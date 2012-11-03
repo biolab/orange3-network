@@ -1,0 +1,7 @@
+recursive-include _network *.png
+recursive-include tests *
+recursive-include docs/rst *
+include docs/Makefile
+include COPYING
+include LICENSE
+include *.py *.txt *.rst
