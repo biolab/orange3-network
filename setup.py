@@ -15,7 +15,7 @@ from setuptools import setup, find_packages
 NAME = 'Orange-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 
 DESCRIPTION = 'Orange Network add-on for Orange data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
