@@ -41,20 +41,13 @@ part of :download:`network-widget.py <code/network-widget.py>`
 
 """
 
-# Test if networkx is installed
-__have_networkx = False
-try:
-    import networkx as nx
+from pkg_resources import resource_filename
+def networks():
+    yield ('', resource_filename(__name__, 'networks'))
 
-    __have_networkx = True
-except ImportError:
-    import warnings
+import networkx as nx
 
-    warnings.warn(
-        "Warning: some features are disabled. Install networkx to use the 'Orange.network' module.")
-
-if __have_networkx:
-    from network import *
+from network import *
 
 import community
 import snap

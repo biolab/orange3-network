@@ -1,3 +1,4 @@
 mock
 numpydoc
+networkx
 -e hg+http://bitbucket.org/biolab/orange#egg=Orange

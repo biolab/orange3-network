@@ -69,11 +69,12 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',      # Requires Fortran compiler
+    'networkx',
 ),
 
 EXTRAS_REQUIRE = {
+    # Dependencies which are problematic to install automatically
     'GUI': (
-        # Dependencies which are problematic to install automatically
         'PyQt4',
     ),
     'reST': (
