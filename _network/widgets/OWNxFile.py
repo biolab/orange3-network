@@ -351,35 +351,35 @@ class OWNxFile(OWWidget):
         if inDemos:
             import os
             try:
-                import orngConfiguration
-                startfile = Orange.utils.environ.network_install_dir
+                import pkg_resources
+                startfile = pkg_resources.load_entry_point("Orange-Network", "orange.data.io.search_paths", "network")().next()[1]
             except:
                 startfile = ""
 
-            if not startfile or not os.path.exists(startfile):
-                try:
-                    import win32api, win32con
-                    t = win32api.RegOpenKey(win32con.HKEY_LOCAL_MACHINE, "SOFTWARE\\Python\\PythonCore\\%i.%i\\PythonPath\\Orange" % sys.version_info[:2], 0, win32con.KEY_READ)
-                    t = win32api.RegQueryValueEx(t, "")[0]
-                    startfile = t[:t.find("orange")] + "orange\\doc\\networks"
-                except:
-                    startfile = ""
-
-            if not startfile or not os.path.exists(startfile):
-                d = OWGUI.__file__
-                if d[-8:] == "OWGUI.py":
-                    startfile = d[:-22] + "doc/networks"
-                elif d[-9:] == "OWGUI.pyc":
-                    startfile = d[:-23] + "doc/networks"
-
-            if not startfile or not os.path.exists(startfile):
-                d = os.getcwd()
-                if d[-12:] == "OrangeCanvas":
-                    startfile = d[:-12] + "doc/networks"
-                else:
-                    if d[-1] not in ["/", "\\"]:
-                        d += "/"
-                    startfile = d + "doc/networks"
+#            if not startfile or not os.path.exists(startfile):
+#                try:
+#                    import win32api, win32con
+#                    t = win32api.RegOpenKey(win32con.HKEY_LOCAL_MACHINE, "SOFTWARE\\Python\\PythonCore\\%i.%i\\PythonPath\\Orange" % sys.version_info[:2], 0, win32con.KEY_READ)
+#                    t = win32api.RegQueryValueEx(t, "")[0]
+#                    startfile = t[:t.find("orange")] + "orange\\doc\\networks"
+#                except:
+#                    startfile = ""
+#
+#            if not startfile or not os.path.exists(startfile):
+#                d = OWGUI.__file__
+#                if d[-8:] == "OWGUI.py":
+#                    startfile = d[:-22] + "doc/networks"
+#                elif d[-9:] == "OWGUI.pyc":
+#                    startfile = d[:-23] + "doc/networks"
+#
+#            if not startfile or not os.path.exists(startfile):
+#                d = os.getcwd()
+#                if d[-12:] == "OrangeCanvas":
+#                    startfile = d[:-12] + "doc/networks"
+#                else:
+#                    if d[-1] not in ["/", "\\"]:
+#                        d += "/"
+#                    startfile = d + "doc/networks"
 
             if not os.path.exists(startfile):
                 QMessageBox.information(None, "File", "Cannot find the directory with example networks", QMessageBox.Ok + QMessageBox.Default)

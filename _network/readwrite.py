@@ -90,8 +90,6 @@ def _check_network_dir(p):
     if type(p) == str:
         if not os.path.isfile(p):
             path = Orange.data.io.find_file(os.path.split(p)[1])
-            #path = os.path.join(Orange.utils.environ.network_install_dir, \
-            #                    os.path.split(p)[1])
 
             if os.path.isfile(path):
                 return path
