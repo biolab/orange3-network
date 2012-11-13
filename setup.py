@@ -78,7 +78,6 @@ EXTRAS_REQUIRE = {
         'PyQt4',
     ),
     'reST': (
-        'mock',
         'numpydoc',
     ),
 }
