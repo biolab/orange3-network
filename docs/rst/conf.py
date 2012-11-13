@@ -14,9 +14,9 @@
 import sys, os, os.path
 import mock
 
-MOCK_MODULES = ['numpy', 'numpy.core', 'matplotlib', 'numpy.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'numpy.ma', 'linalg', 'numpy.linalg', 'scipy.linalg']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
+#MOCK_MODULES = ['numpy', 'numpy.core', 'matplotlib', 'numpy.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'numpy.ma', 'linalg', 'numpy.linalg', 'scipy.linalg']
+#for mod_name in MOCK_MODULES:
+#    sys.modules[mod_name] = mock.Mock()
 
 #rewrite formatargs function with different defaults
 sys.path.insert(0, os.path.dirname(__file__))
