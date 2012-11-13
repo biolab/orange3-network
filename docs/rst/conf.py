@@ -13,31 +13,25 @@
 
 import sys, os, os.path
 import mock
+import numpydoc
+import imp
 
 #MOCK_MODULES = ['numpy', 'numpy.core', 'matplotlib', 'numpy.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'numpy.ma', 'linalg', 'numpy.linalg', 'scipy.linalg']
 #for mod_name in MOCK_MODULES:
 #    sys.modules[mod_name] = mock.Mock()
 
-#rewrite formatargs function with different defaults
-sys.path.insert(0, os.path.dirname(__file__))
-import myinspect
-import sphinx.ext.autodoc
-import numpydoc
-sphinx.ext.autodoc.inspect = myinspect
-numpydoc.docscrape.inspect = myinspect
-
-
-import imp
 module_setup = imp.load_source('module_setup', os.path.join(os.path.dirname(__file__), '..', '..', 'setup.py'))
 VERSION = module_setup.VERSION
+AUTHOR = module_setup.AUTHOR
+DOCUMENTATION_NAME = module_setup.DOCUMENTATION_NAME
 
-#disable deprecation decorators for the documentation
-os.environ["orange_no_deprecated_members"] = "1"
+TITLE = "%s v%s documentation" % (DOCUMENTATION_NAME, VERSION)
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.append(os.path.abspath('../../mm'))
+#sys.path.append(os.path.abspath('../../mm'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -65,8 +59,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Orange Network'
-copyright = u'Miha Stajdohar, FRI UL'
+project = TITLE
+copyright = AUTHOR
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -134,7 +128,7 @@ if html_theme == "orange_theme":
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "Model Map Reference"
+html_title = TITLE
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -227,10 +221,8 @@ latex_documents = [
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'Model Map Reference'
-epub_author = u'Miha Stajdohar'
-epub_publisher = u'Miha Stajdohar'
-epub_copyright = u'Miha Stajdohar, FRI UL'
+epub_title = TITLE
+epub_author = AUTHOR
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
@@ -265,40 +257,3 @@ epub_exclude_files = ["index.html", "genindex.html", "py-modindex.html", "search
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
-
-import types
-from sphinx.ext import autodoc
-
-def maybe_skip_member(app, what, name, obj, skip, options):
-    #print app, what, name, obj, skip, options
-
-    #allow class methods that begin with __ and end with __
-    if isinstance(obj, types.MethodType) \
-        and not isinstance(options.members, list) \
-        and name.startswith("__") \
-        and name.endswith("__") \
-        and (obj.__doc__ != None or options.get("undoc-members", False)):
-            return False
-
-class SingletonDocumenter(autodoc.ModuleLevelDocumenter):
-    """
-    Specialized Documenter subclass for singleton items.
-    """
-    objtype = 'singleton'
-    directivetype = 'data'
-
-    member_order = 40
-
-    @classmethod
-    def can_document_member(cls, member, membername, isattr, parent):
-        return isinstance(parent, autodoc.ModuleDocumenter) and isattr
-
-    def document_members(self, all_members=False):
-        pass
-
-    def add_content(self, more_content, no_docstring=False):
-        self.add_line(u'Singleton instance of :py:class:`~%s`.' % (self.object.__class__.__name__,), '<autodoc>')
-
-def setup(app):
-    app.connect('autodoc-skip-member', maybe_skip_member)
-    app.add_autodocumenter(SingletonDocumenter)
