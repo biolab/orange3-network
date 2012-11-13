@@ -12,7 +12,7 @@
 # serve to show the default.
 
 import sys, os, os.path
-import mock
+#import mock
 import numpydoc
 import imp
 
