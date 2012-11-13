@@ -2,4 +2,5 @@ orange-network
 -e hg+http://bitbucket.org/biolab/orange#egg=Orange
 numpy
 numpydoc
+scipy
 networkx
