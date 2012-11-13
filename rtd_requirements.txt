@@ -1,5 +1,5 @@
+orange-network
+-e hg+http://bitbucket.org/biolab/orange#egg=Orange
 numpy
 numpydoc
 networkx
--e hg+http://bitbucket.org/biolab/orange#egg=Orange
-orange-network
