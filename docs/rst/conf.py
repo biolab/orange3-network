@@ -11,7 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os, os.path
+import sys, os
 import numpydoc
 import imp
 
@@ -24,16 +24,16 @@ VERSION = module_setup.VERSION
 AUTHOR = module_setup.AUTHOR
 DOCUMENTATION_NAME = module_setup.DOCUMENTATION_NAME
 
-TITLE = "%s v%s documentation" % (DOCUMENTATION_NAME, VERSION)
+TITLE = "%s Documentation v%s" % (DOCUMENTATION_NAME, VERSION)
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-import Orange
-import _network
-Orange.network = _network
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+#import Orange
+#import _network
+#Orange.network = _network
 
 # -- General configuration -----------------------------------------------------
 

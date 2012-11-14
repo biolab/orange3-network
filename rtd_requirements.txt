@@ -1,4 +1,2 @@
-numpy
 numpydoc
-networkx
 -e hg+https://bitbucket.org/biolab/orange#egg=Orange
