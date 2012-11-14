@@ -1,4 +1,4 @@
 numpy
 numpydoc
 networkx
--e hg+http://bitbucket.org/biolab/orange#egg=Orange
+-e hg+https://bitbucket.org/biolab/orange#egg=Orange
