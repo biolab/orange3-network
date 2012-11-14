@@ -12,7 +12,6 @@
 # serve to show the default.
 
 import sys, os, os.path
-#import mock
 import numpydoc
 import imp
 
@@ -31,7 +30,10 @@ TITLE = "%s v%s documentation" % (DOCUMENTATION_NAME, VERSION)
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.append(os.path.abspath('../../mm'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+import Orange
+import _network
+Orange.network = _network
 
 # -- General configuration -----------------------------------------------------
 
