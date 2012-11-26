@@ -26,8 +26,8 @@ import networkx.readwrite.gml as rwgml
 import networkx.readwrite.gpickle as rwgpickle
 
 import Orange
+import Orange.core as orangeom
 
-from Orange import orangeom
 from network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
 
