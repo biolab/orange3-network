@@ -1,4 +1,4 @@
-""" 
+"""
 .. index:: Network
 
 *********
@@ -59,7 +59,7 @@ import numpy
 import networkx as nx
 
 import Orange
-from Orange import orangeom
+import Orange.core as orangeom
 
 class MdsTypeClass():
     def __init__(self):
