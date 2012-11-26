@@ -67,7 +67,7 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'Orange',
     'setuptools',
-    'numpy',
+#    'numpy',
 #    'scipy',      # Requires Fortran compiler
     'networkx',
 ),
