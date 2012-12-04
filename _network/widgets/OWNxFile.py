@@ -1,7 +1,7 @@
 """
 <name>Net File</name>
 <description>Reads data from a graf file (Pajek networks (.net) files and GML network files).</description>
-<icon>icons/NetworkFile.png</icon>
+<icon>icons/NetworkFile.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
 <priority>6410</priority>
 """

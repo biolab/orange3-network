@@ -1,7 +1,7 @@
 """
 <name>SNAP</name>
 <description>Read networks from Stanford Large Network Dataset Collection.</description>
-<icon>icons/SNAP.png</icon>
+<icon>icons/SNAP.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
 <priority>6415</priority>
 """

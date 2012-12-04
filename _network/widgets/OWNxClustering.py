@@ -1,7 +1,7 @@
 """
 <name>Net Clustering</name>
 <description>Orange widget for community detection in networks</description>
-<icon>icons/Network.png</icon>
+<icon>icons/Networkclustering.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
 <priority>6430</priority>
 """
