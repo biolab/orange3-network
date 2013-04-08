@@ -1,7 +1,7 @@
 """
 <name>Net Inside View</name>
 <description>Orange widget for community detection in networks</description>
-<icon>icons/Network.png</icon>
+<icon>icons/NetworkInsideView.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
 <priority>6460</priority>
 """

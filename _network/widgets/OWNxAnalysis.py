@@ -1,7 +1,7 @@
 """
 <name>Net Analysis</name>
 <description>Statistical analysis of network data.</description>
-<icon>icons/NetworkFromDistances.png</icon>
+<icon>icons/NetworkAnalysis.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
 <priority>6425</priority>
 """

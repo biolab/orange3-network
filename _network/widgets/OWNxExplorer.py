@@ -1,7 +1,7 @@
 """
 <name>Net Explorer</name>
 <description>Orange widget for network exploration.</description>
-<icon>icons/Network.png</icon>
+<icon>icons/NetworkExplorer.svg</icon>
 <contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
 <priority>6420</priority>
 """
