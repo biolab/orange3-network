@@ -1,7 +1,7 @@
 """
 <name>Pubmed Network View</name>
 <description></description>
-<icon>icons/Network.png</icon>
+<icon>icons/NetworkExplorer.svg</icon>
 <contact></contact> 
 <priority>6470</priority>
 """
