@@ -1,3 +1,5 @@
+import os
+
 import OWToolbars
 import OWColorPalette
 import orngMDS
@@ -5,13 +7,15 @@ import orngMDS
 from OWWidget import *
 from OWNxCanvas import *
 
-_dir = os.path.dirname(__file__) + "/../icons/"
-dlg_mark2sel = _dir + "Dlg_Mark2Sel.png"
-dlg_sel2mark = _dir + "Dlg_Sel2Mark.png"
-dlg_selIsmark = _dir + "Dlg_SelisMark.png"
-dlg_selected = _dir + "Dlg_HideSelection.png"
-dlg_unselected = _dir + "Dlg_UnselectedNodes.png"
-dlg_showall = _dir + "Dlg_clear.png"
+from Orange import core, data, network
+
+_dir = os.path.join(os.path.dirname(__file__), 'icons')
+dlg_mark2sel = os.path.join(_dir, "Dlg_Mark2Sel.png")
+dlg_sel2mark = os.path.join(_dir, "Dlg_Sel2Mark.png")
+dlg_selIsmark = os.path.join(_dir, "Dlg_SelisMark.png")
+dlg_selected = os.path.join(_dir, "Dlg_HideSelection.png")
+dlg_unselected = os.path.join(_dir, "Dlg_UnselectedNodes.png")
+dlg_showall = os.path.join(_dir, "Dlg_clear.png")
 
 class OWNxExplorerQwt(OWWidget):
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
@@ -31,18 +35,17 @@ class OWNxExplorerQwt(OWWidget):
 
         OWWidget.__init__(self, parent, signalManager, name)
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="markerAttributes"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
-        self.inputs = [("Network", Orange.network.Graph, self.set_graph, Default),
-                       ("Nx View", Orange.network.NxView, self.set_network_view),
-                       ("Items", Orange.data.Table, self.setItems),
-                       ("Marked Items", Orange.data.Table, self.markItems),
-                       ("Item Subset", Orange.data.Table, self.setExampleSubset),
-                       ("Distances", Orange.core.SymMatrix, self.set_items_distance_matrix)]
+        self.inputs = [("Network", network.Graph, self.set_graph, Default),
+                       ("Items", data.Table, self.set_items),
+                       ("Item Subset", data.Table, self.mark_items),
+                       ("Distances", core.SymMatrix, self.set_items_distance_matrix),
+                       ("Net View", network.NxView, self.set_network_view)]
 
-        self.outputs = [("Selected Network", Orange.network.Graph),
-                        ("Distance Matrix", Orange.core.SymMatrix),
-                        ("Selected Items", Orange.data.Table),
-                        ("Other Items", Orange.data.Table),
-                        ("Marked Items", Orange.data.Table),
+        self.outputs = [("Selected Network", network.Graph),
+                        ("Distance Matrix", core.SymMatrix),
+                        ("Marked Items", data.Table),
+                        ("Selected Items", data.Table),
+                        ("Other Items", data.Table),
                         ("Features", AttributeList)]
 
         self.markerAttributes = []
@@ -411,7 +414,7 @@ class OWNxExplorerQwt(OWWidget):
             for v in vertices:
                 self.graph_base.items()[v][att] = str(self.editValue)
 
-        self.setItems(self.graph_base.items())
+        self.set_items(self.graph_base.items())
 
     def drawForce(self):
         if self.btnForce.isChecked() and self.graph is not None:
@@ -759,7 +762,7 @@ class OWNxExplorerQwt(OWWidget):
             self.progressBarSet(i * 100.0 / len(components))
 
         self.lastNameComponentAttribute = self.nameComponentCombo.currentText()
-        self.setItems(Orange.data.Table([self.graph_base.items(), keyword_table]))
+        self.set_items(Orange.data.Table([self.graph_base.items(), keyword_table]))
         self.progressBarFinished()
 
     def nameComponents_old(self):
@@ -972,7 +975,7 @@ class OWNxExplorerQwt(OWWidget):
         self.lastNameComponentAttribute = self.nameComponentCombo.currentText()
         #print "self.lastNameComponentAttribute:", self.lastNameComponentAttribute
         items = Orange.data.Table([self.graph_base.items(), keyword_table])
-        self.setItems(items)
+        self.set_items(items)
 
         #for item in items:
         #    print item
@@ -1417,7 +1420,7 @@ class OWNxExplorerQwt(OWWidget):
         self.networkCanvas.callbackSelectVertex = self._network_view.nodes_selected
         self.set_graph(self.graph_base)
 
-    def setItems(self, items=None):
+    def set_items(self, items=None):
         self.error('')
 
         if self.graph is None or items is None:
@@ -1450,7 +1453,7 @@ class OWNxExplorerQwt(OWWidget):
             self.networkCanvas.set_marked_nodes([])
             self.networkCanvas.replot()
 
-    def markItems(self, items):
+    def mark_items(self, items):
         self.markInputCombo.clear()
         self.markInputRadioButton.setEnabled(False)
         self.markInputItems = items

@@ -17,6 +17,7 @@ from OWWidget import *
 from operator import itemgetter
 
 try:
+    raise ImportError
     from OWNxCanvasQt import *
 
     class OWNxExplorer(OWWidget):
