@@ -68,8 +68,6 @@ INSTALL_REQUIRES = (
     'networkx',
     'Orange',
     'setuptools',
-#    'numpy',
-#    'scipy',      # Requires Fortran compiler
 ),
 
 EXTRAS_REQUIRE = {
@@ -87,13 +85,13 @@ DEPENDENCY_LINKS = (
 
 ENTRY_POINTS = {
     'orange.addons': (
-        'network = _network',
+        'network = orangecontrib.network',
     ),
     'orange.widgets': (
-        'Network = _network.widgets',
+        'Network = orangecontrib.network.widgets',
     ),
     'orange.data.io.search_paths': (
-        'network = _network:networks',
+        'network = orangecontrib.network:networks',
     ),
 }
 
