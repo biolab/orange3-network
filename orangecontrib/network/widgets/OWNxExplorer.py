@@ -39,7 +39,6 @@ WIDGET_CLASS = "OWNxExplorer"
 REPLACES = ["_network.widgets.OWNxExplorer.OWNxExplorer"]
 
 try:
-    raise ImportError
     from OWNxCanvasQt import *
 
     class OWNxExplorer(OWWidget):
@@ -1618,7 +1617,11 @@ except ImportError as err:
         # if Qwt is also not installed throw could not import orangeqt error
         raise err
 
-    from OWNxExplorerQwt import OWNxExplorerQwt as OWNxExplorer
+    from OWNxExplorerQwt import OWNxExplorerQwt as _OWNxExplorerQwt
+
+    class OWNxExplorer(_OWNxExplorerQwt):
+        pass
+
 
 if __name__ == "__main__":
     a = QApplication(sys.argv)
