@@ -14,6 +14,17 @@ import OWGUI
 
 from OWWidget import *
 
+NAME = "Net File"
+DESCRIPTION = "Reads data from a graf file (Pajek networks (.net) files and GML network files)."
+ICON = "icons/NetworkFile.svg"
+PRIORITY = 6410
+
+OUTPUTS = [("Network", Orange.network.Graph),
+           ("Items", Orange.data.Table)]
+
+REPLACES = ["_network.widgets.OWNxFile.OWNxFile"]
+
+
 class OWNxFile(OWWidget):
 
     settingsList = ["recentFiles", "recentDataFiles", "recentEdgesFiles", "auto_table"]

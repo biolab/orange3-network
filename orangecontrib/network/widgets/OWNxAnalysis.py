@@ -14,6 +14,21 @@ import OWGUI
 
 from OWWidget import *
 
+
+NAME = "Net Analysis"
+DESCRIPTION = "Statistical analysis of network data."
+ICON = "icons/NetworkAnalysis.svg"
+PRIORITY = 6425
+
+INPUTS = [("Network", Orange.network.Graph, "set_graph"),
+          ("Items", Orange.data.Table, "set_items")]
+
+OUTPUTS = [("Network", Orange.network.Graph),
+           ("Items", Orange.data.Table)]
+
+REPLACES = ["_network.widgets.OWNxAnalysis.OWNxAnalysis"]
+
+
 NODELEVEL = 0
 GRAPHLEVEL = 1
 

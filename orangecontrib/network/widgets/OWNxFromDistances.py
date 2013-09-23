@@ -21,6 +21,23 @@ from OWWidget import *
 from OWGraph import *
 from OWHist import *
 
+
+NAME = "Net from Distances"
+DESCRIPTION = """
+Constructs Graph object by connecting nodes from data table where
+distance between them is between given threshold.
+"""
+ICON = "icons/NetworkFromDistances.svg"
+PRIORITY = 6440
+
+INPUTS = [("Distances", Orange.core.SymMatrix, "setMatrix")]
+OUTPUTS = [("Network", Orange.network.Graph),
+           ("Data", Orange.data.Table),
+           ("Distances", Orange.core.SymMatrix)]
+
+REPLACES = ["_network.widgets.OWNxFromDistances.OWNxFromDistances"]
+
+
 class OWNxFromDistances(OWWidget, OWNxHist):
     settingsList=["spinLowerThreshold", "spinUpperThreshold", "netOption", 
                   "dstWeight", "kNN", "percentil", "andor", "excludeLimit"]

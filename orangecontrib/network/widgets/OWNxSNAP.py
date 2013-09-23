@@ -18,6 +18,18 @@ import OWGUI
 
 from OWWidget import *
 
+
+NAME = "SNAP"
+DESCRIPTION = "Read networks from Stanford Large Network Dataset Collection."
+ICON = "icons/SNAP.svg"
+PRIORITY = 6415
+
+OUTPUTS = [("Network", Orange.network.Graph),
+           ("Items", Orange.data.Table)]
+
+REPLACES = ["_network.widgets.OWNxSNAP.OWNxSNAP"]
+
+
 class OWNxSNAP(OWWidget):
     
     settingsList=['last_total']

@@ -11,6 +11,17 @@ import OWGUI
 
 from OWWidget import *
 
+
+NAME = "Net Inside View"
+DESCRIPTION = "Orange widget for community detection in networks"
+ICON = "icons/NetworkInsideView.svg"
+PRIORITY = 6460
+
+OUTPUTS = [("Nx View", Orange.network.NxView)]
+
+REPLACES = ["_network.widgets.OWNxInsideView.OWNxInsideView"]
+
+
 class NxInsideView(Orange.network.NxView):
     """Network Inside View
     

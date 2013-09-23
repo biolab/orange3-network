@@ -16,6 +16,28 @@ from Orange import core, data, feature, network
 from OWWidget import *
 from operator import itemgetter
 
+
+NAME = "Net Explorer"
+DESCRIPTIPN = "Orange widget for network exploration."
+ICON = "icons/NetworkExplorer.svg"
+PRIORITY = 6420
+
+INPUTS = [("Network", network.Graph, "set_graph", Default),
+          ("Items", data.Table, "set_items"),
+          ("Item Subset", data.Table, "mark_items"),
+          ("Distances", core.SymMatrix, "set_items_distance_matrix"),
+          ("Net View", network.NxView, "set_network_view")]
+
+OUTPUTS = [("Selected Network", network.Graph),
+           ("Distance Matrix", core.SymMatrix),
+           ("Marked Items", data.Table),
+           ("Selected Items", data.Table),
+           ("Other Items", data.Table)]
+
+WIDGET_CLASS = "OWNxExplorer"
+
+REPLACES = ["_network.widgets.OWNxExplorer.OWNxExplorer"]
+
 try:
     raise ImportError
     from OWNxCanvasQt import *

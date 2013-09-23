@@ -11,6 +11,16 @@ import OWGUI
 
 from OWWidget import *
 
+
+NAME = "Pubmed Network View"
+ICON = "icons/NetworkExplorer.svg"
+PRIORITY = 6470
+
+OUTPUTS = [("Nx View", Orange.network.NxView)]
+
+REPLACES = ["_network.widgets.OWPubmedView.OWPubmedView"]
+
+
 class PubmedNetworkView(Orange.network.NxView):
     """Network Inside View
     

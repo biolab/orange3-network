@@ -12,6 +12,18 @@ import OWGUI
 
 from OWWidget import *
 
+
+NAME = "Net Clustering"
+DESCRIPTION = "Orange widget for community detection in networks"
+ICON = "icons/NetworkClustering.svg"
+PRIORITY = 6430
+
+INPUTS = [("Network", Orange.network.Graph, "setNetwork", Default)]
+OUTPUTS = [("Network", Orange.network.Graph),
+           ("Community Detection", cd.CommunityDetection)]
+
+REPLACES = ["_network.widgets.OWNxClustering.OWNxClustering"]
+
 class OWNxClustering(OWWidget):
 
     settingsList = ['method', 'iterationHistory', 'autoApply', 'iterations',
