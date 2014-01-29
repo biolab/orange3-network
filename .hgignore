@@ -1,0 +1,30 @@
+syntax: glob
+
+# Ignore dot files.
+.*
+
+# Ignore backup files.
+*.orig
+
+# Ignore temporary editor files.
+*.swp
+*~
+
+# Ignore binaries.
+*.py[cod]
+*.so
+*.dll
+
+# Ignore files created by setup.py.
+build
+dist
+MANIFEST
+*.egg-info
+*.egg
+distribute*.tar.gz
+
+# Ignore built documentation.
+docs/html
+
+# Ignore model data files.
+*.bz2
