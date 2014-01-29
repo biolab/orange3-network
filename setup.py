@@ -67,7 +67,6 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'networkx',
     'Orange',
-    'setuptools',
     'pyparsing>=2.0.1'
 ),
 
