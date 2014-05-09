@@ -1,4 +1,5 @@
 recursive-include orangecontrib/network *.png *.svg
+recursive-include orangecontrib/network/networks *
 recursive-include tests *
 recursive-include docs/rst *
 include docs/Makefile
