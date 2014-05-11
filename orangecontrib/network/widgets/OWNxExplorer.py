@@ -862,7 +862,6 @@ class OWNxExplorer(OWWidget):
             if len(set(positions.values())) > 1:
                 self.networkCanvas.networkCurve.set_node_coordinates(positions)
 
-
         self.networkCanvas.showEdgeLabels = self.showEdgeLabels
         self.networkCanvas.maxEdgeSize = self.maxLinkSize
         self.networkCanvas.minComponentEdgeWidth = self.minComponentEdgeWidth
@@ -1025,7 +1024,7 @@ class OWNxExplorer(OWWidget):
     #######################################################################
 
     def graph_layout(self):
-        if self.graph is None or self.graph.number_of_nodes <= 0:   #grafa se ni
+        if self.graph is None or self.graph.number_of_nodes() <= 0:   #grafa se ni
             self.optButton.setChecked(False)
             return
 
@@ -1071,6 +1070,7 @@ class OWNxExplorer(OWWidget):
 
         self.optButton.setChecked(False)
         self.networkCanvas.update_graph_layout()
+        qApp.processEvents()
 
     def graph_layout_method(self, method=None):
         self.information()

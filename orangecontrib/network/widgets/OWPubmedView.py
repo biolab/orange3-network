@@ -2,9 +2,10 @@
 <name>Pubmed Network View</name>
 <description></description>
 <icon>icons/NetworkExplorer.svg</icon>
-<contact></contact> 
+<contact></contact>
 <priority>6470</priority>
 """
+raise Exception("This widget is a Prototype.")
 
 import Orange
 import OWGUI
@@ -22,9 +23,8 @@ REPLACES = ["_network.widgets.OWPubmedView.OWPubmedView"]
 
 
 class PubmedNetworkView(Orange.network.NxView):
-    """Network Inside View
-    
-    """
+
+    """Network Inside View"""
 
     def __init__(self, parent):
         Orange.network.NxView.__init__(self)

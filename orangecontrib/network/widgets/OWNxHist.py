@@ -62,22 +62,24 @@ class OWNxHist():
         OWGUI.appendRadioButton(ribg, self, "netOption", "Large components only. Min nodes:", insertInto=hb, callback=self.generateGraph)
         OWGUI.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)))
         OWGUI.appendRadioButton(ribg, self, "netOption", "Largest connected component only", callback=self.generateGraph)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
+        #OWGUI.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
         self.attribute = None
-        self.attributeCombo = OWGUI.comboBox(parent, self, "attribute", box="Filter attribute", orientation='horizontal')#, callback=self.setVertexColor)
+
+        ### FILTER NETWORK BY ATTRIBUTE IS OBSOLETE - USE SELECT DATA WIDGET ###
+        #self.attributeCombo = OWGUI.comboBox(parent, self, "attribute", box="Filter attribute", orientation='horizontal')#, callback=self.setVertexColor)
+        #self.label = ''
+        #self.searchString = OWGUI.lineEdit(self.attributeCombo.box, self, "label", callback=self.setSearchStringTimer, callbackOnType=True)
+        #self.searchStringTimer = QTimer(self)
+        #self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.generateGraph)
+        #if str(self.netOption) != '3':
+        #    self.attributeCombo.box.setEnabled(False)
 
         ribg = OWGUI.radioButtonsInBox(parent, self, "dstWeight", [], "Distance -> Weight", callback=self.generateGraph)
         hb = OWGUI.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         OWGUI.appendRadioButton(ribg, self, "dstWeight", "Weight := distance", insertInto=hb, callback=self.generateGraph)
         OWGUI.appendRadioButton(ribg, self, "dstWeight", "Weight := 1 - distance", insertInto=hb, callback=self.generateGraph)
 
-        self.label = ''
-        self.searchString = OWGUI.lineEdit(self.attributeCombo.box, self, "label", callback=self.setSearchStringTimer, callbackOnType=True)
-        self.searchStringTimer = QTimer(self)
-        self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.generateGraph)
 
-        if str(self.netOption) != '3':
-            self.attributeCombo.box.setEnabled(False)
 
     def setPercentil(self):
         if self.matrix is None or self.percentil <= 0:
@@ -91,17 +93,19 @@ class OWNxHist():
         self.generateGraph()
 
     def enableAttributeSelection(self):
-        self.attributeCombo.box.setEnabled(True)
+        #self.attributeCombo.box.setEnabled(True)
+        pass
 
     def setSearchStringTimer(self):
-        self.searchStringTimer.stop()
-        self.searchStringTimer.start(750)
+        # self.searchStringTimer.stop()
+        # self.searchStringTimer.start(750)
+        pass
 
     def setMatrix(self, data):
         if data == None:
             self.matrix = None
             self.histogram.setValues([])
-            self.attributeCombo.clear()
+            #self.attributeCombo.clear()
             self.generateGraph()
             return
 
@@ -119,7 +123,7 @@ class OWNxHist():
         upp = max(values)
         self.spinLowerThreshold = self.spinUpperThreshold = math.floor(low - (0.03 * (upp - low)))
 
-        self.attributeCombo.clear()
+        # self.attributeCombo.clear()
         vars = []
 
         if hasattr(self.matrix, "items"):
@@ -133,12 +137,12 @@ class OWNxHist():
 
         self.icons = self.createAttributeIconDict()
 
-        for var in vars:
-            try:
-                if var.varType != 7: # if not Orange.feature.Python
-                    self.attributeCombo.addItem(self.icons[var.varType], unicode(var.name))
-            except:
-                print "Error adding", var, "to the attribute combo."
+        # for var in vars:
+        #     try:
+        #         if var.varType != 7: # if not Orange.feature.Python
+        #             self.attributeCombo.addItem(self.icons[var.varType], unicode(var.name))
+        #     except:
+        #         print "Error adding", var, "to the attribute combo."
 
         self.setPercentil()
         self.generateGraph()
@@ -170,8 +174,8 @@ class OWNxHist():
         self.generateGraph()
 
     def generateGraph(self, N_changed=False):
-        self.searchStringTimer.stop()
-        self.attributeCombo.box.setEnabled(False)
+        # self.searchStringTimer.stop()
+        # self.attributeCombo.box.setEnabled(False)
         self.error()
         matrix = None
         self.warning('')
@@ -250,31 +254,30 @@ class OWNxHist():
                     self.graph = None
                     matrix = None
             # connected component with vertex by label
-            elif str(self.netOption) == '3':
-                self.attributeCombo.box.setEnabled(True)
-                self.graph = None
-                matrix = None
-                #print self.attributeCombo.currentText()
-                if self.attributeCombo.currentText() != '' and self.label != '':
-                    components = Orange.network.nx.algorithms.components.connected_components(graph)
+            # elif str(self.netOption) == '3':
+            #     self.attributeCombo.box.setEnabled(True)
+            #     self.graph = None
+            #     matrix = None
+            #     if self.attributeCombo.currentText() != '' and self.label != '':
+            #         components = Orange.network.nx.algorithms.components.connected_components(graph)
 
-                    txt = self.label.lower()
-                    #print 'txt:',txt
-                    nodes = [i for i, values in enumerate(self.matrix.items) if txt in str(values[str(self.attributeCombo.currentText())]).lower()]
-                    #print "nodes:",nodes
-                    if len(nodes) > 0:
-                        vertices = []
-                        for component in components:
-                            for node in nodes:
-                                if node in component:
-                                    if len(component) > 0:
-                                        vertices.extend(component)
+            #         txt = self.label.lower()
+            #         #print 'txt:',txt
+            #         nodes = [i for i, values in enumerate(self.matrix.items) if txt in str(values[str(self.attributeCombo.currentText())]).lower()]
+            #         #print "nodes:",nodes
+            #         if len(nodes) > 0:
+            #             vertices = []
+            #             for component in components:
+            #                 for node in nodes:
+            #                     if node in component:
+            #                         if len(component) > 0:
+            #                             vertices.extend(component)
 
-                        if len(vertices) > 0:
-                            #print "n vertices:", len(vertices), "n set vertices:", len(set(vertices))
-                            vertices = list(set(vertices))
-                            self.graph = graph.subgraph(include)
-                            matrix = self.matrix.getitems(vertices)
+            #             if len(vertices) > 0:
+            #                 #print "n vertices:", len(vertices), "n set vertices:", len(set(vertices))
+            #                 vertices = list(set(vertices))
+            #                 self.graph = graph.subgraph(include)
+            #                 matrix = self.matrix.getitems(vertices)
             else:
                 self.graph = graph
 
