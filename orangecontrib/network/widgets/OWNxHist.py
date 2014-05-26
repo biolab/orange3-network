@@ -38,11 +38,11 @@ class OWNxHist():
         if parent is None:
             parent = self.controlArea
 
-        boxGeneral = OWGUI.widgetBox(parent, box="Distance boundaries")
+        boxGeneral = OWGUI.widgetBox(parent, box="Edges")
 
         ribg = OWGUI.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
-        OWGUI.lineEdit(ribg, self, "spinLowerThreshold", "Lower", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, enterPlaceholder=True, controlWidth=100)
-        OWGUI.lineEdit(ribg, self, "spinUpperThreshold", "Upper    ", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, enterPlaceholder=True, controlWidth=100)
+        OWGUI.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, enterPlaceholder=True, controlWidth=60)
+        OWGUI.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, enterPlaceholder=True, controlWidth=60)
         ribg.layout().addStretch(1)
         #ribg = OWGUI.radioButtonsInBox(boxGeneral, self, "andor", [], orientation='horizontal', callback = self.generateGraph)
         #OWGUI.appendRadioButton(ribg, self, "andor", "OR", callback = self.generateGraph)
@@ -51,17 +51,18 @@ class OWNxHist():
         #ribg.hide(False)
 
         ribg = OWGUI.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
-        OWGUI.spin(ribg, self, "kNN", 0, 1000, 1, label="kNN   ", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=100)
-        OWGUI.doubleSpin(ribg, self, "percentil", 0, 100, 0.1, label="Percentile", orientation='horizontal', callback=self.setPercentil, callbackOnReturn=1, controlWidth=100)
+
+        OWGUI.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1, label="Percentile", orientation='horizontal', callback=self.setPercentil, callbackOnReturn=1, controlWidth=60)
+        OWGUI.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
         ribg.layout().addStretch(1)
         # Options
         self.attrColor = ""
-        ribg = OWGUI.radioButtonsInBox(parent, self, "netOption", [], "Options", callback=self.generateGraph)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "All vertices", callback=self.generateGraph)
+        ribg = OWGUI.radioButtonsInBox(parent, self, "netOption", [], "Node selection", callback=self.generateGraph)
+        OWGUI.appendRadioButton(ribg, self, "netOption", "Keep all nodes", callback=self.generateGraph)
         hb = OWGUI.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Large components only. Min nodes:", insertInto=hb, callback=self.generateGraph)
-        OWGUI.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)))
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Largest connected component only", callback=self.generateGraph)
+        OWGUI.appendRadioButton(ribg, self, "netOption", "Components with at least nodes", insertInto=hb, callback=self.generateGraph)
+        OWGUI.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
+        OWGUI.appendRadioButton(ribg, self, "netOption", "Largest connected component", callback=self.generateGraph)
         #OWGUI.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
         self.attribute = None
 
@@ -74,10 +75,10 @@ class OWNxHist():
         #if str(self.netOption) != '3':
         #    self.attributeCombo.box.setEnabled(False)
 
-        ribg = OWGUI.radioButtonsInBox(parent, self, "dstWeight", [], "Distance -> Weight", callback=self.generateGraph)
+        ribg = OWGUI.radioButtonsInBox(parent, self, "dstWeight", [], "Edge weights", callback=self.generateGraph)
         hb = OWGUI.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
-        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Weight := distance", insertInto=hb, callback=self.generateGraph)
-        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Weight := 1 - distance", insertInto=hb, callback=self.generateGraph)
+        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Proportional to distance", insertInto=hb, callback=self.generateGraph)
+        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Inverted distance", insertInto=hb, callback=self.generateGraph)
 
 
 
@@ -292,12 +293,12 @@ class OWNxHist():
             self.pconnected = self.graph.number_of_nodes()
             self.nedges = self.graph.number_of_edges()
         if hasattr(self, "infoa"):
-            self.infoa.setText("Matrix size: %d" % self.matrix.dim)
+            self.infoa.setText("Data items on input: %d" % self.matrix.dim)
         if hasattr(self, "infob"):
-            self.infob.setText("Graph nodes: %d (%3.1f%%)" % (self.pconnected,
+            self.infob.setText("Network nodes: %d (%3.1f%%)" % (self.pconnected,
                 self.pconnected / float(self.matrix.dim) * 100))
         if hasattr(self, "infoc"):
-            self.infoc.setText("Graph edges: %d (%.2f edges/node)" % (
+            self.infoc.setText("Network edges: %d (%.2f edges/node)" % (
                 self.nedges, self.nedges / float(self.pconnected)
                 if self.pconnected else 0))
 
