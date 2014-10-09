@@ -39,11 +39,21 @@ class OWNxHist():
             parent = self.controlArea
 
         boxGeneral = OWGUI.widgetBox(parent, box="Edges")
-
         ribg = OWGUI.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
-        OWGUI.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, enterPlaceholder=True, controlWidth=60)
-        OWGUI.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, enterPlaceholder=True, controlWidth=60)
-        ribg.layout().addStretch(1)
+        ribg.layout().addWidget(QLabel("Distance threshold", self),
+                                4, Qt.AlignVCenter | Qt.AlignLeft)
+        OWGUI.doubleSpin(ribg, self, "spinLowerThreshold",
+                         0.0, float("inf"), 0.0001, decimals=4,
+                         callback=self.changeLowerSpin,
+                         keyboardTracking=False)
+        ribg.layout().addWidget(QLabel("to", self), 1, Qt.AlignCenter)
+        OWGUI.doubleSpin(ribg, self, "spinUpperThreshold",
+                         0.0, float("inf"), 0.0001, decimals=4,
+                         callback=self.changeUpperSpin,
+                         keyboardTracking=False)
+#         OWGUI.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
+#         OWGUI.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
+#         ribg.layout().addStretch(1)
         #ribg = OWGUI.radioButtonsInBox(boxGeneral, self, "andor", [], orientation='horizontal', callback = self.generateGraph)
         #OWGUI.appendRadioButton(ribg, self, "andor", "OR", callback = self.generateGraph)
         #b = OWGUI.appendRadioButton(ribg, self, "andor", "AND", callback = self.generateGraph)
@@ -122,7 +132,8 @@ class OWNxHist():
 
         low = min(values)
         upp = max(values)
-        self.spinLowerThreshold = self.spinUpperThreshold = math.floor(low - (0.03 * (upp - low)))
+
+        self.spinLowerThreshold = self.spinUpperThreshold = low - (0.03 * (upp - low))
 
         # self.attributeCombo.clear()
         vars = []
