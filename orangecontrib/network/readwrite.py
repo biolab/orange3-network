@@ -28,7 +28,7 @@ import networkx.readwrite.gpickle as rwgpickle
 import Orange
 import Orange.core as orangeom
 
-from network import Graph, DiGraph, MultiGraph, MultiDiGraph
+from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
 
 __all__ = ['read', 'write', 'read_gpickle', 'write_gpickle', 'read_pajek',
@@ -69,12 +69,12 @@ def _get_fh(path, mode='r'):
     if _is_string_like(path):
         if path.endswith('.gz'):
             import gzip
-            fh = gzip.open(path,mode=mode)
+            fh = gzip.open(path, mode=mode)
         elif path.endswith('.bz2'):
             import bz2
-            fh = bz2.BZ2File(path,mode=mode)
+            fh = bz2.BZ2File(path, mode=mode)
         else:
-            fh = open(path,mode = mode)
+            fh = open(path, mode=mode)
     elif hasattr(path, 'read'):
         fh = path
     else:
@@ -101,8 +101,10 @@ def _check_network_dir(p):
 def graph_to_table(G):
     """Builds a Data Table from node values."""
     if G.number_of_nodes() > 0:
-        features = list(set(itertools.chain.from_iterable(node.iterkeys() for node in G.node.itervalues())))
-        data = [[node.get(f).encode('utf-8').replace('\t', ' ') if type(node.get(f, 1)) == str or type(node.get(f, 1)) == unicode else str(node.get(f, '?')) for f in features] for node in G.node.itervalues()]
+        features = list(set(itertools.chain.from_iterable(node.keys() for node in G.node.values())))
+        data = [[node.get(f).replace('\t', ' ') if isinstance(node.get(f, 1), str) else str(node.get(f, '?'))
+                 for f in features]
+                for node in G.node.values()]
         fp = tempfile.NamedTemporaryFile('wt', suffix='.txt', delete=False)
         fp.write('\n'.join('\t'.join(line) for line in [features] + data))
         fp.close()

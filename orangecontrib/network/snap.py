@@ -21,14 +21,14 @@ which is maintained by `Jure Leskovec <http://cs.stanford.edu/~jure/>`_.
 """
 
 import os
-import urllib
-import httplib
+import urllib.request, urllib.parse, urllib.error
+import http.client
 
 import Orange.misc
 
-import readwrite
+from . import readwrite
 
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 
 class NetworkInfo(object):
     """The NetworkInfo class provides information about a network on the SNAP
@@ -99,7 +99,7 @@ class NetworkInfo(object):
         if not os.path.exists(self._root):
             os.makedirs(self._root)
 
-        urllib.urlretrieve(self._remote_file, self._local_file, progress_callback)
+        urllib.request.urlretrieve(self._remote_file, self._local_file, progress_callback)
 
 class SNAPParser(HTMLParser):
     def __init__(self, *args, **kwargs):
@@ -210,7 +210,7 @@ class SNAP(object):
 
         """
         if done_callback == None:
-            conn = httplib.HTTPConnection("snap.stanford.edu")
+            conn = http.client.HTTPConnection("snap.stanford.edu")
             conn.request("GET", "/data/index.html")
             r1 = conn.getresponse()
             src = r1.read()

@@ -12,6 +12,7 @@ import OWGUI
 from OWWidget import *
 from OWGraph import *
 from OWHist import *
+from functools import reduce
 
 class OWNxHist():
 
@@ -144,7 +145,7 @@ class OWNxHist():
                 vars = list(self.matrix.items.domain.variables)
 
                 metas = self.matrix.items.domain.getmetas(0)
-                for i, var in metas.iteritems():
+                for i, var in metas.items():
                     vars.append(var)
 
         self.icons = self.createAttributeIconDict()

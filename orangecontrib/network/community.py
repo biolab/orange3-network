@@ -49,7 +49,7 @@ def add_history_to_items(G, lblhistory):
 
     dom = Orange.data.Domain(attrs, 0)
     # transpose history
-    data = map(list, zip(*lblhistory))
+    data = [list(i) for i in zip(*lblhistory)]
     data = Orange.data.Table(dom, data)
     if items is None:
         G.set_items(data)

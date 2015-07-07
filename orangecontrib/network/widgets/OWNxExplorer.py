@@ -8,6 +8,8 @@
 import operator
 import statc
 from operator import itemgetter
+from functools import reduce
+from itertools import chain
 
 import OWGUI
 import OWColorPalette
@@ -16,7 +18,7 @@ import orngMDS
 from Orange import core, data, feature, network
 from OWWidget import *
 
-from OWNxCanvasQt import *
+from .OWNxCanvasQt import *
 
 
 NAME = "Net Explorer"
@@ -114,7 +116,18 @@ class OWNxExplorer(OWWidget):
         self.showEdgeLabels = 0
         self.colorSettings = None
         self.selectedSchemaIndex = 0
-        self.edgeColorSettings = [('net_edges', [[], [('contPalette', (4294967295L, 4278190080L, 0))], [('discPalette', [(204, 204, 204), (179, 226, 205), (253, 205, 172), (203, 213, 232), (244, 202, 228), (230, 245, 201), (255, 242, 174), (241, 226, 204)])]]), ('Default', [[], [('contPalette', (4294967295L, 4278190080L, 0))], [('discPalette', [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 128, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (128, 0, 255), (0, 128, 255), (255, 223, 128), (127, 111, 64), (92, 46, 0), (0, 84, 0), (192, 192, 0), (0, 127, 127), (128, 0, 0), (127, 0, 127)])]])]
+        self.edgeColorSettings = [
+            ('net_edges', [
+                [],
+                [('contPalette', (4294967295, 4278190080, 0))],
+                [('discPalette', [(204, 204, 204), (179, 226, 205), (253, 205, 172), (203, 213, 232), (244, 202, 228), (230, 245, 201), (255, 242, 174), (241, 226, 204)])]
+            ]),
+            ('Default', [
+                [],
+                [('contPalette', (4294967295, 4278190080, 0))],
+                [('discPalette', [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 128, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (128, 0, 255), (0, 128, 255), (255, 223, 128), (127, 111, 64), (92, 46, 0), (0, 84, 0), (192, 192, 0), (0, 127, 127), (128, 0, 0), (127, 0, 127)])]
+            ]),
+        ]
         self.selectedEdgeSchemaIndex = 0
         self.items_matrix = None
         self.showDistances = 0
@@ -478,7 +491,10 @@ class OWNxExplorer(OWWidget):
                     return
 
                 txt = self.markSearchString
-                toMark = set(i for i, values in enumerate(self.graph_base.items()) if txt.lower() in " ".join([str(values[ndx]).decode("ascii", "ignore").lower() for ndx in range(len(self.graph_base.items().domain)) + self.graph_base.items().domain.getmetas().keys()]))
+                toMark = set(i for i, values in enumerate(self.graph_base.items())
+                             if txt.lower() in " ".join(str(values[ndx]).lower()
+                                                        for ndx in chain(range(len(self.graph_base.items().domain)),
+                                                                         self.graph_base.items().domain.getmetas().keys())))
                 toMark = toMark.intersection(self.graph.nodes())
                 self.networkCanvas.networkCurve.clear_node_marks()
                 self.networkCanvas.networkCurve.set_node_marks(dict((i, True) for i in toMark))
@@ -509,12 +525,12 @@ class OWNxExplorer(OWWidget):
             elif hubs == 6:
                 #print "mark more than any"
                 self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > max([0] + self.graph.degree(self.graph.neighbors(i)).values()) \
+                    d > max(0, max(self.graph.degree(self.graph.neighbors(i)).values())) \
                     else (i, False) for i, d in powers))
             elif hubs == 7:
                 #print "mark more than avg"
                 self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > statc.mean([0] + self.graph.degree(self.graph.neighbors(i)).values()) \
+                    d > statc.mean([0] + list(self.graph.degree(self.graph.neighbors(i)).values())) \
                     else (i, False) for i, d in powers))
                 self.networkCanvas.replot()
             elif hubs == 8:
@@ -561,7 +577,7 @@ class OWNxExplorer(OWWidget):
         filename = QFileDialog.getSaveFileName(self, 'Save Network File', \
             '', 'NetworkX graph as Python pickle (*.gpickle)\nPajek ' + \
             'network (*.net)\nGML network (*.gml)')
-        filename = unicode(filename)
+        filename = str(filename)
         if filename:
             fn = ""
             head, tail = os.path.splitext(filename)
@@ -654,7 +670,7 @@ class OWNxExplorer(OWWidget):
             if var.varType in [feature.Type.Discrete, \
                                feature.Type.Continuous]:
                 self.colorCombo.addItem(self.icons.get(var.varType, \
-                                        self.icons[-1]), unicode(var.name))
+                                        self.icons[-1]), str(var.name))
 
             if var.varType in [feature.Type.String] and hasattr(self.graph, 'items') and self.graph_base.items() is not None and len(self.graph_base.items()) > 0:
 
@@ -663,28 +679,28 @@ class OWNxExplorer(OWWidget):
                 # can value be a list?
                 try:
                     if type(eval(value)) == type([]):
-                        self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
+                        self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
                         continue
                 except:
                     pass
 
                 if len(value.split(',')) > 1:
-                    self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), "num of " + unicode(var.name))
+                    self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), "num of " + str(var.name))
 
             elif var.varType in [feature.Type.Continuous]:
-                self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
+                self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
 
             if var.varType in [feature.Type.String] and var.name == "label":
-                self.colorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
+                self.colorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
 
-            self.nameComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.showComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.editCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.comboAttSelection.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
+            self.nameComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
+            self.showComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
+            self.editCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
+            self.comboAttSelection.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
 
         for var in edgeVars:
             if var.varType in [feature.Type.Discrete, feature.Type.Continuous]:
-                self.edgeColorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
+                self.edgeColorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), str(var.name))
 
         for i in range(self.vertexSizeCombo.count()):
             if self.lastVertexSizeColumn == \
@@ -987,7 +1003,7 @@ class OWNxExplorer(OWWidget):
             lstNewDomain = [x.name for x in items.domain] + [items.domain[x].name for x in items.domain.getmetas()]
             commonVars = set(lstNewDomain) & set(lstOrgDomain)
 
-            self.markInputCombo.addItem(self.icons[feature.Type.Discrete], unicode("ID"))
+            self.markInputCombo.addItem(self.icons[feature.Type.Discrete], str("ID"))
 
             if len(commonVars) > 0:
                 for var in commonVars:
@@ -995,7 +1011,7 @@ class OWNxExplorer(OWWidget):
                     mrkVar = items.domain[var]
 
                     if orgVar.varType == mrkVar.varType and orgVar.varType == feature.Type.String:
-                        self.markInputCombo.addItem(self.icons[orgVar.varType], unicode(orgVar.name))
+                        self.markInputCombo.addItem(self.icons[orgVar.varType], str(orgVar.name))
 
             self.markInputRadioButton.setEnabled(True)
             self.set_mark_mode(9)
@@ -1374,8 +1390,8 @@ class OWNxExplorer(OWWidget):
             values = dict((node, 1.) for node in self.graph)
 
         if self.invertSize:
-            maxval = max(values.itervalues())
-            values.update((key, maxval - val) for key, val in values.iteritems())
+            maxval = max(values.values())
+            values.update((key, maxval - val) for key, val in values.items())
             self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
         else:
             self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
@@ -1565,10 +1581,10 @@ class OWNxExplorer(OWWidget):
             namingScore.sort(reverse=True)
 
             if len(namingScore) < 1:
-                print "warning. no annotations found for group of genes: " + ", ".join(genes)
+                print("warning. no annotations found for group of genes: " + ", ".join(genes))
                 continue
             elif len(namingScore[0]) < 2:
-                print "warning. error computing score for group of genes: " + ", ".join(genes)
+                print("warning. error computing score for group of genes: " + ", ".join(genes))
                 continue
 
             for v in component:
@@ -1587,7 +1603,7 @@ class OWNxExplorer(OWWidget):
 
 
     def setAutoSendAttributes(self):
-        print 'TODO setAutoSendAttributes'
+        print('TODO setAutoSendAttributes')
         #if self.autoSendAttributes:
         #    self.networkCanvas.callbackSelectVertex = self.sendAttSelectionList
         #else:
@@ -1621,7 +1637,7 @@ if __name__ == "__main__":
         #if signal == 'Items':
         #    ow.set_items(data)
 
-    import OWNxFile
+    from . import OWNxFile
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
     owFile.show()

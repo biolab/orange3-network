@@ -16,7 +16,7 @@ import random
 import Orange
 import OWGUI
 
-from OWNxHist import *
+from .OWNxHist import *
 from OWWidget import *
 from OWGraph import *
 from OWHist import *

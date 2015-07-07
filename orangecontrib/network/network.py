@@ -91,7 +91,7 @@ class BaseGraph():
 
         if self._items is not None and \
                         len(self._items) != self.number_of_nodes():
-            print "Warning: items length does not match the number of nodes."
+            print("Warning: items length does not match the number of nodes.")
 
         return self._items
 
@@ -105,7 +105,7 @@ class BaseGraph():
             if not isinstance(items, Orange.data.Table):
                 raise TypeError('items must be of type \'Orange.data.Table\'')
             if len(items) != self.number_of_nodes():
-                print "Warning: items length must match the number of nodes."
+                print("Warning: items length must match the number of nodes.")
 
         self._items = items
 
@@ -117,7 +117,7 @@ class BaseGraph():
 
         if self._links is not None \
                     and len(self._links) != self.number_of_edges():
-            print "Warning: links length does not match the number of edges."
+            print("Warning: links length does not match the number of edges.")
 
         return self._links
 
@@ -131,7 +131,7 @@ class BaseGraph():
             if not isinstance(links, Orange.data.Table):
                 raise TypeError('links must be of type \'Orange.data.Table\'')
             if len(links) != self.number_of_edges():
-                print "Warning: links length must match the number of edges."
+                print("Warning: links length must match the number of edges.")
 
         self._links = links
 
@@ -172,7 +172,7 @@ class BaseGraph():
                 vars = list(self._items.domain.variables)
 
                 metas = self._items.domain.getmetas(0)
-                vars.extend(var for i, var in metas.iteritems())
+                vars.extend(var for i, var in metas.items())
         return vars
 
     def links_vars(self):
@@ -546,8 +546,8 @@ class GraphLayout(orangeom.GraphLayout):
         if self.mdsType == MdsType.MDS:
             x = [mds.points[u][0] for u in range(self.graph.number_of_nodes())]
             y = [mds.points[u][1] for u in range(self.graph.number_of_nodes())]
-            self.coors[0][range(self.graph.number_of_nodes())] = x
-            self.coors[1][range(self.graph.number_of_nodes())] = y
+            self.coors[0][list(range(self.graph.number_of_nodes()))] = x
+            self.coors[1][list(range(self.graph.number_of_nodes()))] = y
             if callbackUpdateCanvas:
                 callbackUpdateCanvas()
             return

@@ -85,7 +85,7 @@ class OWNxAnalysis(OWWidget):
         self.methods = [
             ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
             ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
-            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: numpy.average(G.degree().values())),
+            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: numpy.average(list(G.degree().values()))),
             ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
             ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
             ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),
@@ -328,7 +328,7 @@ class OWNxAnalysis(OWWidget):
             elif job.result is not None:
                 if job.type == NODELEVEL:
                     self.analfeatures.append((job.name, Orange.feature.Continuous(job.label)))
-                    self.analdata[job.name] = [job.result[node] for node in sorted(job.result.iterkeys())]
+                    self.analdata[job.name] = [job.result[node] for node in sorted(job.result.keys())]
 
                 elif job.type == GRAPHLEVEL:
                     self.analdata[job.name] = job.result
@@ -449,7 +449,7 @@ if __name__ == "__main__":
         #if signal == 'Items':
         #    ow.set_items(data)
 
-    import OWNxFile
+    from . import OWNxFile
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
     owFile.show()

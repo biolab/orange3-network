@@ -125,9 +125,9 @@ class OWNxFile(OWWidget):
 
     def activateLoadedSettings(self):
         # remove missing data set names
-        self.recentFiles = filter(os.path.exists, self.recentFiles)
-        self.recentDataFiles = filter(os.path.exists, self.recentDataFiles)
-        self.recentEdgesFiles = filter(os.path.exists, self.recentEdgesFiles)
+        self.recentFiles = list(filter(os.path.exists, self.recentFiles))
+        self.recentDataFiles = list(filter(os.path.exists, self.recentDataFiles))
+        self.recentEdgesFiles = list(filter(os.path.exists, self.recentEdgesFiles))
 
         self.recentFiles.append("(none)")
         self.recentDataFiles.append("(none)")
@@ -404,7 +404,7 @@ class OWNxFile(OWWidget):
             else:
                 startfile = self.recentFiles[0]
 
-        filename = unicode(QFileDialog.getOpenFileName(self, 'Open a Network File', startfile, "All network files (*.gpickle *.net *.gml)\nNetworkX graph as Python pickle (*.gpickle)\nPajek files (*.net)\nGML files (*.gml)\nAll files (*.*)"))
+        filename = str(QFileDialog.getOpenFileName(self, 'Open a Network File', startfile, "All network files (*.gpickle *.net *.gml)\nNetworkX graph as Python pickle (*.gpickle)\nPajek files (*.net)\nGML files (*.gml)\nAll files (*.*)"))
 
         if filename == "": return
         if filename in self.recentFiles: self.recentFiles.remove(filename)
@@ -429,7 +429,7 @@ class OWNxFile(OWWidget):
         else:
             startfile = self.recentDataFiles[0]
 
-        filename = unicode(QFileDialog.getOpenFileName(self, 'Open a Vertices Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
+        filename = str(QFileDialog.getOpenFileName(self, 'Open a Vertices Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
 
         if filename == "": return
         if filename in self.recentDataFiles: self.recentDataFiles.remove(filename)
@@ -454,7 +454,7 @@ class OWNxFile(OWWidget):
         else:
             startfile = self.recentEdgesFiles[0]
 
-        filename = unicode(QFileDialog.getOpenFileName(self, 'Open a Edges Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
+        filename = str(QFileDialog.getOpenFileName(self, 'Open a Edges Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
 
         if filename == "": return
         if filename in self.recentEdgesFiles: self.recentEdgesFiles.remove(filename)

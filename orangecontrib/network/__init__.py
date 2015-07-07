@@ -47,7 +47,7 @@ def networks():
 
 import networkx as nx
 
-from network import *
+from .network import *
 
-import community
-import snap
+from . import community
+from . import snap

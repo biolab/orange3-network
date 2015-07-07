@@ -122,7 +122,7 @@ class OWNxSNAP(OWWidget):
         except:
             percent = 100
             if numblocks != 0:
-                print str(percent)+'%'
+                print(str(percent)+'%')
 
     def select_network(self, selected_table):
         for table in self.tables:
@@ -139,7 +139,6 @@ class OWNxSNAP(OWWidget):
             if table is not selected_table:
                 table.clearSelection()
 
-
     def progress_callback(self, done, total):
         if done == total:
             self.progressBarFinished()
@@ -149,6 +148,7 @@ class OWNxSNAP(OWWidget):
             self.progressBarSet(int(done/total * 100))
         else:
             self.progressBarSet(int(done * 100 / self.last_total))
+
 
 if __name__ == "__main__":
     a=QApplication(sys.argv)

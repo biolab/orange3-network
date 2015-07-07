@@ -180,8 +180,8 @@ class NetworkCurve(orangeqt.NetworkCurve):
             d_mds = 1
             d_fr = 1
 
-        self.set_node_coordinates(dict( (key,(node.x() * d_mds / d_fr, node.y() * d_mds / d_fr)) \
-                                   for key, node in nodes.iteritems()))
+        self.set_node_coordinates(dict((key, (node.x() * d_mds / d_fr, node.y() * d_mds / d_fr)) \
+                                       for key, node in nodes.items()))
 
         p.update_graph_layout()
         qApp.processEvents()
@@ -194,7 +194,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
                     mds.points[u][0] = x
                     mds.points[u][1] = y
             else:
-                for i, u in enumerate(sorted(nodes.iterkeys())):
+                for i, u in enumerate(sorted(nodes.keys())):
                     mds.points[i][0] = nodes[u].x()
                     mds.points[i][1] = nodes[u].y()
         else:
@@ -272,7 +272,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
         qApp.processEvents()
 
         if opt_from_curr:
-            for i, u in enumerate(sorted(nodes.iterkeys())):
+            for i, u in enumerate(sorted(nodes.keys())):
                 mds.points[i][0] = nodes[u].x()
                 mds.points[i][1] = nodes[u].y()
         else:
@@ -384,18 +384,18 @@ class OWNxCanvas(OWPlot):
       self.drawPlotItems()
 
     def selected_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if vertex.is_selected()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if vertex.is_selected()]
         #return [p.index() for p in self.selected_points()]
 
     def not_selected_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if not vertex.is_selected()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if not vertex.is_selected()]
 
     def marked_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if vertex.is_marked()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if vertex.is_marked()]
         #return [p.index() for p in self.marked_points()]
 
     def not_marked_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if not vertex.is_marked()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if not vertex.is_marked()]
 
     def get_neighbors_upto(self, ndx, dist):
         newNeighbours = neighbours = set([ndx])
@@ -460,7 +460,7 @@ class OWNxCanvas(OWPlot):
 
                 i += 1
             metas = table.domain.getmetas()
-            for i, var in metas.iteritems():
+            for i, var in metas.items():
                 if var.name == attribute:
                     colorIndex = i
                     if var.varType == core.VarTypes.Discrete:
@@ -621,8 +621,8 @@ class OWNxCanvas(OWPlot):
 
         current_nodes = self.networkCurve.nodes()
 
-        center_x = numpy.average([node.x() for node in current_nodes.itervalues()]) if len(current_nodes) > 0 else 0
-        center_y = numpy.average([node.y() for node in current_nodes.itervalues()]) if len(current_nodes) > 0 else 0
+        center_x = numpy.average([node.x() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
+        center_y = numpy.average([node.y() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
 
         def closest_nodes_with_pos(nodes):
 
@@ -721,7 +721,7 @@ class OWNxCanvas(OWPlot):
                     self.edge_to_row[u] = u_dict
                     self.edge_to_row[v] = v_dict
                 else:
-                    print 'could not find edge', u, v
+                    print('could not find edge', u, v)
 
         #add edges
         if self.links is not None and len(self.links) > 0:

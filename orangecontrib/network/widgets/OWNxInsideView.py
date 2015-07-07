@@ -41,7 +41,7 @@ class NxInsideView(Orange.network.NxView):
 
         selected = self._nx_explorer.networkCanvas.selected_nodes()
         if selected is None or len(selected) <= 0:
-            self._center_node = graph.nodes_iter().next()
+            self._center_node = next(graph.nodes_iter())
         else:
             self._center_node = selected[0]
 
