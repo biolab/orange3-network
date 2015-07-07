@@ -15,7 +15,7 @@ import sys, os
 import numpydoc
 import imp
 
-#MOCK_MODULES = ['numpy', 'numpy.core', 'matplotlib', 'numpy.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'numpy.ma', 'linalg', 'numpy.linalg', 'scipy.linalg']
+#MOCK_MODULES = ['np', 'np.core', 'matplotlib', 'np.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'np.ma', 'linalg', 'np.linalg', 'scipy.linalg']
 #for mod_name in MOCK_MODULES:
 #    sys.modules[mod_name] = mock.Mock()
 

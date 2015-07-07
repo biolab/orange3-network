@@ -6,7 +6,7 @@
 <priority>6425</priority>
 """
 from PyQt4.QtCore import QMutex
-import numpy
+import numpy as np
 import networkx as nx
 
 import Orange
@@ -85,7 +85,7 @@ class OWNxAnalysis(OWWidget):
         self.methods = [
             ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
             ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
-            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: numpy.average(list(G.degree().values()))),
+            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.average(list(G.degree().values()))),
             ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
             ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
             ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),

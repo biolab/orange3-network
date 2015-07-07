@@ -8,7 +8,7 @@ SELECT_RECTANGLE = 2
 SELECT_POLYGON = 3
 MOVE_SELECTION = 100
 
-import numpy
+import numpy as np
 
 from plot.owplot import *
 from plot.owpoint import *
@@ -68,10 +68,10 @@ class NetworkCurve(orangeqt.NetworkCurve):
                     x_avg_mds = sum(x) / len(x)
                     y_avg_mds = sum(y) / len(y)
                     # compute rotation angle
-#                    c = [numpy.linalg.norm(numpy.cross(mds.points[u], \
+#                    c = [np.linalg.norm(np.cross(mds.points[u], \
 #                                [nodes[u].x(), nodes[u].y()])) for u in component]
 #
-#                    n = [numpy.vdot([nodes[u].x(), nodes[u].y()], \
+#                    n = [np.vdot([nodes[u].x(), nodes[u].y()], \
 #                                    [nodes[u].x(), nodes[u].y()]) for u in component]
 #                    phi[i] = sum(c) / sum(n)
 
@@ -94,9 +94,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
 
     #            if phi[i]:  # rotate vertices
     #                #print "rotate", i, phi[i]
-    #                r = numpy.array([[numpy.cos(phi[i]), -numpy.sin(phi[i])], [numpy.sin(phi[i]), numpy.cos(phi[i])]])  #rotation matrix
+    #                r = np.array([[np.cos(phi[i]), -np.sin(phi[i])], [np.sin(phi[i]), np.cos(phi[i])]])  #rotation matrix
     #                c = [x_avg_graph, y_avg_graph]  # center of mass in FR coordinate system
-    #                v = [numpy.dot(numpy.array([self.graph.coors[0][u], self.graph.coors[1][u]]) - c, r) + c for u in component]
+    #                v = [np.dot(np.array([self.graph.coors[0][u], self.graph.coors[1][u]]) - c, r) + c for u in component]
     #                self.graph.coors[0][component] = [u[0] for u in v]
     #                self.graph.coors[1][component] = [u[1] for u in v]
 
@@ -621,8 +621,8 @@ class OWNxCanvas(OWPlot):
 
         current_nodes = self.networkCurve.nodes()
 
-        center_x = numpy.average([node.x() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
-        center_y = numpy.average([node.y() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
+        center_x = np.average([node.x() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
+        center_y = np.average([node.y() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
 
         def closest_nodes_with_pos(nodes):
 
@@ -640,7 +640,7 @@ class OWNxCanvas(OWPlot):
             else:
                 return closest_nodes_with_pos(neighbors | nodes)
 
-        pos = dict((n, [numpy.average(c) for c in zip(*[(current_nodes[u].x(), current_nodes[u].y()) for u in closest_nodes_with_pos(set([n]))])]) for n in add_nodes)
+        pos = dict((n, [np.average(c) for c in zip(*[(current_nodes[u].x(), current_nodes[u].y()) for u in closest_nodes_with_pos(set([n]))])]) for n in add_nodes)
 
         self.networkCurve.remove_nodes(remove_nodes)
 

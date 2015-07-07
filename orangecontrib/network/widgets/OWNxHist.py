@@ -4,7 +4,7 @@
 # the base for network histograms
 
 import math
-import numpy
+import numpy as np
 
 import Orange
 import OWGUI

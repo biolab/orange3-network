@@ -55,7 +55,7 @@ MultiDiGraph
 import copy
 import math
 
-import numpy
+import numpy as np
 import networkx as nx
 
 import Orange
@@ -433,14 +433,14 @@ class GraphLayout(orangeom.GraphLayout):
             x = x - x_center
             y = y - y_center
 
-            r = numpy.sqrt(x ** 2 + y ** 2)
-            fi = numpy.arctan2(y, x)
+            r = np.sqrt(x ** 2 + y ** 2)
+            fi = np.arctan2(y, x)
 
             fi += phi[i]
-            #fi += factor * M[i] * numpy.pi / 180
+            #fi += factor * M[i] * np.pi / 180
 
-            x = r * numpy.cos(fi)
-            y = r * numpy.sin(fi)
+            x = r * np.cos(fi)
+            y = r * np.sin(fi)
 
             self.coors[0][component] = x + x_center
             self.coors[1][component] = y + y_center
@@ -498,10 +498,10 @@ class GraphLayout(orangeom.GraphLayout):
                         e = math.sqrt((v_x - x_center) ** 2 + \
                                       (v_y - y_center) ** 2)
 
-                        M[i] += (1 - d) / (e ** 2) * numpy.cross(R, L)
+                        M[i] += (1 - d) / (e ** 2) * np.cross(R, L)
 
-            tmpM = numpy.array(M)
-            #print numpy.min(tmpM), numpy.max(tmpM),numpy.average(tmpM),numpy.min(numpy.abs(tmpM))
+            tmpM = np.array(M)
+            #print np.min(tmpM), np.max(tmpM),np.average(tmpM),np.min(np.abs(tmpM))
 
             phi = [0] * len(components)
             #print "rotating", temperature, M
@@ -512,17 +512,17 @@ class GraphLayout(orangeom.GraphLayout):
                         temperature[i][1] = 1
                         dirChange[i] += 1
 
-                    phi[i] = temperature[i][0] * numpy.pi / 180
+                    phi[i] = temperature[i][0] * np.pi / 180
                 elif M[i] < 0:
                     if temperature[i][1] > 0:
                         temperature[i][0] = temperature[i][0] * 5 / 10
                         temperature[i][1] = -1
                         dirChange[i] += 1
 
-                    phi[i] = -temperature[i][0] * numpy.pi / 180
+                    phi[i] = -temperature[i][0] * np.pi / 180
 
             # stop rotating when phi is to small to notice the rotation
-            if max(phi) < numpy.pi / 1800:
+            if max(phi) < np.pi / 1800:
                 #print "breaking"
                 break
 
@@ -565,10 +565,10 @@ class GraphLayout(orangeom.GraphLayout):
                 x_avg_mds = sum(x) / len(x)
                 y_avg_mds = sum(y) / len(y)
                 # compute rotation angle
-                c = [numpy.linalg.norm(numpy.cross(mds.points[u], \
+                c = [np.linalg.norm(np.cross(mds.points[u], \
                             [self.coors[0][u], self.coors[1][u]])) \
                             for u in component]
-                n = [numpy.vdot([self.coors[0][u], \
+                n = [np.vdot([self.coors[0][u], \
                                  self.coors[1][u]], \
                                  [self.coors[0][u], \
                                   self.coors[1][u]]) for u in component]
@@ -730,9 +730,9 @@ class GraphLayout(orangeom.GraphLayout):
 
 #            if phi[i]:  # rotate vertices
 #                #print "rotate", i, phi[i]
-#                r = numpy.array([[numpy.cos(phi[i]), -numpy.sin(phi[i])], [numpy.sin(phi[i]), numpy.cos(phi[i])]])  #rotation matrix
+#                r = np.array([[np.cos(phi[i]), -np.sin(phi[i])], [np.sin(phi[i]), np.cos(phi[i])]])  #rotation matrix
 #                c = [x_avg_graph, y_avg_graph]  # center of mass in FR coordinate system
-#                v = [numpy.dot(numpy.array([self.coors[0][u], self.coors[1][u]]) - c, r) + c for u in component]
+#                v = [np.dot(np.array([self.coors[0][u], self.coors[1][u]]) - c, r) + c for u in component]
 #                self.coors[0][component] = [u[0] for u in v]
 #                self.coors[1][component] = [u[1] for u in v]
 
