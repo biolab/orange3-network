@@ -7,7 +7,7 @@ import math
 import numpy as np
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 from OWGraph import *
@@ -39,57 +39,57 @@ class OWNxHist():
         if parent is None:
             parent = self.controlArea
 
-        boxGeneral = OWGUI.widgetBox(parent, box="Edges")
-        ribg = OWGUI.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
+        boxGeneral = gui.widgetBox(parent, box="Edges")
+        ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
         ribg.layout().addWidget(QLabel("Distance threshold", self),
                                 4, Qt.AlignVCenter | Qt.AlignLeft)
-        OWGUI.doubleSpin(ribg, self, "spinLowerThreshold",
+        gui.doubleSpin(ribg, self, "spinLowerThreshold",
                          0.0, float("inf"), 0.0001, decimals=4,
                          callback=self.changeLowerSpin,
                          keyboardTracking=False)
         ribg.layout().addWidget(QLabel("to", self), 1, Qt.AlignCenter)
-        OWGUI.doubleSpin(ribg, self, "spinUpperThreshold",
+        gui.doubleSpin(ribg, self, "spinUpperThreshold",
                          0.0, float("inf"), 0.0001, decimals=4,
                          callback=self.changeUpperSpin,
                          keyboardTracking=False)
-#         OWGUI.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
-#         OWGUI.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
+#         gui.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
+#         gui.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
 #         ribg.layout().addStretch(1)
-        #ribg = OWGUI.radioButtonsInBox(boxGeneral, self, "andor", [], orientation='horizontal', callback = self.generateGraph)
-        #OWGUI.appendRadioButton(ribg, self, "andor", "OR", callback = self.generateGraph)
-        #b = OWGUI.appendRadioButton(ribg, self, "andor", "AND", callback = self.generateGraph)
+        #ribg = gui.radioButtonsInBox(boxGeneral, self, "andor", [], orientation='horizontal', callback = self.generateGraph)
+        #gui.appendRadioButton(ribg, self, "andor", "OR", callback = self.generateGraph)
+        #b = gui.appendRadioButton(ribg, self, "andor", "AND", callback = self.generateGraph)
         #b.setEnabled(False)
         #ribg.hide(False)
 
-        ribg = OWGUI.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
+        ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
 
-        OWGUI.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1, label="Percentile", orientation='horizontal', callback=self.setPercentil, callbackOnReturn=1, controlWidth=60)
-        OWGUI.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
+        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1, label="Percentile", orientation='horizontal', callback=self.setPercentil, callbackOnReturn=1, controlWidth=60)
+        gui.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
         ribg.layout().addStretch(1)
         # Options
         self.attrColor = ""
-        ribg = OWGUI.radioButtonsInBox(parent, self, "netOption", [], "Node selection", callback=self.generateGraph)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Keep all nodes", callback=self.generateGraph)
-        hb = OWGUI.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Components with at least nodes", insertInto=hb, callback=self.generateGraph)
-        OWGUI.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
-        OWGUI.appendRadioButton(ribg, self, "netOption", "Largest connected component", callback=self.generateGraph)
-        #OWGUI.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
+        ribg = gui.radioButtonsInBox(parent, self, "netOption", [], "Node selection", callback=self.generateGraph)
+        gui.appendRadioButton(ribg, self, "netOption", "Keep all nodes", callback=self.generateGraph)
+        hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
+        gui.appendRadioButton(ribg, self, "netOption", "Components with at least nodes", insertInto=hb, callback=self.generateGraph)
+        gui.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
+        gui.appendRadioButton(ribg, self, "netOption", "Largest connected component", callback=self.generateGraph)
+        #gui.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
         self.attribute = None
 
         ### FILTER NETWORK BY ATTRIBUTE IS OBSOLETE - USE SELECT DATA WIDGET ###
-        #self.attributeCombo = OWGUI.comboBox(parent, self, "attribute", box="Filter attribute", orientation='horizontal')#, callback=self.setVertexColor)
+        #self.attributeCombo = gui.comboBox(parent, self, "attribute", box="Filter attribute", orientation='horizontal')#, callback=self.setVertexColor)
         #self.label = ''
-        #self.searchString = OWGUI.lineEdit(self.attributeCombo.box, self, "label", callback=self.setSearchStringTimer, callbackOnType=True)
+        #self.searchString = gui.lineEdit(self.attributeCombo.box, self, "label", callback=self.setSearchStringTimer, callbackOnType=True)
         #self.searchStringTimer = QTimer(self)
         #self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.generateGraph)
         #if str(self.netOption) != '3':
         #    self.attributeCombo.box.setEnabled(False)
 
-        ribg = OWGUI.radioButtonsInBox(parent, self, "dstWeight", [], "Edge weights", callback=self.generateGraph)
-        hb = OWGUI.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
-        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Proportional to distance", insertInto=hb, callback=self.generateGraph)
-        OWGUI.appendRadioButton(ribg, self, "dstWeight", "Inverted distance", insertInto=hb, callback=self.generateGraph)
+        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", [], "Edge weights", callback=self.generateGraph)
+        hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
+        gui.appendRadioButton(ribg, self, "dstWeight", "Proportional to distance", insertInto=hb, callback=self.generateGraph)
+        gui.appendRadioButton(ribg, self, "dstWeight", "Inverted distance", insertInto=hb, callback=self.generateGraph)
 
 
 

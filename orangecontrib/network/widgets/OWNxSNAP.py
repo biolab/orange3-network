@@ -14,7 +14,7 @@ import PyQt4.QtNetwork
 
 import Orange.data
 import Orange.network
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -62,7 +62,7 @@ class OWNxSNAP(OWWidget):
         scrollArea = QScrollArea(self.mainArea)
         self.mainArea.layout().addWidget(scrollArea)
 
-        self.network_list = OWGUI.widgetBox(self.mainArea, addToLayout=False)
+        self.network_list = gui.widgetBox(self.mainArea, addToLayout=False)
         self.network_list.layout().setSizeConstraint(QLayout.SetFixedSize);
         scrollArea.setWidget(self.network_list);
 
@@ -84,7 +84,7 @@ class OWNxSNAP(OWWidget):
 
             if len(network_group) > 0:
                 self.network_list.layout().addWidget(QLabel("<h3>" + network_group[0].repository + "</h3>"))
-                table = OWGUI.table(self.network_list, rows=len(network_group), columns=5, selectionMode = -1, addToLayout = 1)
+                table = gui.table(self.network_list, rows=len(network_group), columns=5, selectionMode = -1, addToLayout = 1)
                 table.setHorizontalHeaderLabels(['Name', 'Type', 'Nodes', 'Edges', 'Description'])
                 f = table.font()
                 f.setPointSize(9)
@@ -98,10 +98,10 @@ class OWNxSNAP(OWWidget):
                     lbl = QLabel("<a href='"+ net.link +"'>" + net.name + "</a>")
                     lbl.setOpenExternalLinks(True)
                     table.setCellWidget(i, 0, lbl)
-                    OWGUI.tableItem(table, i, 1, net.type)
-                    OWGUI.tableItem(table, i, 2, net.nodes)
-                    OWGUI.tableItem(table, i, 3, net.edges)
-                    OWGUI.tableItem(table, i, 4, net.description)
+                    gui.tableItem(table, i, 1, net.type)
+                    gui.tableItem(table, i, 2, net.nodes)
+                    gui.tableItem(table, i, 3, net.edges)
+                    gui.tableItem(table, i, 4, net.description)
 
                 table.setFixedSize(712, 100)
                 table.setColumnWidth(0, 120)
@@ -113,7 +113,7 @@ class OWNxSNAP(OWWidget):
                 table.setFixedSize(712, sum(table.rowHeight(i) for i in range(len(networks))) + 27)
                 self.tables.append(table)
 
-                OWGUI.separator(self.network_list, 10, 10)
+                gui.separator(self.network_list, 10, 10)
 
     def download_progress(self, numblocks, blocksize, filesize):
         try:

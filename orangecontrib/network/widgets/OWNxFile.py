@@ -10,7 +10,7 @@ import os.path
 import user
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -50,37 +50,37 @@ class OWNxFile(OWWidget):
 
         #GUI
         self.controlArea.layout().setMargin(4)
-        self.box = OWGUI.widgetBox(self.controlArea, box="Graph File", orientation="vertical")
-        hb = OWGUI.widgetBox(self.box, orientation="horizontal")
-        self.filecombo = OWGUI.comboBox(hb, self, "filename")
+        self.box = gui.widgetBox(self.controlArea, box="Graph File", orientation="vertical")
+        hb = gui.widgetBox(self.box, orientation="horizontal")
+        self.filecombo = gui.comboBox(hb, self, "filename")
         self.filecombo.setMinimumWidth(250)
-        button = OWGUI.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
+        button = gui.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        OWGUI.checkBox(self.box, self, "auto_table", "Build graph data table automatically", callback=lambda: self.selectNetFile(self.filecombo.currentIndex()))
+        gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically", callback=lambda: self.selectNetFile(self.filecombo.currentIndex()))
 
-        self.databox = OWGUI.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
-        self.datacombo = OWGUI.comboBox(self.databox, self, "dataname")
+        self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
+        self.datacombo = gui.comboBox(self.databox, self, "dataname")
         self.datacombo.setMinimumWidth(250)
-        button = OWGUI.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
+        button = gui.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
 
-        self.edgesbox = OWGUI.widgetBox(self.controlArea, box="Edges Data File", orientation="horizontal")
-        self.edgescombo = OWGUI.comboBox(self.edgesbox, self, "edgesname")
+        self.edgesbox = gui.widgetBox(self.controlArea, box="Edges Data File", orientation="horizontal")
+        self.edgescombo = gui.comboBox(self.edgesbox, self, "edgesname")
         self.edgescombo.setMinimumWidth(250)
-        button = OWGUI.button(self.edgesbox, self, '...', callback=self.browseEdgesFile, disabled=0)
+        button = gui.button(self.edgesbox, self, '...', callback=self.browseEdgesFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
 
         # info
-        box = OWGUI.widgetBox(self.controlArea, "Info")
-        self.infoa = OWGUI.widgetLabel(box, 'No data loaded.')
-        self.infob = OWGUI.widgetLabel(box, ' ')
-        self.infoc = OWGUI.widgetLabel(box, ' ')
-        self.infod = OWGUI.widgetLabel(box, ' ')
+        box = gui.widgetBox(self.controlArea, "Info")
+        self.infoa = gui.widgetLabel(box, 'No data loaded.')
+        self.infob = gui.widgetLabel(box, ' ')
+        self.infoc = gui.widgetLabel(box, ' ')
+        self.infod = gui.widgetLabel(box, ' ')
 
-        OWGUI.rubber(self.controlArea)
+        gui.rubber(self.controlArea)
         self.resize(150, 100)
         self.activateLoadedSettings()
 
@@ -377,10 +377,10 @@ class OWNxFile(OWWidget):
 #                    startfile = ""
 #
 #            if not startfile or not os.path.exists(startfile):
-#                d = OWGUI.__file__
-#                if d[-8:] == "OWGUI.py":
+#                d = gui.__file__
+#                if d[-8:] == "gui.py":
 #                    startfile = d[:-22] + "doc/networks"
-#                elif d[-9:] == "OWGUI.pyc":
+#                elif d[-9:] == "gui.pyc":
 #                    startfile = d[:-23] + "doc/networks"
 #
 #            if not startfile or not os.path.exists(startfile):
@@ -470,7 +470,7 @@ class OWNxFile(OWWidget):
         self.reportSettings("Network file",
                             [("File name", self.filecombo.currentText()),
                              ("Vertices", self.graph.number_of_nodes()),
-                             hasattr(self.graph, "is_directed") and ("Directed", OWGUI.YesNo[self.graph.is_directed()])])
+                             hasattr(self.graph, "is_directed") and ("Directed", gui.YesNo[self.graph.is_directed()])])
         self.reportSettings("Vertices meta data", [("File name", self.datacombo.currentText())])
         self.reportData(self.graph.items(), None)
         self.reportSettings("Edges meta data", [("File name", self.edgescombo.currentText())])

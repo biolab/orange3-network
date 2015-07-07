@@ -10,7 +10,7 @@ import numpy as np
 import networkx as nx
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -169,37 +169,37 @@ class OWNxAnalysis(OWWidget):
 
         self.loadSettings()
 
-        self.tabs = OWGUI.tabWidget(self.controlArea)
+        self.tabs = gui.tabWidget(self.controlArea)
         self.tabs.setMinimumWidth(450)
-        self.graphIndices = OWGUI.createTabPage(self.tabs, "Graph-level indices")
-        self.nodeIndices = OWGUI.createTabPage(self.tabs, "Node-level indices")
+        self.graphIndices = gui.createTabPage(self.tabs, "Graph-level indices")
+        self.nodeIndices = gui.createTabPage(self.tabs, "Node-level indices")
         self.tabs.setCurrentIndex(self.tab_index)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tab_index', index))
 
         for name, default, label, type, algorithm in self.methods:
             if type == NODELEVEL:
-                box = OWGUI.widgetBox(self.nodeIndices, orientation="horizontal")
+                box = gui.widgetBox(self.nodeIndices, orientation="horizontal")
             elif type == GRAPHLEVEL:
-                box = OWGUI.widgetBox(self.graphIndices, orientation="horizontal")
+                box = gui.widgetBox(self.graphIndices, orientation="horizontal")
 
-            OWGUI.checkBox(box, self, name, label=label, callback=lambda n=name: self.method_clicked(n))
+            gui.checkBox(box, self, name, label=label, callback=lambda n=name: self.method_clicked(n))
             box.layout().addStretch(1)
-            lbl = OWGUI.label(box, self, "%(lbl_" + name + ")s")
+            lbl = gui.label(box, self, "%(lbl_" + name + ")s")
             setattr(self, "tool_" + name, lbl)
 
         self.graphIndices.layout().addStretch(1)
         self.nodeIndices.layout().addStretch(1)
 
-        OWGUI.checkBox(self.controlArea, self, "auto_commit", label="Commit automatically")
+        gui.checkBox(self.controlArea, self, "auto_commit", label="Commit automatically")
 
-        hb = OWGUI.widgetBox(self.controlArea, None, orientation='horizontal')
-        self.btnCommit = OWGUI.button(hb, self, "Commit", callback=self.analyze, toggleButton=1)
-        self.btnStopC = OWGUI.button(hb, self, "Stop current", callback=lambda current=True: self.stop_job(current))
-        self.btnStopA = OWGUI.button(hb, self, "Stop all", callback=lambda current=False: self.stop_job(current))
+        hb = gui.widgetBox(self.controlArea, None, orientation='horizontal')
+        self.btnCommit = gui.button(hb, self, "Commit", callback=self.analyze, toggleButton=1)
+        self.btnStopC = gui.button(hb, self, "Stop current", callback=lambda current=True: self.stop_job(current))
+        self.btnStopA = gui.button(hb, self, "Stop all", callback=lambda current=False: self.stop_job(current))
         self.btnStopC.setEnabled(False)
         self.btnStopA.setEnabled(False)
 
-        self.reportButton = OWGUI.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
+        self.reportButton = gui.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
         self.reportButton.setAutoDefault(0)
 
     def set_graph(self, graph):

@@ -14,7 +14,7 @@ import copy
 import random
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from .OWNxHist import *
 from OWWidget import *
@@ -58,7 +58,7 @@ class OWNxFromDistances(OWWidget, OWNxHist):
 
         # GUI
         # general settings
-        boxHistogram = OWGUI.widgetBox(self.mainArea, box = "Distance histogram")
+        boxHistogram = gui.widgetBox(self.mainArea, box = "Distance histogram")
         self.histogram = OWHist(self, boxHistogram)
         boxHistogram.layout().addWidget(self.histogram)
 
@@ -66,12 +66,12 @@ class OWNxFromDistances(OWWidget, OWNxHist):
         boxHistogram.setMinimumHeight(300)
 
         # info
-        boxInfo = OWGUI.widgetBox(self.controlArea, box = "Info")
-        self.infoa = OWGUI.widgetLabel(boxInfo, "No data loaded.")
-        self.infob = OWGUI.widgetLabel(boxInfo, '')
-        self.infoc = OWGUI.widgetLabel(boxInfo, '')
+        boxInfo = gui.widgetBox(self.controlArea, box = "Info")
+        self.infoa = gui.widgetLabel(boxInfo, "No data loaded.")
+        self.infob = gui.widgetLabel(boxInfo, '')
+        self.infoc = gui.widgetLabel(boxInfo, '')
 
-        OWGUI.rubber(self.controlArea)
+        gui.rubber(self.controlArea)
 
         self.resize(700, 100)
 

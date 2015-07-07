@@ -7,7 +7,7 @@
 """
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -87,8 +87,8 @@ class OWNxInsideView(OWWidget):
 
         self.loadSettings()
 
-        ib = OWGUI.widgetBox(self.controlArea, "Preferences", orientation="vertical")
-        OWGUI.spin(ib, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
+        ib = gui.widgetBox(self.controlArea, "Preferences", orientation="vertical")
+        gui.spin(ib, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
 
         self.inside_view = NxInsideView(self._nhops)
         self.send("Nx View", self.inside_view)

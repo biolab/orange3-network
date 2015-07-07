@@ -8,7 +8,7 @@
 raise Exception("This widget is a Prototype.")
 
 import Orange
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -194,20 +194,20 @@ class OWPubmedView(OWWidget):
 
         self.loadSettings()
 
-        box = OWGUI.widgetBox(self.controlArea, "Paper Selection", orientation="vertical")
-        OWGUI.lineEdit(box, self, "filter", callback=self.filter_list, callbackOnType=True)
-        self.list_titles = OWGUI.listBox(box, self, "selected_titles", "titles", selectionMode=QListWidget.MultiSelection, callback=self.update_view)
-        OWGUI.separator(self.controlArea)
-        box_pref = OWGUI.widgetBox(self.controlArea, "Preferences", orientation="vertical")
-        OWGUI.spin(box_pref, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
-        OWGUI.spin(box_pref, self, "_n_max_neighbors", 1, 100, 1, label="Max number of neighbors: ", callback=self.update_view)
-        OWGUI.doubleSpin(box_pref, self, "_edge_threshold", 0, 1, step=0.01, label="Edge threshold: ", callback=self.update_view)
-        OWGUI.separator(self.controlArea)
-        box_alg = OWGUI.widgetBox(self.controlArea, "Interest Propagation Algorithm", orientation="vertical")
-        radio_box = OWGUI.radioButtonsInBox(box_alg, self, "_algorithm", [], callback=self.update_view)
-        OWGUI.appendRadioButton(radio_box, self, "_algorithm", "Without Clustering", callback=self.update_view)
-        OWGUI.doubleSpin(OWGUI.indentedBox(radio_box), self, "_k_algorithm", 0, 1, step=0.01, label="Parameter k: ", callback=self.update_view)
-        OWGUI.appendRadioButton(radio_box, self, "_algorithm", "With Clustering", callback=self.update_view)
+        box = gui.widgetBox(self.controlArea, "Paper Selection", orientation="vertical")
+        gui.lineEdit(box, self, "filter", callback=self.filter_list, callbackOnType=True)
+        self.list_titles = gui.listBox(box, self, "selected_titles", "titles", selectionMode=QListWidget.MultiSelection, callback=self.update_view)
+        gui.separator(self.controlArea)
+        box_pref = gui.widgetBox(self.controlArea, "Preferences", orientation="vertical")
+        gui.spin(box_pref, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
+        gui.spin(box_pref, self, "_n_max_neighbors", 1, 100, 1, label="Max number of neighbors: ", callback=self.update_view)
+        gui.doubleSpin(box_pref, self, "_edge_threshold", 0, 1, step=0.01, label="Edge threshold: ", callback=self.update_view)
+        gui.separator(self.controlArea)
+        box_alg = gui.widgetBox(self.controlArea, "Interest Propagation Algorithm", orientation="vertical")
+        radio_box = gui.radioButtonsInBox(box_alg, self, "_algorithm", [], callback=self.update_view)
+        gui.appendRadioButton(radio_box, self, "_algorithm", "Without Clustering", callback=self.update_view)
+        gui.doubleSpin(gui.indentedBox(radio_box), self, "_k_algorithm", 0, 1, step=0.01, label="Parameter k: ", callback=self.update_view)
+        gui.appendRadioButton(radio_box, self, "_algorithm", "With Clustering", callback=self.update_view)
 
         self.inside_view = PubmedNetworkView(self)
         self.send("Nx View", self.inside_view)

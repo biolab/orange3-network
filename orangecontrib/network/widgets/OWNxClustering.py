@@ -8,7 +8,7 @@
 
 import Orange.network
 import Orange.network.community as cd
-import OWGUI
+from Orange.widgets import gui
 
 from OWWidget import *
 
@@ -45,27 +45,27 @@ class OWNxClustering(OWWidget):
         self.hop_attenuation = 0.1
         self.loadSettings()
 
-        OWGUI.spin(self.controlArea, self, "iterations", 1,
+        gui.spin(self.controlArea, self, "iterations", 1,
                    100000, 1, label="Iterations: ")
-        ribg = OWGUI.radioButtonsInBox(self.controlArea, self, "method",
+        ribg = gui.radioButtonsInBox(self.controlArea, self, "method",
                                        [], "Method", callback=self.cluster)
-        OWGUI.appendRadioButton(ribg, self, "method",
+        gui.appendRadioButton(ribg, self, "method",
                         "Label propagation clustering (Raghavan et al., 2007)",
                         callback=self.cluster)
 
-        OWGUI.appendRadioButton(ribg, self, "method",
+        gui.appendRadioButton(ribg, self, "method",
                         "Label propagation clustering (Leung et al., 2009)",
                         callback=self.cluster)
-        OWGUI.doubleSpin(OWGUI.indentedBox(ribg), self, "hop_attenuation",
+        gui.doubleSpin(gui.indentedBox(ribg), self, "hop_attenuation",
                          0, 1, 0.01, label="Hop attenuation (delta): ")
 
-        self.info = OWGUI.widgetLabel(self.controlArea, ' ')
-        OWGUI.checkBox(self.controlArea, self, "iterationHistory",
+        self.info = gui.widgetLabel(self.controlArea, ' ')
+        gui.checkBox(self.controlArea, self, "iterationHistory",
                        "Append clustering data on each iteration",
                        callback=self.cluster)
-        OWGUI.checkBox(self.controlArea, self, "autoApply",
+        gui.checkBox(self.controlArea, self, "autoApply",
                        "Commit automatically")
-        OWGUI.button(self.controlArea, self, "Commit",
+        gui.button(self.controlArea, self, "Commit",
                      callback=lambda b=True: self.cluster(b))
 
         self.cluster()

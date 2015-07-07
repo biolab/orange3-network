@@ -11,7 +11,7 @@ from operator import itemgetter
 from functools import reduce
 from itertools import chain
 
-import OWGUI
+from Orange.widgets import gui
 import OWColorPalette
 import orngMDS
 
@@ -170,20 +170,20 @@ class OWNxExplorer(OWWidget):
 
         self.networkCanvas.maxLinkSize = self.maxLinkSize
 
-        self.tabs = OWGUI.tabWidget(self.controlArea)
+        self.tabs = gui.tabWidget(self.controlArea)
 
-        self.verticesTab = OWGUI.createTabPage(self.tabs, "Nodes")
-        self.edgesTab = OWGUI.createTabPage(self.tabs, "Edges")
-        self.markTab = OWGUI.createTabPage(self.tabs, "Mark")
-        self.infoTab = OWGUI.createTabPage(self.tabs, "Info")
-        self.performanceTab = OWGUI.createTabPage(self.tabs, "Performance")
+        self.verticesTab = gui.createTabPage(self.tabs, "Nodes")
+        self.edgesTab = gui.createTabPage(self.tabs, "Edges")
+        self.markTab = gui.createTabPage(self.tabs, "Mark")
+        self.infoTab = gui.createTabPage(self.tabs, "Info")
+        self.performanceTab = gui.createTabPage(self.tabs, "Performance")
 
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
 
-        self.optimizeBox = OWGUI.radioButtonsInBox(self.verticesTab, self, "optimizeWhat", [], "Optimize", addSpace=False)
+        self.optimizeBox = gui.radioButtonsInBox(self.verticesTab, self, "optimizeWhat", [], "Optimize", addSpace=False)
 
-        self.optCombo = OWGUI.comboBox(self.optimizeBox, self, "optMethod", label='Method:     ', orientation='horizontal', callback=self.graph_layout_method)
+        self.optCombo = gui.comboBox(self.optimizeBox, self, "optMethod", label='Method:     ', orientation='horizontal', callback=self.graph_layout_method)
         self.optCombo.addItem("No optimization")
         self.optCombo.addItem("Random")
         self.optCombo.addItem("Fruchterman Reingold")
@@ -196,96 +196,96 @@ class OWNxExplorer(OWWidget):
         self.optCombo.addItem("MDS")
         self.optCombo.addItem("Pivot MDS")
         self.optCombo.setCurrentIndex(self.optMethod)
-        self.stepsSpin = OWGUI.spin(self.optimizeBox, self, "frSteps", 1, 100000, 1, label="Iterations: ")
-        self.cb_opt_from_curr = OWGUI.checkBox(self.optimizeBox, self, "opt_from_curr", label="Optimize from current positions")
+        self.stepsSpin = gui.spin(self.optimizeBox, self, "frSteps", 1, 100000, 1, label="Iterations: ")
+        self.cb_opt_from_curr = gui.checkBox(self.optimizeBox, self, "opt_from_curr", label="Optimize from current positions")
         self.cb_opt_from_curr.setEnabled(False)
         self.stepsSpin.setEnabled(False)
 
-        self.optButton = OWGUI.button(self.optimizeBox, self, "Optimize layout", callback=self.graph_layout, toggleButton=1)
+        self.optButton = gui.button(self.optimizeBox, self, "Optimize layout", callback=self.graph_layout, toggleButton=1)
 
-        colorBox = OWGUI.widgetBox(self.verticesTab, "Node color attribute", orientation="horizontal", addSpace=False)
-        self.colorCombo = OWGUI.comboBox(colorBox, self, "color", callback=self.set_node_colors)
+        colorBox = gui.widgetBox(self.verticesTab, "Node color attribute", orientation="horizontal", addSpace=False)
+        self.colorCombo = gui.comboBox(colorBox, self, "color", callback=self.set_node_colors)
         self.colorCombo.addItem("(same color)")
-        OWGUI.button(colorBox, self, "palette", self._set_colors, tooltip="Set node color palette", width=60, debuggingEnabled=0)
+        gui.button(colorBox, self, "palette", self._set_colors, tooltip="Set node color palette", width=60, debuggingEnabled=0)
 
-        ib = OWGUI.widgetBox(self.verticesTab, "Node size attribute", orientation="vertical", addSpace=False)
-        hb = OWGUI.widgetBox(ib, orientation="horizontal", addSpace=False)
-        OWGUI.checkBox(hb, self, "invertSize", "Invert size", callback=self.set_node_sizes)
-        OWGUI.spin(hb, self, "minVertexSize", 5, 200, 1, label="Min:", callback=self.set_node_sizes)
-        OWGUI.spin(hb, self, "maxVertexSize", 5, 200, 1, label="Max:", callback=self.set_node_sizes)
-        self.vertexSizeCombo = OWGUI.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
+        ib = gui.widgetBox(self.verticesTab, "Node size attribute", orientation="vertical", addSpace=False)
+        hb = gui.widgetBox(ib, orientation="horizontal", addSpace=False)
+        gui.checkBox(hb, self, "invertSize", "Invert size", callback=self.set_node_sizes)
+        gui.spin(hb, self, "minVertexSize", 5, 200, 1, label="Min:", callback=self.set_node_sizes)
+        gui.spin(hb, self, "maxVertexSize", 5, 200, 1, label="Max:", callback=self.set_node_sizes)
+        self.vertexSizeCombo = gui.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
         self.vertexSizeCombo.addItem("(none)")
 
-        self.attBox = OWGUI.widgetBox(self.verticesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
-        hb = OWGUI.widgetBox(self.attBox, orientation="horizontal", addSpace=False)
-        self.attListBox = OWGUI.listBox(hb, self, "markerAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_att_lstbox)
-        self.tooltipListBox = OWGUI.listBox(hb, self, "tooltipAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
-        OWGUI.spin(self.attBox, self, "networkCanvas.trim_label_words", 0, 5, 1, label='Trim label words to', callback=self._clicked_att_lstbox)
+        self.attBox = gui.widgetBox(self.verticesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
+        hb = gui.widgetBox(self.attBox, orientation="horizontal", addSpace=False)
+        self.attListBox = gui.listBox(hb, self, "markerAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_att_lstbox)
+        self.tooltipListBox = gui.listBox(hb, self, "tooltipAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
+        gui.spin(self.attBox, self, "networkCanvas.trim_label_words", 0, 5, 1, label='Trim label words to', callback=self._clicked_att_lstbox)
 
-        ib = OWGUI.widgetBox(self.edgesTab, "General", orientation="vertical")
-        OWGUI.checkBox(ib, self, 'networkCanvas.show_weights', 'Show weights', callback=self.networkCanvas.set_edge_labels)
-        #OWGUI.checkBox(ib, self, 'showEdgeLabels', 'Show labels on edges', callback=(lambda: self._set_canvas_attr('showEdgeLabels', self.showEdgeLabels)))
-        OWGUI.spin(ib, self, "maxLinkSize", 1, 50, 1, label="Max edge width:", callback=self.set_edge_sizes)
-        self.cb_show_distances = OWGUI.checkBox(ib, self, 'explore_distances', 'Explore node distances', callback=self.set_explore_distances, disabled=1)
-        self.cb_show_component_distances = OWGUI.checkBox(ib, self, 'networkCanvas.show_component_distances', 'Show component distances', callback=self.networkCanvas.set_show_component_distances, disabled=1)
+        ib = gui.widgetBox(self.edgesTab, "General", orientation="vertical")
+        gui.checkBox(ib, self, 'networkCanvas.show_weights', 'Show weights', callback=self.networkCanvas.set_edge_labels)
+        #gui.checkBox(ib, self, 'showEdgeLabels', 'Show labels on edges', callback=(lambda: self._set_canvas_attr('showEdgeLabels', self.showEdgeLabels)))
+        gui.spin(ib, self, "maxLinkSize", 1, 50, 1, label="Max edge width:", callback=self.set_edge_sizes)
+        self.cb_show_distances = gui.checkBox(ib, self, 'explore_distances', 'Explore node distances', callback=self.set_explore_distances, disabled=1)
+        self.cb_show_component_distances = gui.checkBox(ib, self, 'networkCanvas.show_component_distances', 'Show component distances', callback=self.networkCanvas.set_show_component_distances, disabled=1)
 
-        colorBox = OWGUI.widgetBox(self.edgesTab, "Edge color attribute", orientation="horizontal", addSpace=False)
-        self.edgeColorCombo = OWGUI.comboBox(colorBox, self, "edgeColor", callback=self.set_edge_colors)
+        colorBox = gui.widgetBox(self.edgesTab, "Edge color attribute", orientation="horizontal", addSpace=False)
+        self.edgeColorCombo = gui.comboBox(colorBox, self, "edgeColor", callback=self.set_edge_colors)
         self.edgeColorCombo.addItem("(same color)")
-        OWGUI.button(colorBox, self, "palette", self._set_edge_color_palette, tooltip="Set edge color palette", width=60, debuggingEnabled=0)
+        gui.button(colorBox, self, "palette", self._set_edge_color_palette, tooltip="Set edge color palette", width=60, debuggingEnabled=0)
 
-        self.edgeLabelBox = OWGUI.widgetBox(self.edgesTab, "Edge labels", addSpace=False)
-        self.edgeLabelListBox = OWGUI.listBox(self.edgeLabelBox, self, "edgeLabelAttributes", "edgeAttributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_edge_label_listbox)
+        self.edgeLabelBox = gui.widgetBox(self.edgesTab, "Edge labels", addSpace=False)
+        self.edgeLabelListBox = gui.listBox(self.edgeLabelBox, self, "edgeLabelAttributes", "edgeAttributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_edge_label_listbox)
         #self.edgeLabelBox.setEnabled(False)
 
-        ib = OWGUI.widgetBox(self.verticesTab, "General", orientation="vertical")
-        OWGUI.checkBox(ib, self, 'networkCanvas.show_indices', 'Show indices', callback=self.networkCanvas.set_node_labels)
-        OWGUI.checkBox(ib, self, 'labelsOnMarkedOnly', 'Show labels on marked nodes only', callback=(lambda: self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)))
-        OWGUI.spin(ib, self, "fontSize", 4, 30, 1, label="Font size:", callback=self.set_font)
-        self.comboFontWeight = OWGUI.comboBox(ib, self, "fontWeight", label='Font weight:', orientation='horizontal', callback=self.set_font)
+        ib = gui.widgetBox(self.verticesTab, "General", orientation="vertical")
+        gui.checkBox(ib, self, 'networkCanvas.show_indices', 'Show indices', callback=self.networkCanvas.set_node_labels)
+        gui.checkBox(ib, self, 'labelsOnMarkedOnly', 'Show labels on marked nodes only', callback=(lambda: self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)))
+        gui.spin(ib, self, "fontSize", 4, 30, 1, label="Font size:", callback=self.set_font)
+        self.comboFontWeight = gui.comboBox(ib, self, "fontWeight", label='Font weight:', orientation='horizontal', callback=self.set_font)
         self.comboFontWeight.addItem("Normal")
         self.comboFontWeight.addItem("Bold")
         self.comboFontWeight.setCurrentIndex(self.fontWeight)
 
-        ib = OWGUI.widgetBox(self.markTab, "Info", orientation="vertical")
-        OWGUI.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
-        OWGUI.label(ib, self, "Selected: %(nSelected)i, marked: %(nMarked)i")
+        ib = gui.widgetBox(self.markTab, "Info", orientation="vertical")
+        gui.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
+        gui.label(ib, self, "Selected: %(nSelected)i, marked: %(nMarked)i")
 
-        ribg = OWGUI.radioButtonsInBox(self.markTab, self, "hubs", [], "Mark", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "None", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Search", callback=self.set_mark_mode)
-        self.ctrlMarkSearchString = OWGUI.lineEdit(OWGUI.indentedBox(ribg), self, "markSearchString", callback=self._set_search_string_timer, callbackOnType=True)
+        ribg = gui.radioButtonsInBox(self.markTab, self, "hubs", [], "Mark", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "None", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "Search", callback=self.set_mark_mode)
+        self.ctrlMarkSearchString = gui.lineEdit(gui.indentedBox(ribg), self, "markSearchString", callback=self._set_search_string_timer, callbackOnType=True)
         self.searchStringTimer = QTimer(self)
         self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.set_mark_mode)
 
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Neighbors of focused", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Neighbours of selected", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg, orientation=0)
-        self.ctrlMarkDistance = OWGUI.spin(ib, self, "markDistance", 0, 100, 1, label="Distance ",
+        gui.appendRadioButton(ribg, self, "hubs", "Neighbors of focused", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "Neighbours of selected", callback=self.set_mark_mode)
+        ib = gui.indentedBox(ribg, orientation=0)
+        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance ",
             callback=(lambda: self.set_mark_mode(2 if not self.hubs == 3 else 3)))
-        #self.ctrlMarkFreeze = OWGUI.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
-        OWGUI.widgetLabel(ribg, "Mark nodes with ...")
-        OWGUI.appendRadioButton(ribg, self, "hubs", "at least N connections", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "at most N connections", callback=self.set_mark_mode)
-        self.ctrlMarkNConnections = OWGUI.spin(OWGUI.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N ",
+        #self.ctrlMarkFreeze = gui.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
+        gui.widgetLabel(ribg, "Mark nodes with ...")
+        gui.appendRadioButton(ribg, self, "hubs", "at least N connections", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "at most N connections", callback=self.set_mark_mode)
+        self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N ",
             callback=(lambda: self.set_mark_mode(4 if not self.hubs == 5 else 5)))
-        OWGUI.appendRadioButton(ribg, self, "hubs", "more connections than any neighbour", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "more connections than avg neighbour", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "most connections", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg)
-        self.ctrlMarkNumber = OWGUI.spin(ib, self, "markNumber", 0, 1000000, 1, label="Number of nodes:", callback=(lambda h=8: self.set_mark_mode(h)))
-        OWGUI.widgetLabel(ib, "(More nodes are marked in case of ties)")
-        self.markInputRadioButton = OWGUI.appendRadioButton(ribg, self, "hubs", "Mark nodes given in the input signal", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg)
+        gui.appendRadioButton(ribg, self, "hubs", "more connections than any neighbour", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "more connections than avg neighbour", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, self, "hubs", "most connections", callback=self.set_mark_mode)
+        ib = gui.indentedBox(ribg)
+        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 0, 1000000, 1, label="Number of nodes:", callback=(lambda h=8: self.set_mark_mode(h)))
+        gui.widgetLabel(ib, "(More nodes are marked in case of ties)")
+        self.markInputRadioButton = gui.appendRadioButton(ribg, self, "hubs", "Mark nodes given in the input signal", callback=self.set_mark_mode)
+        ib = gui.indentedBox(ribg)
         self.markInput = 0
-        self.markInputCombo = OWGUI.comboBox(ib, self, "markInput", callback=(lambda h=9: self.set_mark_mode(h)))
+        self.markInputCombo = gui.comboBox(ib, self, "markInput", callback=(lambda h=9: self.set_mark_mode(h)))
         self.markInputRadioButton.setEnabled(False)
 
-        #ib = OWGUI.widgetBox(self.markTab, "General", orientation="vertical")
+        #ib = gui.widgetBox(self.markTab, "General", orientation="vertical")
         #self.checkSendMarkedNodes = True
-        #OWGUI.checkBox(ib, self, 'checkSendMarkedNodes', 'Send marked nodes', callback = self.send_marked_nodes, disabled=0)
+        #gui.checkBox(ib, self, 'checkSendMarkedNodes', 'Send marked nodes', callback = self.send_marked_nodes, disabled=0)
 
-        self.toolbar = OWGUI.widgetBox(self.controlArea, orientation='horizontal')
+        self.toolbar = gui.widgetBox(self.controlArea, orientation='horizontal')
         prevstate = self.networkCanvas.state
         prevselbeh = self.networkCanvas.selection_behavior
         G = self.networkCanvas.gui
@@ -308,52 +308,52 @@ class OWNxExplorer(OWWidget):
         self.zoomSelectToolbar.select_selection_behaviour(prevselbeh)
         self.zoomSelectToolbar.select_state(prevstate)
 
-        ib = OWGUI.widgetBox(self.infoTab, "General")
-        OWGUI.label(ib, self, "Number of nodes: %(number_of_nodes_label)i")
-        OWGUI.label(ib, self, "Number of edges: %(number_of_edges_label)i")
-        OWGUI.label(ib, self, "Nodes per edge: %(verticesPerEdge).2f")
-        OWGUI.label(ib, self, "Edges per node: %(edgesPerVertex).2f")
+        ib = gui.widgetBox(self.infoTab, "General")
+        gui.label(ib, self, "Number of nodes: %(number_of_nodes_label)i")
+        gui.label(ib, self, "Number of edges: %(number_of_edges_label)i")
+        gui.label(ib, self, "Nodes per edge: %(verticesPerEdge).2f")
+        gui.label(ib, self, "Edges per node: %(edgesPerVertex).2f")
 
-        ib = OWGUI.widgetBox(self.infoTab, orientation="horizontal")
+        ib = gui.widgetBox(self.infoTab, orientation="horizontal")
 
-        OWGUI.button(ib, self, "Save net", callback=self.save_network, debuggingEnabled=False)
-        OWGUI.button(ib, self, "Save img", callback=self.networkCanvas.saveToFile, debuggingEnabled=False)
-        self.reportButton = OWGUI.button(ib, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
+        gui.button(ib, self, "Save net", callback=self.save_network, debuggingEnabled=False)
+        gui.button(ib, self, "Save img", callback=self.networkCanvas.saveToFile, debuggingEnabled=False)
+        self.reportButton = gui.button(ib, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
         self.reportButton.setAutoDefault(0)
 
-        #OWGUI.button(self.edgesTab, self, "Clustering", callback=self.clustering)
-        ib = OWGUI.widgetBox(self.infoTab, "Edit")
+        #gui.button(self.edgesTab, self, "Clustering", callback=self.clustering)
+        ib = gui.widgetBox(self.infoTab, "Edit")
         self.editAttribute = 0
-        self.editCombo = OWGUI.comboBox(ib, self, "editAttribute", label="Edit attribute:", orientation="horizontal")
+        self.editCombo = gui.comboBox(ib, self, "editAttribute", label="Edit attribute:", orientation="horizontal")
         self.editCombo.addItem("Select attribute")
         self.editValue = ''
-        hb = OWGUI.widgetBox(ib, orientation="horizontal")
-        OWGUI.lineEdit(hb, self, "editValue", "Value:", orientation='horizontal')
-        OWGUI.button(hb, self, "Set", callback=self.edit)
+        hb = gui.widgetBox(ib, orientation="horizontal")
+        gui.lineEdit(hb, self, "editValue", "Value:", orientation='horizontal')
+        gui.button(hb, self, "Set", callback=self.edit)
 
-        ib = OWGUI.widgetBox(self.infoTab, "Prototype")
+        ib = gui.widgetBox(self.infoTab, "Prototype")
         ib.setVisible(True)
 
-        OWGUI.lineEdit(ib, self, "organism", "Organism:", orientation='horizontal')
+        gui.lineEdit(ib, self, "organism", "Organism:", orientation='horizontal')
 
         self.nameComponentAttribute = 0
-        self.nameComponentCombo = OWGUI.comboBox(ib, self, "nameComponentAttribute", callback=self.nameComponents, label="Name components:", orientation="horizontal")
+        self.nameComponentCombo = gui.comboBox(ib, self, "nameComponentAttribute", callback=self.nameComponents, label="Name components:", orientation="horizontal")
         self.nameComponentCombo.addItem("Select attribute")
 
         self.showComponentAttribute = 0
-        self.showComponentCombo = OWGUI.comboBox(ib, self, "showComponentAttribute", callback=self.showComponents, label="Labels on components:", orientation="horizontal")
+        self.showComponentCombo = gui.comboBox(ib, self, "showComponentAttribute", callback=self.showComponents, label="Labels on components:", orientation="horizontal")
         self.showComponentCombo.addItem("Select attribute")
-        OWGUI.checkBox(ib, self, 'showTextMiningInfo', "Show text mining info")
+        gui.checkBox(ib, self, 'showTextMiningInfo', "Show text mining info")
 
-        #OWGUI.spin(ib, self, "rotateSteps", 1, 10000, 1, label="Rotate max steps: ")
-        OWGUI.spin(ib, self, "minComponentEdgeWidth", 0, 100, 1, label="Min component edge width: ", callback=(lambda changedMin=1: self.set_component_edge_width(changedMin)))
-        OWGUI.spin(ib, self, "maxComponentEdgeWidth", 0, 200, 1, label="Max component edge width: ", callback=(lambda changedMin=0: self.set_component_edge_width(changedMin)))
+        #gui.spin(ib, self, "rotateSteps", 1, 10000, 1, label="Rotate max steps: ")
+        gui.spin(ib, self, "minComponentEdgeWidth", 0, 100, 1, label="Min component edge width: ", callback=(lambda changedMin=1: self.set_component_edge_width(changedMin)))
+        gui.spin(ib, self, "maxComponentEdgeWidth", 0, 200, 1, label="Max component edge width: ", callback=(lambda changedMin=0: self.set_component_edge_width(changedMin)))
 
         self.attSelectionAttribute = 0
-        self.comboAttSelection = OWGUI.comboBox(ib, self, "attSelectionAttribute", label='Send attribute selection list:', orientation='horizontal', callback=self.sendAttSelectionList)
+        self.comboAttSelection = gui.comboBox(ib, self, "attSelectionAttribute", label='Send attribute selection list:', orientation='horizontal', callback=self.sendAttSelectionList)
         self.comboAttSelection.addItem("Select attribute")
         self.autoSendAttributes = 0
-        OWGUI.checkBox(ib, self, 'autoSendAttributes', "auto send attributes", callback=self.setAutoSendAttributes)
+        gui.checkBox(ib, self, 'autoSendAttributes', "auto send attributes", callback=self.setAutoSendAttributes)
 
         self.icons = self.createAttributeIconDict()
         self.set_mark_mode()
