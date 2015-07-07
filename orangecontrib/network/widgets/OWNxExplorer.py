@@ -1,49 +1,35 @@
-"""
-<name>Net Explorer</name>
-<description>Orange widget for network exploration.</description>
-<icon>icons/NetworkExplorer.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6420</priority>
-"""
 import operator
 import statc
 from operator import itemgetter
 from functools import reduce
 from itertools import chain
 
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 import OWColorPalette
 import orngMDS
 
 from Orange import core, data, feature, network
-from OWWidget import *
 
 from .OWNxCanvasQt import *
 
 
-NAME = "Net Explorer"
-DESCRIPTIPN = "Orange widget for network exploration."
-ICON = "icons/NetworkExplorer.svg"
-PRIORITY = 6420
+class OWNxExplorer(widget.OWWidget):
+    name = "Network Explorer"
+    descriptipn = "Orange widget for network exploration."
+    icon = "icons/NetworkExplorer.svg"
+    priority = 6420
 
-INPUTS = [("Network", network.Graph, "set_graph", Default),
-          ("Items", data.Table, "set_items"),
-          ("Item Subset", data.Table, "mark_items"),
-          ("Distances", core.SymMatrix, "set_items_distance_matrix"),
-          ("Net View", network.NxView, "set_network_view")]
+    inputs = [("Network", network.Graph, "set_graph", widget.Default),
+              ("Items", data.Table, "set_items"),
+              ("Item Subset", data.Table, "mark_items"),
+              ("Distances", core.SymMatrix, "set_items_distance_matrix"),
+              ("Net View", network.NxView, "set_network_view")]
 
-OUTPUTS = [("Selected Network", network.Graph),
-           ("Distance Matrix", core.SymMatrix),
-           ("Marked Items", data.Table),
-           ("Selected Items", data.Table),
-           ("Other Items", data.Table)]
-
-WIDGET_CLASS = "OWNxExplorer"
-
-REPLACES = ["_network.widgets.OWNxExplorer.OWNxExplorer"]
-
-
-class OWNxExplorer(OWWidget):
+    outputs = [("Selected Network", network.Graph),
+               ("Distance Matrix", core.SymMatrix),
+               ("Marked Items", data.Table),
+               ("Selected Items", data.Table),
+               ("Other Items", data.Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
     "maxLinkSize", "minVertexSize", "maxVertexSize", "networkCanvas.animate_plot",
@@ -63,22 +49,9 @@ class OWNxExplorer(OWWidget):
     "networkCanvas.selection_behavior", "hubs", "markDistance",
     "markNConnections", "markNumber", "markSearchString"]
 
-    def __init__(self, parent=None, signalManager=None, name='Net Explorer',
-                 NetworkCanvas=OWNxCanvas):
-        OWWidget.__init__(self, parent, signalManager, name, noReport=True)
+    def __init__(self, NetworkCanvas=OWNxCanvas):
+        super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="markerAttributes"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
-        self.inputs = [("Network", network.Graph, self.set_graph, Default),
-                       ("Items", data.Table, self.set_items),
-                       ("Item Subset", data.Table, self.mark_items),
-                       ("Distances", core.SymMatrix, self.set_items_distance_matrix),
-                       ("Net View", network.NxView, self.set_network_view)]
-
-        self.outputs = [("Selected Network", network.Graph),
-                        ("Distance Matrix", core.SymMatrix),
-                        ("Marked Items", data.Table),
-                        ("Selected Items", data.Table),
-                        ("Other Items", data.Table)]
-                        #("Attribute Selection List", AttributeList)]
 
         self.networkCanvas = NetworkCanvas(self, self.mainArea, "Net Explorer")
 

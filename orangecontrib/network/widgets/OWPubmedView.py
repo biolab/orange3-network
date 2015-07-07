@@ -1,30 +1,10 @@
-"""
-<name>Pubmed Network View</name>
-<description></description>
-<icon>icons/NetworkExplorer.svg</icon>
-<contact></contact>
-<priority>6470</priority>
-"""
 raise Exception("This widget is a Prototype.")
 
 import Orange
-from Orange.widgets import gui
-
-from OWWidget import *
-
-
-NAME = "Pubmed Network View"
-ICON = "icons/NetworkExplorer.svg"
-PRIORITY = 6470
-
-OUTPUTS = [("Nx View", Orange.network.NxView)]
-
-REPLACES = ["_network.widgets.OWPubmedView.OWPubmedView"]
+from Orange.widgets import gui, widget
 
 
 class PubmedNetworkView(Orange.network.NxView):
-
-    """Network Inside View"""
 
     def __init__(self, parent):
         Orange.network.NxView.__init__(self)
@@ -171,15 +151,18 @@ class PubmedNetworkView(Orange.network.NxView):
         return max(x)
 
 
-class OWPubmedView(OWWidget):
+class OWPubmedView(widget.OWWidget):
+
+    name = "Pubmed Network View"
+    icon = "icons/NetworkExplorer.svg"
+    priority = 6470
+
+    outputs = [("Nx View", Orange.network.NxView)]
 
     settingsList = ['_nhops']
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, 'Pubmed Network View', wantMainArea=0)
-
-        self.inputs = []
-        self.outputs = [("Nx View", Orange.network.NxView)]
+    def __init__(self):
+        super().__init__()
 
         self._nhops = 2
         self._edge_threshold = 0.5

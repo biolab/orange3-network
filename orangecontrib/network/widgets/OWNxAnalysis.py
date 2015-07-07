@@ -1,36 +1,14 @@
-"""
-<name>Net Analysis</name>
-<description>Statistical analysis of network data.</description>
-<icon>icons/NetworkAnalysis.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6425</priority>
-"""
 from PyQt4.QtCore import QMutex
 import numpy as np
 import networkx as nx
 
 import Orange
-from Orange.widgets import gui
-
-from OWWidget import *
-
-
-NAME = "Net Analysis"
-DESCRIPTION = "Statistical analysis of network data."
-ICON = "icons/NetworkAnalysis.svg"
-PRIORITY = 6425
-
-INPUTS = [("Network", Orange.network.Graph, "set_graph"),
-          ("Items", Orange.data.Table, "set_items")]
-
-OUTPUTS = [("Network", Orange.network.Graph),
-           ("Items", Orange.data.Table)]
-
-REPLACES = ["_network.widgets.OWNxAnalysis.OWNxAnalysis"]
+from Orange.widgets import gui, widget
 
 
 NODELEVEL = 0
 GRAPHLEVEL = 1
+
 
 class WorkerThread(QThread):
     def __init__(self, receiver, name, label, type, algorithm):
@@ -53,8 +31,19 @@ class WorkerThread(QThread):
             self.result = None
             self.error = ex
 
-class OWNxAnalysis(OWWidget):
-    settingsList=[
+
+class OWNxAnalysis(widget.OWWidget):
+    name = 'Network Analysis'
+    description = 'Statistical analysis of network data.'
+    icon = 'icons/NetworkAnalysis.svg'
+    priority = 6425
+
+    inputs = [("Network", Orange.network.Graph, 'set_graph'),
+              ("Items", Orange.data.Table, 'set_items')]
+    outputs = [("Network", Orange.network.Graph),
+               ("Items", Orange.data.Table)]
+
+    settingsList = [
         "auto_commit", "tab_index", "degree", "in_degree", "out_degree", "average_neighbor_degree",
         "clustering", "triangles", "square_clustering", "number_of_cliques",
         "degree_centrality", "in_degree_centrality", "out_degree_centrality",
@@ -73,14 +62,10 @@ class OWNxAnalysis(OWWidget):
         "number_attracting_components", "diameter", "radius", "average_shortest_path_length"
     ]
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, "Nx Analysis", noReport=True, wantMainArea=False)
+    want_main_area = False
 
-        self.inputs = [("Network", Orange.network.Graph, self.set_graph),
-                        ("Items", Orange.data.Table, self.set_items)]
-
-        self.outputs = [("Network", Orange.network.Graph),
-                        ("Items", Orange.data.Table)]
+    def __init__(self):
+        super().__init__()
 
         self.methods = [
             ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),

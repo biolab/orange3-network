@@ -7,9 +7,8 @@ import math
 import numpy as np
 
 import Orange
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 
-from OWWidget import *
 from OWGraph import *
 from OWHist import *
 from functools import reduce

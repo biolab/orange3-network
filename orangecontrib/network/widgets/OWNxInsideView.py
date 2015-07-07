@@ -1,25 +1,6 @@
-"""
-<name>Net Inside View</name>
-<description>Orange widget for community detection in networks</description>
-<icon>icons/NetworkInsideView.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6460</priority>
-"""
 
 import Orange
-from Orange.widgets import gui
-
-from OWWidget import *
-
-
-NAME = "Net Inside View"
-DESCRIPTION = "Orange widget for community detection in networks"
-ICON = "icons/NetworkInsideView.svg"
-PRIORITY = 6460
-
-OUTPUTS = [("Nx View", Orange.network.NxView)]
-
-REPLACES = ["_network.widgets.OWNxInsideView.OWNxInsideView"]
+from Orange.widgets import gui, widget
 
 
 class NxInsideView(Orange.network.NxView):
@@ -73,15 +54,18 @@ class NxInsideView(Orange.network.NxView):
             nodes.update(neighbors)
         return nodes
 
-class OWNxInsideView(OWWidget):
+class OWNxInsideView(widget.OWWidget):
+    name = "Network Inside View"
+    description = "Orange widget for community detection in networks"
+    icon = "icons/NetworkInsideView.svg"
+    priority = 6460
+
+    outputs = [("Nx View", Orange.network.NxView)]
 
     settingsList = ['_nhops']
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, 'Net Inside View')
-
-        self.inputs = []
-        self.outputs = [("Nx View", Orange.network.NxView)]
+    def __init__(self):
+        super().__init__()
 
         self._nhops = 2
 

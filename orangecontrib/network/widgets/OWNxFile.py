@@ -1,39 +1,24 @@
-"""
-<name>Net File</name>
-<description>Reads data from a graf file (Pajek networks (.net) files and GML network files).</description>
-<icon>icons/NetworkFile.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6410</priority>
-"""
 import sys
 import os.path
 import user
 
 import Orange
-from Orange.widgets import gui
-
-from OWWidget import *
-
-NAME = "Net File"
-DESCRIPTION = "Reads data from a graf file (Pajek networks (.net) files and GML network files)."
-ICON = "icons/NetworkFile.svg"
-PRIORITY = 6410
-
-OUTPUTS = [("Network", Orange.network.Graph),
-           ("Items", Orange.data.Table)]
-
-REPLACES = ["_network.widgets.OWNxFile.OWNxFile"]
+from Orange.widgets import gui, widget
 
 
-class OWNxFile(OWWidget):
+class OWNxFile(widget.OWWidget):
+    name = "Network File"
+    description = "Read network graph file (Pajek networks (*.net) files and GML network files)."
+    icon = "icons/NetworkFile.svg"
+    priority = 6410
+
+    outputs = [("Network", Orange.network.Graph),
+               ("Items", Orange.data.Table)]
 
     settingsList = ["recentFiles", "recentDataFiles", "recentEdgesFiles", "auto_table"]
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, "Nx File", wantMainArea=False)
-
-        self.inputs = []
-        self.outputs = [("Network", Orange.network.Graph), ("Items", Orange.data.Table)]
+    def __init__(self):
+        super().__init__()
 
         #set default settings
         self.recentFiles = ["(none)"]

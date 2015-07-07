@@ -1,41 +1,23 @@
-"""
-<name>Net Clustering</name>
-<description>Orange widget for community detection in networks</description>
-<icon>icons/NetworkClustering.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6430</priority>
-"""
-
 import Orange.network
 import Orange.network.community as cd
-from Orange.widgets import gui
-
-from OWWidget import *
+from Orange.widgets import gui, widget
 
 
-NAME = "Net Clustering"
-DESCRIPTION = "Orange widget for community detection in networks"
-ICON = "icons/NetworkClustering.svg"
-PRIORITY = 6430
+class OWNxClustering(widget.OWWidget):
+    name = 'Network Clustering'
+    description = 'Orange widget for community detection in networks.'
+    icon = "icons/NetworkClustering.svg"
+    priority = 6430
 
-INPUTS = [("Network", Orange.network.Graph, "setNetwork", Default)]
-OUTPUTS = [("Network", Orange.network.Graph),
-           ("Community Detection", cd.CommunityDetection)]
-
-REPLACES = ["_network.widgets.OWNxClustering.OWNxClustering"]
-
-class OWNxClustering(OWWidget):
+    inputs = [("Network", Orange.network.Graph, "setNetwork", widget.Default)]
+    outputs = [("Network", Orange.network.Graph),
+               ("Community Detection", cd.CommunityDetection)]
 
     settingsList = ['method', 'iterationHistory', 'autoApply', 'iterations',
                     'hop_attenuation']
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, 'Nx Clustering')
-
-        self.inputs = [("Network", Orange.network.Graph,
-                        self.setNetwork, Default)]
-        self.outputs = [("Network", Orange.network.Graph),
-                        ("Community Detection", cd.CommunityDetection)]
+    def __init__(self):
+        super().__init__()
 
         self.net = None
         self.method = 0

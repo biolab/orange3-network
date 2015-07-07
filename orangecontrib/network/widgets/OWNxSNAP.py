@@ -1,11 +1,3 @@
-"""
-<name>SNAP</name>
-<description>Read networks from Stanford Large Network Dataset Collection.</description>
-<icon>icons/SNAP.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6415</priority>
-"""
-
 import sys
 import os.path
 import itertools
@@ -14,31 +6,22 @@ import PyQt4.QtNetwork
 
 import Orange.data
 import Orange.network
-from Orange.widgets import gui
-
-from OWWidget import *
+from Orange.widgets import gui, widget
 
 
-NAME = "SNAP"
-DESCRIPTION = "Read networks from Stanford Large Network Dataset Collection."
-ICON = "icons/SNAP.svg"
-PRIORITY = 6415
+class OWNxSNAP(widget.OWWidget):
+    name = "SNAP"
+    description = "Read networks from Stanford Large Network Dataset Collection."
+    icon = "icons/SNAP.svg"
+    priority = 6415
 
-OUTPUTS = [("Network", Orange.network.Graph),
-           ("Items", Orange.data.Table)]
-
-REPLACES = ["_network.widgets.OWNxSNAP.OWNxSNAP"]
-
-
-class OWNxSNAP(OWWidget):
+    outputs = [("Network", Orange.network.Graph),
+               ("Items", Orange.data.Table)]
 
     settingsList=['last_total']
 
-    def __init__(self,parent=None, signalManager = None):
-        OWWidget.__init__(self, parent, signalManager, "SNAP")
-
-        self.inputs = []
-        self.outputs = [("Network", Orange.network.Graph), ("Items", Orange.data.Table)]
+    def __init__(self):
+        super().__init__()
 
         self.last_total = 24763
 
