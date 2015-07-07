@@ -1,6 +1,5 @@
-import Orange.network
-import Orange.network.community as cd
 from Orange.widgets import gui, widget
+from orangecontrib.network import Graph, community as cd
 
 
 class OWNxClustering(widget.OWWidget):
@@ -9,12 +8,13 @@ class OWNxClustering(widget.OWWidget):
     icon = "icons/NetworkClustering.svg"
     priority = 6430
 
-    inputs = [("Network", Orange.network.Graph, "setNetwork", widget.Default)]
-    outputs = [("Network", Orange.network.Graph),
+    inputs = [("Network", Graph, "setNetwork", widget.Default)]
+    outputs = [("Network", Graph),
                ("Community Detection", cd.CommunityDetection)]
 
     settingsList = ['method', 'iterationHistory', 'autoApply', 'iterations',
                     'hop_attenuation']
+    # TODO: set settings
 
     def __init__(self):
         super().__init__()
@@ -25,7 +25,6 @@ class OWNxClustering(widget.OWWidget):
         self.autoApply = 0
         self.iterations = 1000
         self.hop_attenuation = 0.1
-        self.loadSettings()
 
         gui.spin(self.controlArea, self, "iterations", 1,
                    100000, 1, label="Iterations: ")

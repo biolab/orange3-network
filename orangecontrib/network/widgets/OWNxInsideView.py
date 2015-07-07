@@ -1,15 +1,16 @@
 
 import Orange
-from Orange.widgets import gui, widget
+from Orange.widgets import gui, widget, settings
+import orangecontrib.network as network
 
 
-class NxInsideView(Orange.network.NxView):
+class NxInsideView(network.NxView):
     """Network Inside View
 
     """
 
     def __init__(self, nhops):
-        Orange.network.NxView.__init__(self)
+        network.NxView.__init__(self)
 
         self._nhops = nhops
         self._center_node = None
@@ -27,11 +28,11 @@ class NxInsideView(Orange.network.NxView):
             self._center_node = selected[0]
 
         nodes = self._get_neighbors()
-        return Orange.network.nx.Graph.subgraph(self._network, nodes)
+        return network.nx.Graph.subgraph(self._network, nodes)
 
     def update_network(self):
         nodes = self._get_neighbors()
-        subnet = Orange.network.nx.Graph.subgraph(self._network, nodes)
+        subnet = network.nx.Graph.subgraph(self._network, nodes)
 
         if self._nx_explorer is not None:
             self._nx_explorer.change_graph(subnet)
@@ -60,16 +61,14 @@ class OWNxInsideView(widget.OWWidget):
     icon = "icons/NetworkInsideView.svg"
     priority = 6460
 
-    outputs = [("Nx View", Orange.network.NxView)]
+    outputs = [("Nx View", network.NxView)]
 
-    settingsList = ['_nhops']
+    _nhops = settings.Setting(2)
 
     def __init__(self):
         super().__init__()
 
         self._nhops = 2
-
-        self.loadSettings()
 
         ib = gui.widgetBox(self.controlArea, "Preferences", orientation="vertical")
         gui.spin(ib, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)

@@ -1,18 +1,22 @@
-from PyQt4.QtCore import QMutex
+from PyQt4 import QtCore
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 import numpy as np
 import networkx as nx
+import sys
 
 import Orange
 from Orange.widgets import gui, widget
+import orangecontrib.network as network
 
 
 NODELEVEL = 0
 GRAPHLEVEL = 1
 
 
-class WorkerThread(QThread):
+class WorkerThread(QtCore.QThread):
     def __init__(self, receiver, name, label, type, algorithm):
-        QThread.__init__(self)
+        super().__init__()
         self.receiver = receiver
         self.name = name
         self.label = label
@@ -38,9 +42,9 @@ class OWNxAnalysis(widget.OWWidget):
     icon = 'icons/NetworkAnalysis.svg'
     priority = 6425
 
-    inputs = [("Network", Orange.network.Graph, 'set_graph'),
+    inputs = [("Network", network.Graph, 'set_graph'),
               ("Items", Orange.data.Table, 'set_items')]
-    outputs = [("Network", Orange.network.Graph),
+    outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
     settingsList = [
@@ -61,6 +65,7 @@ class OWNxAnalysis(widget.OWWidget):
         "number_strongly_connected_components", "number_weakly_connected_components",
         "number_attracting_components", "diameter", "radius", "average_shortest_path_length"
     ]
+    # TODO: set settings
 
     want_main_area = False
 
@@ -136,7 +141,7 @@ class OWNxAnalysis(widget.OWWidget):
 
         self.auto_commit = False
         self.tab_index = 0
-        self.mutex = QMutex()
+        self.mutex = QtCore.QMutex()
 
         self.graph = None
         self.items = None          # items set by Items signal
@@ -151,8 +156,6 @@ class OWNxAnalysis(widget.OWWidget):
         for method in self.methods:
             setattr(self, method[0], method[1])
             setattr(self, "lbl_" + method[0], "")
-
-        self.loadSettings()
 
         self.tabs = gui.tabWidget(self.controlArea)
         self.tabs.setMinimumWidth(450)
@@ -276,7 +279,7 @@ class OWNxAnalysis(widget.OWWidget):
             if job.name in self.analdata:
                 if job.type == NODELEVEL:
                     self.analfeatures.append((job.name, \
-                                Orange.feature.Continuous(job.label)))
+                                Orange.data.ContinuousVariable(job.label)))
                     setattr(self, "lbl_" + job.name, "  finished")
 
                 elif job.type == GRAPHLEVEL:
@@ -308,11 +311,11 @@ class OWNxAnalysis(widget.OWWidget):
             if job.error is not None:
                 setattr(self, "lbl_" + job.name, "     error")
                 tooltop = getattr(self, "tool_" + job.name)
-                tooltop.setToolTip(QString(job.error.message))
+                tooltop.setToolTip(job.error.message)
 
             elif job.result is not None:
                 if job.type == NODELEVEL:
-                    self.analfeatures.append((job.name, Orange.feature.Continuous(job.label)))
+                    self.analfeatures.append((job.name, Orange.data.ContinuousVariable(job.label)))
                     self.analdata[job.name] = [job.result[node] for node in sorted(job.result.keys())]
 
                 elif job.type == GRAPHLEVEL:

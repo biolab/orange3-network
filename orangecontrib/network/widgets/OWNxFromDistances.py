@@ -3,9 +3,9 @@ import random
 
 import Orange
 from Orange.widgets import gui, widget
+import orangecontrib.network as network
 
 from .OWNxHist import *
-from OWGraph import *
 from OWHist import *
 
 
@@ -17,22 +17,20 @@ class OWNxFromDistances(widget.OWWidget, OWNxHist):
     icon = "icons/NetworkFromDistances.svg"
     priority = 6440
 
-    inputs = [("Distances", Orange.core.SymMatrix, "setMatrix")]
-    outputs = [("Network", Orange.network.Graph),
+    inputs = [("Distances", Orange.misc.DistMatrix, "setMatrix")]
+    outputs = [("Network", network.Graph),
                ("Data", Orange.data.Table),
-               ("Distances", Orange.core.SymMatrix)]
+               ("Distances", Orange.misc.DistMatrix)]
 
     settingsList=["spinLowerThreshold", "spinUpperThreshold", "netOption",
                   "dstWeight", "kNN", "percentil", "andor", "excludeLimit"]
+    # TODO: set settings
 
     def __init__(self):
         super().__init__()
         OWNxHist.__init__(self)
 
         self.addHistogramControls()
-
-        # get settings from the ini file, if they exist
-        self.loadSettings()
 
         # GUI
         # general settings

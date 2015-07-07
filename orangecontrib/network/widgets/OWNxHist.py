@@ -8,10 +8,13 @@ import numpy as np
 
 import Orange
 from Orange.widgets import gui, widget
+import orangecontrib.network as network
 
-from OWGraph import *
-from OWHist import *
 from functools import reduce
+
+
+
+
 
 class OWNxHist():
 
@@ -125,7 +128,6 @@ class OWNxHist():
 
         self.matrix = data
         # draw histogram
-        data.matrixType = orange.SymMatrix.Symmetric
         values = data.getValues()
         #print "values:",values
         self.histogram.setValues(values)
@@ -218,7 +220,7 @@ class OWNxHist():
             n = 0
             self.error('Estimated number of edges is too high (%d).' % nEdgesEstimate)
         else:
-            graph = Orange.network.Graph()
+            graph = network.Graph()
             graph.add_nodes_from(range(self.matrix.dim))
             matrix = self.matrix
 
@@ -227,7 +229,7 @@ class OWNxHist():
                     graph.set_items(self.matrix.items)
                 else:
                     data = [[str(x)] for x in self.matrix.items]
-                    items = Orange.data.Table(Orange.data.Domain(Orange.feature.String('label'), 0), data)
+                    items = Orange.data.Table(Orange.data.Domain(Orange.data.StringVariable('label'), 0), data)
                     graph.set_items(items)
 
             # set the threshold
@@ -236,7 +238,7 @@ class OWNxHist():
             if self.kNN >= self.matrix.dim:
                 self.warning(0, "kNN larger then supplied distance matrix dimension. Using k = %i" % (self.matrix.dim - 1))
             #nedges = graph.fromDistanceMatrix(self.matrix, self.spinLowerThreshold, self.spinUpperThreshold, min(self.kNN, self.matrix.dim - 1), self.andor)
-            edge_list = Orange.network.GraphLayout().edges_from_distance_matrix(self.matrix, self.spinLowerThreshold, self.spinUpperThreshold, min(self.kNN, self.matrix.dim - 1))
+            edge_list = network.GraphLayout().edges_from_distance_matrix(self.matrix, self.spinLowerThreshold, self.spinUpperThreshold, min(self.kNN, self.matrix.dim - 1))
             if self.dstWeight == 1:
                 graph.add_edges_from(((u, v, {'weight':1 - d}) for u, v, d in edge_list))
             else:
@@ -244,7 +246,7 @@ class OWNxHist():
 
             # exclude unconnected
             if str(self.netOption) == '1':
-                components = [x for x in Orange.network.nx.algorithms.components.connected_components(graph) if len(x) >= self.excludeLimit]
+                components = [x for x in network.nx.algorithms.components.connected_components(graph) if len(x) >= self.excludeLimit]
                 if len(components) > 0:
                     include = reduce(lambda x, y: x + y, components)
                     if len(include) > 1:
@@ -258,7 +260,7 @@ class OWNxHist():
                     matrix = None
             # largest connected component only
             elif str(self.netOption) == '2':
-                component = Orange.network.nx.algorithms.components.connected_components(graph)[0]
+                component = network.nx.algorithms.components.connected_components(graph)[0]
                 if len(component) > 1:
                     self.graph = graph.subgraph(component)
                     matrix = self.matrix.getitems(component)
@@ -271,7 +273,7 @@ class OWNxHist():
             #     self.graph = None
             #     matrix = None
             #     if self.attributeCombo.currentText() != '' and self.label != '':
-            #         components = Orange.network.nx.algorithms.components.connected_components(graph)
+            #         components = network.nx.algorithms.components.connected_components(graph)
 
             #         txt = self.label.lower()
             #         #print 'txt:',txt
@@ -319,3 +321,256 @@ class OWNxHist():
 
         self.histogram.setBoundary(self.spinLowerThreshold, self.spinUpperThreshold)
 
+
+
+
+
+# All below shamefully copied from orangecontrib.bio.widgets3.OWFeatureSelection
+import pyqtgraph as pg
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import Qt, pyqtSignal as Signal, pyqtSlot as Slot
+
+
+class InfiniteLine(pg.InfiniteLine):
+    def paint(self, painter, option, widget=None):
+        brect = self.boundingRect()
+        c = brect.center()
+        line = QtCore.QLineF(brect.left(), c.y(), brect.right(), c.y())
+        t = painter.transform()
+        line = t.map(line)
+        painter.save()
+        painter.resetTransform()
+        painter.setPen(self.currentPen)
+        painter.drawLine(line)
+        painter.restore()
+
+
+class Histogram(pg.PlotWidget):
+    """
+    A histogram plot with interactive 'tail' selection
+    """
+    #: Emitted when the selection boundary has changed
+    selectionChanged = Signal()
+    #: Emitted when the selection boundary has been edited by the user
+    #: (by dragging the boundary lines)
+    selectionEdited = Signal()
+
+    #: Selection mode
+    NoSelection, Low, High, TwoSided, Middle = 0, 1, 2, 3, 4
+
+
+    """Adendum: compliance with OWNxFromDistances"""
+    def setValues(self, values):
+        ...
+
+    def
+
+
+    """End Adendum"""
+
+    def __init__(self, parent=None, **kwargs):
+        pg.PlotWidget.__init__(self, parent, **kwargs)
+
+        self.getAxis("bottom").setLabel("Score")
+        self.getAxis("left").setLabel("Counts")
+
+        self.__data = None
+        self.__histcurve = None
+
+        self.__mode = Histogram.NoSelection
+        self.__min = 0
+        self.__max = 0
+
+        def makeline(pos):
+            pen = QtGui.QPen(Qt.darkGray, 1)
+            pen.setCosmetic(True)
+            line = InfiniteLine(angle=90, pos=pos, pen=pen, movable=True)
+            line.setCursor(Qt.SizeHorCursor)
+            return line
+
+        self.__cuthigh = makeline(self.__max)
+        self.__cuthigh.sigPositionChanged.connect(self.__on_cuthigh_changed)
+        self.__cuthigh.sigPositionChangeFinished.connect(self.selectionEdited)
+        self.__cutlow = makeline(self.__min)
+        self.__cutlow.sigPositionChanged.connect(self.__on_cutlow_changed)
+        self.__cutlow.sigPositionChangeFinished.connect(self.selectionEdited)
+
+        brush = pg.mkBrush((200, 200, 200, 180))
+        self.__taillow = pg.PlotCurveItem(
+            fillLevel=0, brush=brush, pen=QtGui.QPen(Qt.NoPen))
+        self.__taillow.setVisible(False)
+
+        self.__tailhigh = pg.PlotCurveItem(
+            fillLevel=0, brush=brush, pen=QtGui.QPen(Qt.NoPen))
+        self.__tailhigh.setVisible(False)
+
+    def setData(self, hist, bins=None):
+        """
+        Set the histogram data
+        """
+        if bins is None:
+            bins = np.arange(len(hist))
+
+        self.__data = (hist, bins)
+        if self.__histcurve is None:
+            self.__histcurve = pg.PlotCurveItem(
+                x=bins, y=hist, stepMode=True
+            )
+        else:
+            self.__histcurve.setData(x=bins, y=hist, stepMode=True)
+
+        self.__update()
+
+    def setHistogramCurve(self, curveitem):
+        """
+        Set the histogram plot curve.
+        """
+        if self.__histcurve is curveitem:
+            return
+
+        if self.__histcurve is not None:
+            self.removeItem(self.__histcurve)
+            self.__histcurve = None
+            self.__data = None
+
+        if curveitem is not None:
+            if not curveitem.opts["stepMode"]:
+                raise ValueError("The curve must have `stepMode == True`")
+            self.addItem(curveitem)
+            self.__histcurve = curveitem
+            self.__data = (curveitem.yData, curveitem.xData)
+
+        self.__update()
+
+    def histogramCurve(self):
+        """
+        Return the histogram plot curve.
+        """
+        return self.__histcurve
+
+    def setSelectionMode(self, mode):
+        """
+        Set selection mode
+        """
+        if self.__mode != mode:
+            self.__mode = mode
+            self.__update_cutlines()
+            self.__update_tails()
+
+    def setLower(self, value):
+        """
+        Set the lower boundary value.
+        """
+        if self.__min != value:
+            self.__min = value
+            self.__update_cutlines()
+            self.__update_tails()
+            self.selectionChanged.emit()
+
+    def setUpper(self, value):
+        """
+        Set the upper boundary value.
+        """
+        if self.__max != value:
+            self.__max = value
+            self.__update_cutlines()
+            self.__update_tails()
+            self.selectionChanged.emit()
+
+    def setBoundary(self, lower, upper):
+        """
+        Set lower and upper boundary value.
+        """
+        changed = False
+        if self.__min != lower:
+            self.__min = lower
+            changed = True
+
+        if self.__max != upper:
+            self.__max = upper
+            changed = True
+
+        if changed:
+            self.__update_cutlines()
+            self.__update_tails()
+            self.selectionChanged.emit()
+
+    def boundary(self):
+        """
+        Return the lower and upper boundary values.
+        """
+        return (self.__min, self.__max)
+
+    def clear(self):
+        """
+        Clear the plot.
+        """
+        self.__data = None
+        self.__histcurve = None
+        super().clear()
+
+    def __update(self):
+        def additem(item):
+            if item.scene() is not self.scene():
+                self.addItem(item)
+
+        def removeitem(item):
+            if item.scene() is self.scene():
+                self.removeItem(item)
+
+        if self.__data is not None:
+            additem(self.__cuthigh)
+            additem(self.__cutlow)
+            additem(self.__tailhigh)
+            additem(self.__taillow)
+
+            _, edges = self.__data
+            # Update the allowable cutoff line bounds
+            minx, maxx = np.min(edges), np.max(edges)
+            span = maxx - minx
+            bounds = minx - span * 0.005, maxx + span * 0.005
+
+            self.__cuthigh.setBounds(bounds)
+            self.__cutlow.setBounds(bounds)
+
+            self.__update_cutlines()
+            self.__update_tails()
+        else:
+            removeitem(self.__cuthigh)
+            removeitem(self.__cutlow)
+            removeitem(self.__tailhigh)
+            removeitem(self.__taillow)
+
+    def __update_cutlines(self):
+        self.__cuthigh.setVisible(self.__mode & Histogram.High)
+        self.__cuthigh.setValue(self.__max)
+        self.__cutlow.setVisible(self.__mode & Histogram.Low)
+        self.__cutlow.setValue(self.__min)
+
+    def __update_tails(self):
+        if self.__mode == Histogram.NoSelection:
+            return
+        if self.__data is None:
+            return
+
+        hist, edges = self.__data
+
+        self.__taillow.setVisible(self.__mode & Histogram.Low)
+        if self.__min > edges[0]:
+            datalow = histogram_cut(hist, edges, edges[0], self.__min)
+            self.__taillow.setData(*datalow, fillLevel=0, stepMode=True)
+        else:
+            self.__taillow.clear()
+
+        self.__tailhigh.setVisible(self.__mode & Histogram.High)
+        if self.__max < edges[-1]:
+            datahigh = histogram_cut(hist, edges, self.__max, edges[-1])
+            self.__tailhigh.setData(*datahigh, fillLevel=0, stepMode=True)
+        else:
+            self.__tailhigh.clear()
+
+    def __on_cuthigh_changed(self):
+        self.setUpper(self.__cuthigh.value())
+
+    def __on_cutlow_changed(self):
+        self.setLower(self.__cutlow.value())

@@ -26,7 +26,6 @@ import networkx.readwrite.gml as rwgml
 import networkx.readwrite.gpickle as rwgpickle
 
 import Orange
-import Orange.core as orangeom
 
 from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
@@ -192,7 +191,7 @@ def read_gpickle(path, auto_table=False):
         G.set_items(graph_to_table(G))
     return G
 
-_add_doc(read_gpickle, rwgpickle.read_gpickle)
+#~ _add_doc(read_gpickle, rwgpickle.read_gpickle)
 
 def write_gpickle(G, path):
     """NetworkX write_gpickle method.
@@ -241,6 +240,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     """
 
     path = _check_network_dir(path)
+    return _wrap(rwpajek.read_pajek(path))
 
     input = orangeom.GraphLayout().readPajek(path, project)
     result = []
@@ -388,15 +388,17 @@ def read_txtgz(path):
     f.close()
 
     content = content.splitlines()
-    comments = (line for line in content if line.strip().startswith('#'))
-    content = (line for line in content if not line.strip().startswith('#'))
+    comments = (line for line in content if line.strip().startswith(b'#'))
+    content = (line for line in content if not line.strip().startswith(b'#'))
 
-    if "directed graph" in ''.join(comments).lower():
+    if b"directed graph" in b''.join(comments).lower():
         G = DiGraph()
     else:
         G = Graph()
 
-    G.add_edges_from([int(node) for node in coors.strip().split('\t')] for coors in content if len(coors.strip().split('\t')) == 2)
+    G.add_edges_from([int(node) for node in coors.strip().split(b'\t')]
+                      for coors in content
+                      if len(coors.strip().split(b'\t')) == 2)
 
     return G
 

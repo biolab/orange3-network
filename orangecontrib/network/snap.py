@@ -25,6 +25,7 @@ import urllib.request, urllib.parse, urllib.error
 import http.client
 
 import Orange.misc
+import Orange.canvas.config
 
 from . import readwrite
 
@@ -71,7 +72,7 @@ class NetworkInfo(object):
         self.edges = edges
         self.repository = repository
         self.description = description
-        self._root =  Orange.utils.environ.buffer_dir + "/snap/"
+        self._root =  Orange.canvas.config.cache_dir() + "/snap/"
         self._local_file = self._root + self.name + ".txt.gz"
         self._remote_file = "http://snap.stanford.edu/data/" + self.name + ".txt.gz"
 
@@ -220,7 +221,7 @@ class SNAP(object):
             return self.network_list
         else:
             import PyQt4.QtNetwork
-            from PyQt4.QtCore import QObject, QString, SIGNAL
+            from PyQt4.QtCore import QObject, SIGNAL
 
             self.http = PyQt4.QtNetwork.QHttp()
 

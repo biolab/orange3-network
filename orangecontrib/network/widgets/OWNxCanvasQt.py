@@ -1,41 +1,32 @@
-CIRCLE = 0
-SQUARE = 1
-ROUND_RECT = 2
-
-NOTHING = 0
-ZOOMING = 1
-SELECT_RECTANGLE = 2
-SELECT_POLYGON = 3
-MOVE_SELECTION = 100
 
 import numpy as np
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
-from plot.owplot import *
-from plot.owpoint import *
-from plot.owtools import *
+from Orange import data
+from Orange.projection.manifold import MDS
 
-from Orange import core, data, misc, network, orangeqt, projection
-from orngScaleScatterPlotData import *
+import networkx as nx
+import pyqtgraph as pg
 
-class NodeItem(orangeqt.NodeItem):
-    def __init__(self, index, x=None, y=None, parent=None):
-        orangeqt.NodeItem.__init__(self, index, OWPoint.Ellipse, Qt.blue, 5, parent)
-        if x is not None:
-            self.set_x(x)
-        if y is not None:
-            self.set_y(y)
+#~ class NodeItem(orangeqt.NodeItem):
+    #~ def __init__(self, index, x=None, y=None, parent=None):
+        #~ orangeqt.NodeItem.__init__(self, index, OWPoint.Ellipse, Qt.blue, 5, parent)
+        #~ if x is not None:
+            #~ self.set_x(x)
+        #~ if y is not None:
+            #~ self.set_y(y)
+#~
+#~ class EdgeItem(orangeqt.EdgeItem):
+    #~ def __init__(self, u=None, v=None, weight=1, links_index=0, arrows=None, label='', parent=None):
+        #~ orangeqt.EdgeItem.__init__(self, u, v, parent)
+        #~ self.set_weight(weight)
+        #~ self.set_links_index(links_index)
+        #~ if arrows is not None:
+            #~ self.set_arrows(arrows)
 
-class EdgeItem(orangeqt.EdgeItem):
-    def __init__(self, u=None, v=None, weight=1, links_index=0, arrows=None, label='', parent=None):
-        orangeqt.EdgeItem.__init__(self, u, v, parent)
-        self.set_weight(weight)
-        self.set_links_index(links_index)
-        if arrows is not None:
-            self.set_arrows(arrows)
-
-class NetworkCurve(orangeqt.NetworkCurve):
+class NetworkCurve:
     def __init__(self, parent=None, pen=QPen(Qt.black), xData=None, yData=None):
-        orangeqt.NetworkCurve.__init__(self, parent)
         self.name = "Network Curve"
 
     def layout_fr(self, steps, weighted=False, smooth_cooling=False):
@@ -147,10 +138,10 @@ class NetworkCurve(orangeqt.NetworkCurve):
         nodes_inds = dict((n, i) for i, n in enumerate(sorted(graph.nodes_iter())))
         inds_nodes = dict((i, n) for i, n in enumerate(sorted(graph.nodes_iter())))
 
-        graph_components = network.nx.algorithms.connected_components(graph)
+        graph_components = nx.algorithms.connected_components(graph)
         matrix_components = [[nodes_inds[n] for n in c] for c in graph_components]
 
-        distances.matrixType = misc.SymMatrix.Symmetric
+        #~ distances.matrixType = core.SymMatrix.Symmetric
 
         # scale net coordinates
         if avgLinkage:
@@ -160,8 +151,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
         if distances.dim == 1:
             return 0
 
-        mds = projection.mds.MDS(distances)
-        mds.optimize(10, projection.mds.SgnRelStress, 0)
+        mds = MDS()(distances)
         rect = self.data_rect()
         w_fr = rect.width()
         h_fr = rect.height()
@@ -249,8 +239,8 @@ class NetworkCurve(orangeqt.NetworkCurve):
         self.mdsStep = 1
         self.stopMDS = False
 
-        distances.matrixType = core.SymMatrix.Symmetric
-        mds = projection.mds.MDS(distances)
+        #~ distances.matrixType = core.SymMatrix.Symmetric
+        mds = MDS()(distances)
         mds.optimize(10, projection.mds.SgnRelStress, 0)
         rect = self.data_rect()
         w_fr = rect.width()
@@ -324,12 +314,11 @@ class NetworkCurve(orangeqt.NetworkCurve):
 
 
 
-class OWNxCanvas(OWPlot):
+class OWNxCanvas(pg.GraphItem):
     def __init__(self, master, parent=None, name="None"):
-        OWPlot.__init__(self, parent, name, axes=[])
+        super().__init__()
         self.master = master
         self.parent = parent
-        self.NodeItem = NodeItem
         self.graph = None
 
         self.circles = []
@@ -347,7 +336,6 @@ class OWNxCanvas(OWPlot):
         self.fontSize = 12
 
         self.networkCurve = NetworkCurve()
-        self.add_custom_curve(self.networkCurve)
 
         self.minComponentEdgeWidth = 0
         self.maxComponentEdgeWidth = 0
@@ -355,7 +343,6 @@ class OWNxCanvas(OWPlot):
 
         self.items = None
         self.links = None
-        self.edge_to_row = None
         self.label_distances = None
 
         self.node_label_attributes = []
@@ -431,7 +418,7 @@ class OWNxCanvas(OWPlot):
             self.showComponentAttribute = None
             return
 
-        components = network.nx.algorithms.components.connected_components(self.graph)
+        components = nx.algorithms.components.connected_components(self.graph)
         nodes = self.networkCurve.nodes()
 
         for c in components:
@@ -679,9 +666,7 @@ class OWNxCanvas(OWPlot):
 
         return True
 
-    def set_graph(self, graph, curve=None, items=None, links=None):
-        self.clear()
-
+    def set_graph(self, graph):
         if graph is None:
             self.graph = None
             self.networkCurve = None
@@ -691,63 +676,24 @@ class OWNxCanvas(OWPlot):
             xMax = 1.0
             yMin = -1.0
             yMax = 1.0
-            self.addMarker("no network", (xMax - xMin) / 2, (yMax - yMin) / 2, alignment=Qt.AlignCenter, size=self.fontSize)
-            self.replot()
+            #~ self.setData(pos=[.5, .5], text=['no network'])
             return
 
         self.graph = graph
-        self.networkCurve = NetworkCurve() if curve is None else curve()
-        self.add_custom_curve(self.networkCurve)
+        self.items = graph.items()
+        self.links = graph.links()
+        self.networkCurve = NetworkCurve()
 
-        self.items = items if items is not None else self.graph.items()
-        self.links = links if links is not None else self.graph.links()
+        int_graph = nx.convert_node_labels_to_integers(graph, label_attribute='_label')
 
-        #add nodes
-        #self.vertices_old = [(None, []) for v in self.graph]
-        nodes = dict((v, self.NodeItem(v, parent=self.networkCurve)) for v in self.graph.nodes_iter())
-        self.networkCurve.set_nodes(nodes)
-
-        #build edge to row index
-        self.edge_to_row = {}
-        if self.links is not None and len(self.links) > 0:
-            for i, r in enumerate(self.links):
-                u = int(r['u'].value)
-                v = int(r['v'].value)
-                if u - 1 in self.graph and v - 1 in self.graph:
-                    u_dict = self.edge_to_row.get(u, {})
-                    v_dict = self.edge_to_row.get(v, {})
-                    u_dict[v] = i
-                    v_dict[u] = i
-                    self.edge_to_row[u] = u_dict
-                    self.edge_to_row[v] = v_dict
-                else:
-                    print('could not find edge', u, v)
-
-        #add edges
-        if self.links is not None and len(self.links) > 0:
-            links = self.links
-            links_indices = (self.edge_to_row[i + 1][j + 1] \
-                             for (i, j) in self.graph.edges_iter())
-
-            arrow = EdgeItem.ArrowV if self.graph.is_directed() else None
-
-            edges = [EdgeItem(nodes[i], nodes[j],
-                    graph[i][j].get('weight', 1), links_index, arrows=arrow, \
-                    parent=self.networkCurve) for ((i, j), links_index) in \
-                         zip(self.graph.edges_iter(), links_indices)]
-        else:
-            arrow = EdgeItem.ArrowV if self.graph.is_directed() else None
-
-            edges = [EdgeItem(nodes[i], nodes[j], graph[i][j].get('weight', 1), \
-                              arrows=arrow, parent=self.networkCurve) \
-                                  for (i, j) in self.graph.edges_iter()]
-
-        self.networkCurve.set_edges(edges)
-        self.replot()
-
-    def update_animations(self, use_animations=None):
-        OWPlot.update_animations(self, use_animations)
-        self.networkCurve.set_use_animations(self.use_animations)
+        pos = np.array([i[1] for i in sorted(nx.spring_layout(int_graph).items())])
+        adj = np.array(int_graph.edges())
+        # TODO
+        labels = []
+        lines = []
+        size = []
+        data = []
+        self.setData(pos=pos, adj=adj, text=labels)
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
         self.networkCurve.set_labels_on_marked(labelsOnMarkedOnly)
@@ -762,7 +708,3 @@ class OWNxCanvas(OWPlot):
         self._bounds_cache = {}
         self._transform_cache = {}
         OWPlot.update_layout(self)
-
-    def replot(self):
-        self.drawComponentKeywords()
-        OWPlot.replot(self)

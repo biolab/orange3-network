@@ -1,9 +1,12 @@
 import sys
 import os.path
-import user
+
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
 import Orange
 from Orange.widgets import gui, widget
+import orangecontrib.network as network
 
 
 class OWNxFile(widget.OWWidget):
@@ -12,10 +15,11 @@ class OWNxFile(widget.OWWidget):
     icon = "icons/NetworkFile.svg"
     priority = 6410
 
-    outputs = [("Network", Orange.network.Graph),
+    outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
     settingsList = ["recentFiles", "recentDataFiles", "recentEdgesFiles", "auto_table"]
+    # TODO: set settings
 
     def __init__(self):
         super().__init__()
@@ -30,8 +34,9 @@ class OWNxFile(widget.OWWidget):
         self.graph = None
         self.auto_items = None
 
-        #get settings from the ini file, if they exist
-        self.loadSettings()
+        self.filename = '(none)'
+        self.dataname = '(none)'
+        self.edgesname = '(none)'
 
         #GUI
         self.controlArea.layout().setMargin(4)
@@ -67,7 +72,6 @@ class OWNxFile(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         self.resize(150, 100)
-        self.activateLoadedSettings()
 
         # connecting GUI to code
         self.connect(self.filecombo, SIGNAL('activated(int)'), self.selectNetFile)
@@ -185,13 +189,13 @@ class OWNxFile(widget.OWWidget):
             self.readingFailed()
             return
 
-        fileExt = lower(os.path.splitext(fn)[1])
+        fileExt = os.path.splitext(fn)[1].lower()
         if not fileExt in (".net", ".gml", ".gpickle"):
             self.readingFailed(infob='Network file type not supported')
             return
 
         #try:
-        net = Orange.network.readwrite.read(fn, auto_table=self.auto_table)
+        net = network.readwrite.read(fn, auto_table=self.auto_table)
 
         #except:
         #    self.readingFailed(infob='Could not read file')
@@ -281,7 +285,7 @@ class OWNxFile(widget.OWWidget):
         self.send("Items", self.graph.items())
 
     def readDataFile(self, fn):
-        table = ExampleTable(fn)
+        table = Orange.data.Table.from_file(fn)
 
         if len(table) != self.graph.number_of_nodes():
             self.infoc.setText("Vertices data length does not match number of vertices")
@@ -321,7 +325,7 @@ class OWNxFile(widget.OWWidget):
         self.send("Items", self.graph.items())
 
     def readEdgesFile(self, fn):
-        table = ExampleTable(fn)
+        table = Orange.data.Table.from_file(fn)
         if self.graph.is_directed():
             nEdges = len(self.graph.getEdges())
         else:
@@ -346,11 +350,8 @@ class OWNxFile(widget.OWWidget):
         "Display a FileDialog and select a file"
         if inDemos:
             import os
-            try:
-                import pkg_resources
-                startfile = pkg_resources.load_entry_point("Orange-Network", "orange.data.io.search_paths", "network")().next()[1]
-            except:
-                startfile = ""
+            from pkg_resources import load_entry_point
+            startfile = next(load_entry_point("Orange-Network", "orange.data.io.search_paths", "network")())[1]
 
 #            if not startfile or not os.path.exists(startfile):
 #                try:
@@ -382,10 +383,7 @@ class OWNxFile(widget.OWWidget):
                 return
         else:
             if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                if sys.platform == "darwin":
-                    startfile = user.home
-                else:
-                    startfile = "."
+                startfile = "."
             else:
                 startfile = self.recentFiles[0]
 
@@ -404,10 +402,7 @@ class OWNxFile(widget.OWWidget):
         #Display a FileDialog and select a file
         if len(self.recentDataFiles) == 0 or self.recentDataFiles[0] == "(none)":
             if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                if sys.platform == "darwin":
-                    startfile = user.home
-                else:
-                    startfile = "."
+                startfile = "."
             else:
                 startfile = os.path.dirname(self.recentFiles[0])
 
@@ -429,10 +424,7 @@ class OWNxFile(widget.OWWidget):
         #Display a FileDialog and select a file
         if len(self.recentEdgesFiles) == 0 or self.recentEdgesFiles[0] == "(none)":
             if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                if sys.platform == "darwin":
-                    startfile = user.home
-                else:
-                    startfile = "."
+                startfile = "."
             else:
                 startfile = os.path.dirname(self.recentFiles[0])
 
@@ -462,9 +454,9 @@ class OWNxFile(widget.OWWidget):
         self.reportData(self.graph.links(), None, None)
 
 if __name__ == "__main__":
+    from PyQt4.QtGui import QApplication
     a = QApplication(sys.argv)
     owf = OWNxFile()
-    owf.activateLoadedSettings()
     owf.show()
     a.exec_()
     owf.saveSettings()

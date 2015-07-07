@@ -1,13 +1,14 @@
 raise Exception("This widget is a Prototype.")
 
 import Orange
-from Orange.widgets import gui, widget
+from Orange.widgets import gui, widget, settings
+import orangecontrib.network as network
 
 
-class PubmedNetworkView(Orange.network.NxView):
+class PubmedNetworkView(network.NxView):
 
     def __init__(self, parent):
-        Orange.network.NxView.__init__(self)
+        network.NxView.__init__(self)
 
         self._nhops = 2
         self._edge_threshold = 0.5
@@ -35,7 +36,7 @@ class PubmedNetworkView(Orange.network.NxView):
         if self._center_nodes == []:
             return
 
-        subnet = Orange.network.Graph()
+        subnet = network.Graph()
         central_nodes, to_add = self._center_nodes[:], self._center_nodes[:]
         for l in range(self._nhops):
             for i in central_nodes:
@@ -157,9 +158,9 @@ class OWPubmedView(widget.OWWidget):
     icon = "icons/NetworkExplorer.svg"
     priority = 6470
 
-    outputs = [("Nx View", Orange.network.NxView)]
+    outputs = [("Nx View", network.NxView)]
 
-    settingsList = ['_nhops']
+    _nhops = settings.Setting(2)
 
     def __init__(self):
         super().__init__()
@@ -174,8 +175,6 @@ class OWPubmedView(widget.OWWidget):
         self._selected_nodes = []
         self._algorithm = 0
         self._k_algorithm = 0.3
-
-        self.loadSettings()
 
         box = gui.widgetBox(self.controlArea, "Paper Selection", orientation="vertical")
         gui.lineEdit(box, self, "filter", callback=self.filter_list, callbackOnType=True)
@@ -231,7 +230,7 @@ class OWPubmedView(widget.OWWidget):
         menu = QMenu(self)
         menu.addAction('Expand Node')
         menu.addAction('Hide Node')
-        qstr = QString('Set Score')
+        qstr = 'Set Score'
         submenu = menu.addMenu(qstr)
         submenu.addAction('0')
         submenu.addAction('0.2')

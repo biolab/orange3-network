@@ -2,11 +2,11 @@ import sys
 import os.path
 import itertools
 
-import PyQt4.QtNetwork
+from PyQt4.QtGui import *
 
 import Orange.data
-import Orange.network
-from Orange.widgets import gui, widget
+import orangecontrib.network as network
+from Orange.widgets import gui, widget, settings
 
 
 class OWNxSNAP(widget.OWWidget):
@@ -15,17 +15,15 @@ class OWNxSNAP(widget.OWWidget):
     icon = "icons/SNAP.svg"
     priority = 6415
 
-    outputs = [("Network", Orange.network.Graph),
+    outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
-    settingsList=['last_total']
+    last_total = settings.Setting(24763)
 
     def __init__(self):
         super().__init__()
 
         self.last_total = 24763
-
-        self.loadSettings()
 
         self.networks = []
         self.tables = []
@@ -49,12 +47,13 @@ class OWNxSNAP(widget.OWWidget):
         self.network_list.layout().setSizeConstraint(QLayout.SetFixedSize);
         scrollArea.setWidget(self.network_list);
 
-        self.snap = Orange.network.snap.SNAP()
+        self.snap = network.snap.SNAP()
         self.snap.get_network_list(self.add_tables, self.progress_callback)
         self.progressBarInit()
         self.setMinimumSize(960, 600)
 
     def add_tables(self, networks):
+        from PyQt4.QtCore import SIGNAL
         self.networks = networks
         self.tables = []
 
@@ -113,7 +112,7 @@ class OWNxSNAP(widget.OWWidget):
             if len(selected) > 0:
                 row = selected[0].row()
                 fn = selected_table.cellWidget(row, 0).text()
-                network_info = self.snap.get_network(fn[fn.indexOf('>')+1:-4])
+                network_info = self.snap.get_network(fn[fn.index('>')+1:-4])
                 self.progressBarInit()
                 network = network_info.read(progress_callback=self.download_progress)
                 self.progressBarFinished()
@@ -134,9 +133,9 @@ class OWNxSNAP(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    from PyQt4.QtGui import QApplication
     a=QApplication(sys.argv)
     owf=OWNxSNAP()
-    owf.activateLoadedSettings()
     owf.show()
     a.exec_()
     owf.saveSettings()
