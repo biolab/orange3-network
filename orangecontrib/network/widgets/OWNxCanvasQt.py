@@ -70,7 +70,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
                     # compute rotation angle
 #                    c = [numpy.linalg.norm(numpy.cross(mds.points[u], \
 #                                [nodes[u].x(), nodes[u].y()])) for u in component]
-#                    
+#
 #                    n = [numpy.vdot([nodes[u].x(), nodes[u].y()], \
 #                                    [nodes[u].x(), nodes[u].y()]) for u in component]
 #                    phi[i] = sum(c) / sum(n)
@@ -123,9 +123,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
         return 0 if self.stopMDS else 1
 
     def layout_fragviz(self, steps, distances, graph, progress_callback=None, opt_from_curr=False):
-        """Position the network components according to similarities among 
+        """Position the network components according to similarities among
         them.
-        
+
         """
 
         if distances == None or graph == None or distances.dim != graph.number_of_nodes():
@@ -231,9 +231,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
         return 0 if self.stopMDS else 1
 
     def layout_mds(self, steps, distances, progress_callback=None, opt_from_curr=False):
-        """Position the network components according to similarities among 
+        """Position the network components according to similarities among
         them.
-        
+
         """
         nodes = self.nodes()
 
@@ -297,27 +297,27 @@ class NetworkCurve(orangeqt.NetworkCurve):
 
 #    def move_selected_nodes(self, dx, dy):
 #        selected = self.get_selected_nodes()
-#        
+#
 #        self.coors[selected][0] = self.coors[0][selected] + dx
 #        self.coors[1][selected][1] = self.coors[1][selected] + dy
-#          
+#
 #        self.update_properties()
 #        return selected
-#        
+#
 #    def set_hidden_nodes(self, nodes):
 #        for vertex in self.nodes().itervalues():
 #            vertex.setVisible(vertex.index() in nodes)
-#      
+#
 #    def hide_selected_nodes(self):
 #        for vertex in self.nodes().itervalues():
 #          if vertex.selected:
 #            vertex.hide()
-#  
+#
 #    def hide_unselected_nodes(self):
 #        for vertex in self.nodes().itervalues():
 #          if not vertex.selected:
 #            vertex.hide()
-#    
+#
 #    def show_all_vertices(self):
 #        for vertex in self.nodes().itervalues():
 #          vertex.show()
@@ -630,7 +630,7 @@ class OWNxCanvas(OWPlot):
             for n in nodes:
                 neighbors |= set(self.graph.neighbors(n))
 
-            # checked all, none found            
+            # checked all, none found
             if len(neighbors - nodes) == 0:
                 return []
 

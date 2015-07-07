@@ -2,7 +2,7 @@
 <name>Net Inside View</name>
 <description>Orange widget for community detection in networks</description>
 <icon>icons/NetworkInsideView.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
+<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
 <priority>6460</priority>
 """
 
@@ -24,7 +24,7 @@ REPLACES = ["_network.widgets.OWNxInsideView.OWNxInsideView"]
 
 class NxInsideView(Orange.network.NxView):
     """Network Inside View
-    
+
     """
 
     def __init__(self, nhops):

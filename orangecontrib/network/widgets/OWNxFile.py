@@ -2,7 +2,7 @@
 <name>Net File</name>
 <description>Reads data from a graf file (Pajek networks (.net) files and GML network files).</description>
 <icon>icons/NetworkFile.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
+<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
 <priority>6410</priority>
 """
 import sys
@@ -143,7 +143,7 @@ class OWNxFile(OWWidget):
                 os.path.exists(self.recentDataFiles[1]):
             self.selectDataFile(1)
 
-        # if links not loaded with the network, load previous links    
+        # if links not loaded with the network, load previous links
         if len(self.recentEdgesFiles) > 1 and \
             self.recentEdgesFiles[0] == 'none' and \
                 os.path.exists(self.recentEdgesFiles[1]):

@@ -1,7 +1,7 @@
 # Description: Shows how to use graphs
 # Category:    general
 # Classes:     Graph
-# Uses:        
+# Uses:
 # Referenced:  graph.htm
 
 import Orange.network

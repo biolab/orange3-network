@@ -51,8 +51,8 @@ subNetOptimization.fruchterman_reingold(100, 1000)
 for u, v in subnet.getEdges():
     x1, y1 = subnet.coors[0][u], subnet.coors[1][u]
     x2, y2 = subnet.coors[0][v], subnet.coors[1][v]
-    plt.plot([x1, x2], [y1, y2], 'b-')        
-        
+    plt.plot([x1, x2], [y1, y2], 'b-')
+
 # read x and y coordinates to Python list
 x = [coordinate for coordinate in subnet.coors[0]]
 y = [coordinate for coordinate in subnet.coors[1]]

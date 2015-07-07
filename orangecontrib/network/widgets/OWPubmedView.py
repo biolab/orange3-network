@@ -151,7 +151,7 @@ class PubmedNetworkView(Orange.network.NxView):
                 return net
 
     def compute_k(self, id, centers, net):
-        import networkx as nx #VEDERE SE C'E' IN ORANGENET 
+        import networkx as nx #VEDERE SE C'E' IN ORANGENET
         if self._algorithm == 0: #no clustering
             return self._algorithm
         else:   #clustering
@@ -259,7 +259,7 @@ class OWPubmedView(OWWidget):
         menu.popup(QCursor.pos())
 
     def node_menu_triggered(self, action, node):
-        # delete_node_and_neig --> ????        
+        # delete_node_and_neig --> ????
         if action.text() == 'Expand Node':
             self.inside_view.update_center_nodes(node.index())
 

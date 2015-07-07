@@ -158,7 +158,7 @@ def label_propagation(G, results2items=0, \
         (Orange.data.Table) after each iteration of the algorithm.
     :type resultHistory2items: bool
 
-    :param iterations: The maximum number of iterations if there is no convergence. 
+    :param iterations: The maximum number of iterations if there is no convergence.
     :type iterations: int
 
     """

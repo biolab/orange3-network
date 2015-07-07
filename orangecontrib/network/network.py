@@ -12,7 +12,7 @@ edges:
 * links (:obj:`Orange.data.Table`) - information on edges. Each row in the table corresponds to an edge. Two columns titled "u" and "v" should be specified in the table which contain indices of nodes on the given edge.
 
 The BaseGraph class contains also other methods that are common to the four graph types.
-    
+
 .. autoclass:: Orange.network.BaseGraph
    :members:
 
@@ -20,8 +20,8 @@ The BaseGraph class contains also other methods that are common to the four grap
 Graph Types
 ***********
 
-The reference in this section is complemented with the original NetworkX 
-library reference. For a complete documentation please refer to the 
+The reference in this section is complemented with the original NetworkX
+library reference. For a complete documentation please refer to the
 `NetworkX docs <http://networkx.lanl.gov/reference/>`_. All methods from the
 NetworkX package can be used for graph analysis and manipulation. For reading
 and writing graphs refer to the Orange.network.readwrite docs.
@@ -34,22 +34,22 @@ Graph
 
 DiGraph
 =======
-   
+
 .. autoclass:: Orange.network.DiGraph
    :members:
 
 MultiGraph
 ==========
-   
+
 .. autoclass:: Orange.network.MultiGraph
    :members:
-   
+
 MultiDiGraph
 ============
-   
+
 .. autoclass:: Orange.network.MultiDiGraph
    :members:
-   
+
 """
 
 import copy
@@ -74,9 +74,9 @@ def _get_doc(doc):
     return tmp
 
 class BaseGraph():
-    """A collection of methods inherited by all graph types (:obj:`Graph`, 
+    """A collection of methods inherited by all graph types (:obj:`Graph`,
     :obj:`DiGraph`, :obj:`MultiGraph` and :obj:`MultiDiGraph`).
-    
+
     """
 
     def __init__(self):
@@ -84,9 +84,9 @@ class BaseGraph():
         self._links = None
 
     def items(self):
-        """Return the :obj:`Orange.data.Table` items with data about network 
+        """Return the :obj:`Orange.data.Table` items with data about network
         nodes.
-        
+
         """
 
         if self._items is not None and \
@@ -96,9 +96,9 @@ class BaseGraph():
         return self._items
 
     def set_items(self, items=None):
-        """Set the :obj:`Orange.data.Table` items to the given data. Notice 
+        """Set the :obj:`Orange.data.Table` items to the given data. Notice
         that the number of instances must match the number of nodes.
-        
+
         """
 
         if items is not None:
@@ -110,9 +110,9 @@ class BaseGraph():
         self._items = items
 
     def links(self):
-        """Return the :obj:`Orange.data.Table` links with data about network 
+        """Return the :obj:`Orange.data.Table` links with data about network
         edges.
-        
+
         """
 
         if self._links is not None \
@@ -122,9 +122,9 @@ class BaseGraph():
         return self._links
 
     def set_links(self, links=None):
-        """Set the :obj:`Orange.data.Table` links to the given data. Notice 
+        """Set the :obj:`Orange.data.Table` links to the given data. Notice
         that the number of instances must match the number of edges.
-        
+
         """
 
         if links is not None:
@@ -137,9 +137,9 @@ class BaseGraph():
 
     def to_orange_network(self):
         """Convert the current network to >>Orange<< NetworkX standard. To use
-        :obj:`Orange.network` in Orange widgets, set node IDs to be range 
+        :obj:`Orange.network` in Orange widgets, set node IDs to be range
         [0, no_of_nodes - 1].
-        
+
         """
 
         G = self.__class__()
@@ -195,9 +195,9 @@ class BaseGraph():
         return G
 
 class Graph(BaseGraph, nx.Graph):
-    """Bases: `NetworkX.Graph <http://networkx.lanl.gov/reference/classes.graph.html>`_, 
-    :obj:`Orange.network.BaseGraph` 
-    
+    """Bases: `NetworkX.Graph <http://networkx.lanl.gov/reference/classes.graph.html>`_,
+    :obj:`Orange.network.BaseGraph`
+
     """
 
     def __init__(self, data=None, name='', **attr):
@@ -209,9 +209,9 @@ class Graph(BaseGraph, nx.Graph):
     __init__.__doc__ = _get_doc(nx.Graph.__init__.__doc__)
 
 class DiGraph(BaseGraph, nx.DiGraph):
-    """Bases: `NetworkX.DiGraph <http://networkx.lanl.gov/reference/classes.digraph.html>`_, 
-    :obj:`Orange.network.BaseGraph` 
-    
+    """Bases: `NetworkX.DiGraph <http://networkx.lanl.gov/reference/classes.digraph.html>`_,
+    :obj:`Orange.network.BaseGraph`
+
     """
 
 
@@ -223,9 +223,9 @@ class DiGraph(BaseGraph, nx.DiGraph):
     __init__.__doc__ = _get_doc(nx.DiGraph.__init__.__doc__)
 
 class MultiGraph(BaseGraph, nx.MultiGraph):
-    """Bases: `NetworkX.MultiGraph <http://networkx.lanl.gov/reference/classes.multigraph.html>`_, 
-    :obj:`Orange.network.BaseGraph` 
-    
+    """Bases: `NetworkX.MultiGraph <http://networkx.lanl.gov/reference/classes.multigraph.html>`_,
+    :obj:`Orange.network.BaseGraph`
+
     """
 
 
@@ -237,9 +237,9 @@ class MultiGraph(BaseGraph, nx.MultiGraph):
     __init__.__doc__ = _get_doc(nx.MultiGraph.__init__.__doc__)
 
 class MultiDiGraph(BaseGraph, nx.MultiDiGraph):
-    """Bases: `NetworkX.MultiDiGraph <http://networkx.lanl.gov/reference/classes.multidigraph.html>`_, 
-    :obj:`Orange.network.BaseGraph` 
-    
+    """Bases: `NetworkX.MultiDiGraph <http://networkx.lanl.gov/reference/classes.multidigraph.html>`_,
+    :obj:`Orange.network.BaseGraph`
+
     """
 
 
@@ -255,76 +255,76 @@ class GraphLayout(orangeom.GraphLayout):
     optimization technique, the class have to be initialized with the :obj:`set_graph`
     method. Also, do not forget to call :obj:`set_graph` again if the graph
     structure changes.
-    
+
     .. attribute:: coors
-   
+
         Coordinates of all vertices. They are initialized to random positions.
         You can modify them manually or use one of the optimization algorithms.
         Usage: coors[0][i], coors[1][i]; 0 for x-axis, 1 for y-axis
-        
-    
+
+
     .. automethod:: Orange.network.GraphLayout.set_graph
-    
+
     **Network optimization**
-    
+
     .. automethod:: Orange.network.GraphLayout.random
-    
+
     .. automethod:: Orange.network.GraphLayout.fr
-    
+
     .. automethod:: Orange.network.GraphLayout.fr_radial
-    
+
     .. automethod:: Orange.network.GraphLayout.circular_original
-    
+
     .. automethod:: Orange.network.GraphLayout.circular_random
-    
+
     .. automethod:: Orange.network.GraphLayout.circular_crossing_reduction
-    
+
     **FragViz**
-    
+
     .. automethod:: Orange.network.GraphLayout.mds_components
-    
+
     .. automethod:: Orange.network.GraphLayout.rotate_components
-    
-    **Helper methods** 
-    
+
+    **Helper methods**
+
     .. automethod:: Orange.network.GraphLayout.get_vertices_in_rect
-    
+
     .. automethod:: Orange.network.GraphLayout.closest_vertex
-    
+
     .. automethod:: Orange.network.GraphLayout.vertex_distances
-    
+
     .. automethod:: Orange.network.GraphLayout.rotate_vertices
-    
+
     **Examples**
-    
+
     *Network constructor and random layout*
-    
-    In our first example we create a Network object with a simple full graph (K5). 
-    Vertices are initially placed randomly. Graph is visualized using pylabs 
-    matplotlib. 
-        
+
+    In our first example we create a Network object with a simple full graph (K5).
+    Vertices are initially placed randomly. Graph is visualized using pylabs
+    matplotlib.
+
     :download:`network-constructor-nx.py <code/network-constructor-nx.py>`
-    
+
     .. literalinclude:: code/network-constructor-nx.py
-    
+
     Executing the above saves a pylab window with the following graph drawing:
-    
+
     .. image:: files/network-K5-random.png
-    
+
     *Network layout optimization*
-    
+
     This example demonstrates how to optimize network layout using one of the
     included algorithms.
-    
+
     part of :download:`network-optimization-nx.py <code/network-optimization-nx.py>`
-    
+
     .. literalinclude:: code/network-optimization-nx.py
         :lines: 14-19
-        
+
     The result of the above script is a spring force layout optimization:
-    
+
     .. image:: files/network-K5-fr.png
-    
+
     """
 
     def __init__(self):
@@ -333,13 +333,13 @@ class GraphLayout(orangeom.GraphLayout):
 
     def set_graph(self, graph=None, positions=None):
         """Init graph structure.
-        
+
         :param graph: Orange network
         :type graph: Orange.netowork.Graph
-        
+
         :param positions: Initial node positions
         :type positions: A list of positions (x, y)
-        
+
         """
         self.graph = graph
 
@@ -354,19 +354,19 @@ class GraphLayout(orangeom.GraphLayout):
         orangeom.GraphLayout.random(self)
 
     def fr(self, steps, temperature, coolFactor=0, weighted=False):
-        """Fruchterman-Reingold spring layout optimization. Set number of 
-        iterations with argument steps, start temperature with temperature 
+        """Fruchterman-Reingold spring layout optimization. Set number of
+        iterations with argument steps, start temperature with temperature
         (for example: 1000).
-        
+
         """
 
         return orangeom.GraphLayout.fr(self, steps, temperature, coolFactor, weighted)
 
     def fr_radial(self, center, steps, temperature):
-        """Radial Fruchterman-Reingold spring layout optimization. Set center 
-        node with attribute center, number of iterations with argument steps 
+        """Radial Fruchterman-Reingold spring layout optimization. Set center
+        node with attribute center, number of iterations with argument steps
         and start temperature with temperature (for example: 1000).
-        
+
         """
 
         return orangeom.GraphLayout.fr_radial(self, center, steps, temperature)
@@ -382,9 +382,9 @@ class GraphLayout(orangeom.GraphLayout):
         orangeom.GraphLayout.circular_random(self)
 
     def circular_crossing_reduction(self):
-        """Circular graph layout with edge crossing reduction (Michael Baur, 
+        """Circular graph layout with edge crossing reduction (Michael Baur,
         Ulrik Brandes).
-        
+
         """
 
         orangeom.GraphLayout.circular_crossing_reduction(self)
@@ -400,24 +400,24 @@ class GraphLayout(orangeom.GraphLayout):
         return orangeom.GraphLayout.closest_vertex(self, x, y)
 
     def vertex_distances(self, x, y):
-        """Return distances (a list of (distance, vertex) tuples) of all nodes 
+        """Return distances (a list of (distance, vertex) tuples) of all nodes
         to the given position.
-        
+
         """
 
         return orangeom.GraphLayout.vertex_distances(self, x, y)
 
     def rotate_vertices(self, components, phi):
         """Rotate network components for a given angle.
-        
+
         :param components: list of network components
         :type components: list of lists of vertex indices
-        
+
         :param phi: list of component rotation angles (unit: radians)
         :type phi: float
-        
+
         """
-        #print phi 
+        #print phi
         for i in range(len(components)):
             if phi[i] == 0:
                 continue
@@ -818,7 +818,7 @@ class GraphLayout(orangeom.GraphLayout):
         else:
             matrix = self.items_matrix
 
-        #if self.mds == None: 
+        #if self.mds == None:
         self.mds = Orange.projection.mds.MDS(matrix)
 
         if mdsFromCurrentPos:
