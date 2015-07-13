@@ -162,9 +162,6 @@ class NetworkCurve:
         h_mds = max(y_mds) - min(y_mds)
         d_mds = math.sqrt(w_mds ** 2 + h_mds ** 2)
 
-        animate_points = p.animate_points
-        p.animate_points = False
-
         # if only one component
         if d_mds == 0 or d_fr == 0:
             d_mds = 1
@@ -201,7 +198,6 @@ class NetworkCurve:
         if progress_callback is not None:
             progress_callback(mds.avgStress, self.mdsStep)
 
-        p.animate_points = animate_points
         return 0
 
     def mds_callback(self, a, b, mds, mdsRefresh, progress_callback):
@@ -252,9 +248,6 @@ class NetworkCurve:
         h_mds = max(y_mds) - min(y_mds)
         d_mds = math.sqrt(w_mds ** 2 + h_mds ** 2)
 
-        animate_points = p.animate_points
-        p.animate_points = False
-
         self.set_node_coordinates(dict(
            (n, (nodes[n].x() * d_mds / d_fr, nodes[n].y() * d_mds / d_fr)) for n in nodes))
 
@@ -282,7 +275,6 @@ class NetworkCurve:
         if progress_callback is not None:
             progress_callback(mds.avgStress, self.mdsStep)
 
-        p.animate_points = animate_points
         return 0
 
 #    def move_selected_nodes(self, dx, dy):

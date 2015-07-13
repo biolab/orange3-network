@@ -34,10 +34,7 @@ class OWNxExplorer(widget.OWWidget):
                ("Other Items", Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "maxLinkSize", "minVertexSize", "maxVertexSize", "networkCanvas.animate_plot",
-    "networkCanvas.animate_points", "networkCanvas.antialias_plot",
-    "networkCanvas.antialias_points", "networkCanvas.antialias_lines",
-    "networkCanvas.auto_adjust_performance", "invertSize", "optMethod",
+    "maxLinkSize", "minVertexSize", "maxVertexSize", "invertSize", "optMethod",
     "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
     "lastNameComponentAttribute", "lastLabelColumns", "lastTooltipColumns",
     "showWeights", "showEdgeLabels", "colorSettings",
@@ -159,7 +156,6 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesTab = gui.createTabPage(self.tabs, "Edges")
         self.markTab = gui.createTabPage(self.tabs, "Mark")
         self.infoTab = gui.createTabPage(self.tabs, "Info")
-        self.performanceTab = gui.createTabPage(self.tabs, "Performance")
 
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
@@ -336,13 +332,10 @@ class OWNxExplorer(widget.OWWidget):
 
         self.set_mark_mode()
 
-        #~ self.networkCanvas.gui.effects_box(self.performanceTab)
-
         self.verticesTab.layout().addStretch(1)
         self.edgesTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
         self.infoTab.layout().addStretch(1)
-        self.performanceTab.layout().addStretch(1)
 
         dlg = self._create_color_dialog(self.colorSettings, self.selectedSchemaIndex)
         self.networkCanvas.contPalette = dlg.getContinuousPalette("contPalette")
