@@ -25,6 +25,11 @@ import pyqtgraph as pg
         #~ if arrows is not None:
             #~ self.set_arrows(arrows)
 
+def pos_array(pos):
+    """Return ndarray of positions from node-to-position dict"""
+    return [i[1] for i in sorted(pos.items())]
+
+
 class NetworkCurve:
     def __init__(self, parent=None, pen=QPen(Qt.black), xData=None, yData=None):
         self.name = "Network Curve"
@@ -309,6 +314,10 @@ class NetworkCurve:
 class OWNxCanvas(pg.GraphItem):
     def __init__(self, master, parent=None, name="None"):
         super().__init__()
+
+        self.kwargs = {}
+        self.layout_fhr(False)
+
         self.master = master
         self.parent = parent
         self.graph = None
@@ -659,33 +668,10 @@ class OWNxCanvas(pg.GraphItem):
         return True
 
     def set_graph(self, graph):
-        if graph is None:
-            self.graph = None
-            self.networkCurve = None
-            self.items = None
-            self.links = None
-            xMin = -1.0
-            xMax = 1.0
-            yMin = -1.0
-            yMax = 1.0
-            #~ self.setData(pos=[.5, .5], text=['no network'])
-            return
-
-        self.graph = graph
-        self.items = graph.items()
-        self.links = graph.links()
-        self.networkCurve = NetworkCurve()
-
-        int_graph = nx.convert_node_labels_to_integers(graph, label_attribute='_label')
-
-        pos = np.array([i[1] for i in sorted(nx.spring_layout(int_graph).items())])
-        adj = np.array(int_graph.edges())
-        # TODO
-        labels = []
-        lines = []
-        size = []
-        data = []
-        self.setData(pos=pos, adj=adj, text=labels)
+        self.graph = graph and nx.convert_node_labels_to_integers(graph, label_attribute='_label')
+        if graph:
+            self.kwargs['adj'] = np.array(self.graph.edges())
+        self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
         self.networkCurve.set_labels_on_marked(labelsOnMarkedOnly)
@@ -699,4 +685,49 @@ class OWNxCanvas(pg.GraphItem):
     def update_graph_layout(self):
         self._bounds_cache = {}
         self._transform_cache = {}
-        OWPlot.update_layout(self)
+        ...
+
+    def layout_fhr(self, weighted):
+        def _f(G): return pos_array(nx.spring_layout(G, dim=5, iterations=50, weight='weight' if weighted else None))
+        self.layout_func = _f
+        return self
+
+    def layout_circular(self):
+        def _f(G): return pos_array(nx.circular_layout(G))
+        self.layout_func = _f
+        return self
+
+    def layout_spectral(self):
+        def _f(G): return pos_array(nx.spectral_layout(G, dim=3))
+        self.layout_func = _f
+        return self
+
+    def layout_random(self):
+        def _f(G): return pos_array(nx.random_layout(G))
+        self.layout_func = _f
+        return self
+
+    def layout_concentric(self):
+        def _f(G):
+            isolates = set(nx.isolates(G))
+            independent = set(nx.maximal_independent_set(G)) - isolates
+            dominating = set(nx.dominating_set(G)) - independent - isolates
+            rest = set(G.nodes()) - dominating - independent - isolates
+            nlist = list(map(sorted, filter(None, (isolates, independent, dominating, rest))))
+            return pos_array(nx.shell_layout(G, nlist=nlist))
+
+        self.layout_func = _f
+        return self
+
+    def replot(self):
+        text_labels = []
+        lines = []
+        size = []
+        data = []
+
+        if not self.graph:
+            self.setData(pos=[[.5, .5]], text=['no network'])
+            return
+
+        pos = np.array(self.layout_func(self.graph))
+        self.setData(pos=pos, **self.kwargs)

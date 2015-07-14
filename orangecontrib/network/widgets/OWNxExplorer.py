@@ -15,6 +15,23 @@ import orangecontrib.network as network
 from orangecontrib.network.widgets.OWNxCanvasQt import *
 
 
+class Layout:
+    NONE = 'None'
+    FHR = 'Fruchterman-Reingold'
+    FHR_WEIGHTED = 'Weighted Fruchterman-Reingold'
+    RANDOM = 'Random'
+    CIRCULAR = 'Circular'
+    CONCENTRIC = 'Concentric'
+    SPECTRAL = 'Spectral'
+    FRAGVIZ = 'FragViz'
+    MDS = 'Multi-dimensional scaling'
+    PIVOT_MDS = 'Pivot MDS'
+    all = (NONE,      FHR,        FHR_WEIGHTED,
+           CIRCULAR,  CONCENTRIC, RANDOM,
+           SPECTRAL,  FRAGVIZ,    MDS, PIVOT_MDS)
+    REQUIRES_DISTANCE_MATRIX = (FRAGVIZ, MDS, PIVOT_MDS)
+
+
 class OWNxExplorer(widget.OWWidget):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
@@ -133,10 +150,6 @@ class OWNxExplorer(widget.OWWidget):
         self.graph_base = None
         self.markInputItems = None
 
-        # if optimization method is set to FragViz, set it to FR
-        if self.optMethod == 9:
-            self.optMethod = 3
-
         self.networkCanvas.showMissingValues = self.showMissingValues
 
         plot = pg.PlotWidget(background="w")
@@ -152,7 +165,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.tabs = gui.tabWidget(self.controlArea)
 
-        self.verticesTab = gui.createTabPage(self.tabs, "Nodes")
+        self.nodesTab = gui.createTabPage(self.tabs, "Nodes")
         self.edgesTab = gui.createTabPage(self.tabs, "Edges")
         self.markTab = gui.createTabPage(self.tabs, "Mark")
         self.infoTab = gui.createTabPage(self.tabs, "Info")
@@ -160,34 +173,21 @@ class OWNxExplorer(widget.OWWidget):
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
 
-        self.optimizeBox = gui.radioButtonsInBox(self.verticesTab, self, "optimizeWhat", [], "Optimize", addSpace=False)
+        layoutBox = gui.widgetBox(self.nodesTab, "Graph layout")
 
-        self.optCombo = gui.comboBox(self.optimizeBox, self, "optMethod", label='Method:     ', orientation='horizontal', callback=self.graph_layout_method)
-        self.optCombo.addItem("No optimization")
-        self.optCombo.addItem("Random")
-        self.optCombo.addItem("Fruchterman Reingold")
-        self.optCombo.addItem("Fruchterman Reingold Weighted")
-        self.optCombo.addItem("Fruchterman Reingold Radial")
-        self.optCombo.addItem("Circular Crossing Reduction")
-        self.optCombo.addItem("Circular Original")
-        self.optCombo.addItem("Circular Random")
-        self.optCombo.addItem("FragViz")
-        self.optCombo.addItem("MDS")
-        self.optCombo.addItem("Pivot MDS")
+        self.optCombo = gui.comboBox(layoutBox, self, "optMethod", label='Method:', orientation='horizontal', callback=self.graph_layout_method)
+        for layout in Layout.all:
+            self.optCombo.addItem(layout)
+
+        self.optMethod = Layout.all.index(Layout.FHR)
         self.optCombo.setCurrentIndex(self.optMethod)
-        self.stepsSpin = gui.spin(self.optimizeBox, self, "frSteps", 1, 100000, 1, label="Iterations: ")
-        self.cb_opt_from_curr = gui.checkBox(self.optimizeBox, self, "opt_from_curr", label="Optimize from current positions")
-        self.cb_opt_from_curr.setEnabled(False)
-        self.stepsSpin.setEnabled(False)
 
-        self.optButton = gui.button(self.optimizeBox, self, "Optimize layout", callback=self.graph_layout, toggleButton=1)
-
-        colorBox = gui.widgetBox(self.verticesTab, "Node color attribute", orientation="horizontal", addSpace=False)
+        colorBox = gui.widgetBox(self.nodesTab, "Node color attribute", orientation="horizontal", addSpace=False)
         self.colorCombo = gui.comboBox(colorBox, self, "color", callback=self.set_node_colors)
         self.colorCombo.addItem("(same color)")
         gui.button(colorBox, self, "palette", self._set_colors, tooltip="Set node color palette", width=60)
 
-        ib = gui.widgetBox(self.verticesTab, "Node size attribute", orientation="vertical", addSpace=False)
+        ib = gui.widgetBox(self.nodesTab, "Node size attribute", orientation="vertical", addSpace=False)
         hb = gui.widgetBox(ib, orientation="horizontal", addSpace=False)
         gui.checkBox(hb, self, "invertSize", "Invert size", callback=self.set_node_sizes)
         gui.spin(hb, self, "minVertexSize", 5, 200, 1, label="Min:", callback=self.set_node_sizes)
@@ -195,7 +195,7 @@ class OWNxExplorer(widget.OWWidget):
         self.vertexSizeCombo = gui.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
         self.vertexSizeCombo.addItem("(none)")
 
-        self.attBox = gui.widgetBox(self.verticesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
+        self.attBox = gui.widgetBox(self.nodesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
         hb = gui.widgetBox(self.attBox, orientation="horizontal", addSpace=False)
         self.attListBox = gui.listBox(hb, self, "markerAttributes", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_att_lstbox)
         self.tooltipListBox = gui.listBox(hb, self, "tooltipAttributes", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
@@ -217,7 +217,7 @@ class OWNxExplorer(widget.OWWidget):
         self.edgeLabelListBox = gui.listBox(self.edgeLabelBox, self, "edgeLabelAttributes", "edges_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_edge_label_listbox)
         #self.edgeLabelBox.setEnabled(False)
 
-        ib = gui.widgetBox(self.verticesTab, "General", orientation="vertical")
+        ib = gui.widgetBox(self.nodesTab, "General", orientation="vertical")
         gui.checkBox(ib, self, 'networkCanvas.show_indices', 'Show indices', callback=self.networkCanvas.set_node_labels)
         gui.checkBox(ib, self, 'labelsOnMarkedOnly', 'Show labels on marked nodes only', callback=(lambda: self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)))
         gui.spin(ib, self, "fontSize", 4, 30, 1, label="Font size:", callback=self.set_font)
@@ -332,7 +332,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.set_mark_mode()
 
-        self.verticesTab.layout().addStretch(1)
+        self.nodesTab.layout().addStretch(1)
         self.edgesTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
         self.infoTab.layout().addStretch(1)
@@ -412,21 +412,15 @@ class OWNxExplorer(widget.OWWidget):
         self.cb_show_distances.setEnabled(1)
         self.cb_show_component_distances.setEnabled(1)
 
-        if self.optMethod in [8, 9, 10]:
+        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is not None and self.graph_base is not None and \
                                 self.items_matrix.dim == self.graph_base.number_of_nodes():
-                self.optButton.setEnabled(True)
 
-                if self.optMethod in [8, 9]:
-                    self.cb_opt_from_curr.setEnabled(True)
-
-                if self.optMethod == 8: # if FragViz, run FR first
-                    self.optMethod = 2
-                    self.optButton.setChecked(True)
+                if self.optMethod == Layout.FRAGVIZ: # if FragViz, run FR first
+                    self.optMethod = Layout.all.index(Layout.FHR)
                     self.graph_layout()
-                    self.optMethod = 8
+                    self.optMethod = Layout.all.index(Layout.FRAGVIZ)
 
-            self.optButton.setChecked(True)
             self.graph_layout()
 
     def _set_canvas_attr(self, attr, value):
@@ -894,7 +888,6 @@ class OWNxExplorer(widget.OWWidget):
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
-        self.optButton.setChecked(1)
         self.graph_layout()
         self.set_mark_mode()
 
@@ -1006,16 +999,9 @@ class OWNxExplorer(widget.OWWidget):
 
     def graph_layout(self):
         if self.graph is None or self.graph.number_of_nodes() <= 0:   #grafa se ni
-            self.optButton.setChecked(False)
             return
-
-        if not self.optButton.isChecked() and not self.optMethod in [2, 3, 8, 9, 10]:
-            self.optButton.setChecked(False)
-            return
-
-        qApp.processEvents()
-
-        if self.optMethod == 0:
+        layout = Layout.all[self.optMethod]
+        if layout == Layout.NONE:
             items = self.graph.items()
             if items is not None and 'x' in items.domain and 'y' in items.domain:
                 positions = dict((node, (items[node]['x'].value, items[node]['y'].value)) \
@@ -1025,75 +1011,42 @@ class OWNxExplorer(widget.OWWidget):
                 # ignore start position if all nodes are on the same coordinate
                 if len(set(positions.values())) > 1:
                     self.networkCanvas.networkCurve.set_node_coordinates(positions)
-        elif self.optMethod == 1:
-            self.networkCanvas.networkCurve.random()
-        elif self.optMethod == 2:
-            self.graph_layout_fr(False)
-        elif self.optMethod == 3:
-            self.graph_layout_fr(True)
-        elif self.optMethod == 4:
-            self.graph_layout_fr_radial()
-        elif self.optMethod == 5:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_crossing)
-        elif self.optMethod == 6:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_original)
-        elif self.optMethod == 7:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_random)
-        elif self.optMethod == 8:
+        elif layout == Layout.RANDOM:
+            self.networkCanvas.layout_random()
+        elif layout == Layout.FHR:
+            self.networkCanvas.layout_fhr(False)
+        elif layout == Layout.FHR_WEIGHTED:
+            self.networkCanvas.layout_fhr(True)
+        elif layout == Layout.CONCENTRIC:
+            self.networkCanvas.layout_concentric()
+        elif layout == Layout.CIRCULAR:
+            self.networkCanvas.layout_circular()
+        elif layout == Layout.SPECTRAL:
+            self.networkCanvas.layout_spectral()
+        elif layout == Layout.FRAGVIZ:
             self.graph_layout_fragviz()
-        elif self.optMethod == 9:
+        elif layout == Layout.MDS:
             self.graph_layout_mds()
-        elif self.optMethod == 10:
+        elif layout == Layout.PIVOT_MDS:
             self.graph_layout_pivot_mds()
+        else: raise Exception('wtf')
+        self.networkCanvas.replot()
 
-        self.optButton.setChecked(False)
-        #~ self.networkCanvas.update_graph_layout()
-        qApp.processEvents()
-
-    def graph_layout_method(self, method=None):
+    def graph_layout_method(self):
         self.information()
-        self.optButton.setEnabled(True)
-        self.cb_opt_from_curr.setEnabled(False)
 
-        if method is not None:
-            self.optMethod = method
-
-        if self.optMethod == 0:
-            self.optButton.setEnabled(False)
-        else:
-            self.optButton.setEnabled(True)
-
-        if self.optMethod in [2, 3, 4]:
-            self.stepsSpin.setEnabled(True)
-
-        elif self.optMethod in [8, 9, 10]:
-            if self.optMethod == 10:
-                pass
-
-            if self.optMethod in [8, 9]:
-                self.cb_opt_from_curr.setEnabled(True)
-
-            self.stepsSpin.setEnabled(True)
-
+        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is None:
                 self.information('Set distance matrix to input signal')
-                self.optButton.setEnabled(False)
                 return
             if self.graph is None:
                 self.information('No network found')
-                self.optButton.setEnabled(False)
                 return
             if self.items_matrix.dim != self.graph_base.number_of_nodes():
                 self.error('Distance matrix dimensionality must equal number of vertices')
-                self.optButton.setEnabled(False)
                 return
-        else:
-            self.stepsSpin.setEnabled(False)
-            self.optButton.setChecked(True)
-            self.graph_layout()
+
+        self.graph_layout()
 
     def mds_progress(self, avgStress, stepCount):
         #self.drawForce()
@@ -1106,26 +1059,16 @@ class OWNxExplorer(widget.OWWidget):
     def graph_layout_fragviz(self):
         if self.items_matrix is None:
             self.information('Set distance matrix to input signal')
-            self.optButton.setChecked(False)
             return
 
         if self.layout is None:
             self.information('No network found')
-            self.optButton.setChecked(False)
             return
 
         if self.items_matrix.dim != self.graph_base.number_of_nodes():
             self.error('Distance matrix dimensionality must equal number of vertices')
-            self.optButton.setChecked(False)
             return
 
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stopMDS = True
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
         self.progressBarInit()
         qApp.processEvents()
 
@@ -1136,33 +1079,21 @@ class OWNxExplorer(widget.OWWidget):
 
         self.networkCanvas.networkCurve.layout_fragviz(self.frSteps, matrix, self.graph, self.mds_progress, self.opt_from_curr)
 
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
         self.progressBarFinished()
 
     def graph_layout_mds(self):
         if self.items_matrix is None:
             self.information('Set distance matrix to input signal')
-            self.optButton.setChecked(False)
             return
 
         if self.layout is None:
             self.information('No network found')
-            self.optButton.setChecked(False)
             return
 
         if self.items_matrix.dim != self.graph_base.number_of_nodes():
             self.error('Distance matrix dimensionality must equal number of vertices')
-            self.optButton.setChecked(False)
             return
 
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stopMDS = True
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
         self.progressBarInit()
         qApp.processEvents()
 
@@ -1173,53 +1104,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.networkCanvas.networkCurve.layout_mds(self.frSteps, matrix, self.mds_progress, self.opt_from_curr)
 
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
         self.progressBarFinished()
-
-    def graph_layout_fr(self, weighted):
-        if self.graph is None:
-            return
-
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stop_optimization()
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
-        qApp.processEvents()
-        self.networkCanvas.networkCurve.layout_fr(self.frSteps, False)
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
-
-    def graph_layout_fr_radial(self):
-        if self.graph is None:   #grafa se ni
-            return
-
-#        #print "F-R Radial"
-#        k = 1.13850193174e-008
-#        nodes = self.graph.number_of_nodes()
-#        t = k * nodes * nodes
-#        refreshRate = int(5.0 / t)
-#        if refreshRate <    1: refreshRate = 1
-#        if refreshRate > 1500: refreshRate = 1500
-#        #print "refreshRate: " + str(refreshRate)
-#
-#        tolerance = 5
-#        initTemp = 100
-#        centerNdx = 0
-#
-#        selection = self.networkCanvas.getSelection()
-#        if len(selection) > 0:
-#            centerNdx = selection[0]
-#
-#        #print "center ndx: " + str(centerNdx)
-#        initTemp = self.layout.fr_radial(centerNdx, refreshRate, initTemp)
-#        self.networkCanvas.circles = [10000 / 12, 10000/12*2, 10000/12*3]#, 10000/12*4, 10000/12*5]
-#        #self.networkCanvas.circles = [100, 200, 300]
-#        self.networkCanvas.updateCanvas()
-#        self.networkCanvas.circles = []
 
     def graph_layout_pivot_mds(self):
         self.information()
