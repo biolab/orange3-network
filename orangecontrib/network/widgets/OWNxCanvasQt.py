@@ -687,23 +687,45 @@ class OWNxCanvas(pg.GraphItem):
         self._transform_cache = {}
         ...
 
-    def layout_fhr(self, weighted):
-        def _f(G): return pos_array(nx.spring_layout(G, dim=5, iterations=50, weight='weight' if weighted else None))
+    def layout_original(self):
+        def _f(G):
+            items = G.items()
+            if not items or 'x' not in items.domain or 'y' not in items.domain:
+                raise Exception('graph items table doesn\'t have x,y info')
+            positions = {node: (items[node]['x'].value,
+                                items[node]['y'].value)
+                         for node in self.graph.node
+                         if items[node]['x'].value != '?'
+                         and items[node]['y'].value != '?'}
+            if len(positions) == len(items):
+                return pos_array(positions)
+            else:
+                return layout_fhr(pos=positions, iterations=1)(G)
+
+    def layout_fhr(self, weighted=False, pos=None, iterations=50):
+        def _f(G):
+            return pos_array(nx.spring_layout(G, dim=3, pos=pos,
+                                              iterations=iterations,
+                                              weight='weight' if weighted else None))
+        self.kwargs.pop('pos', None)
         self.layout_func = _f
         return self
 
     def layout_circular(self):
         def _f(G): return pos_array(nx.circular_layout(G))
+        self.kwargs.pop('pos', None)
         self.layout_func = _f
         return self
 
     def layout_spectral(self):
         def _f(G): return pos_array(nx.spectral_layout(G, dim=3))
+        self.kwargs.pop('pos', None)
         self.layout_func = _f
         return self
 
     def layout_random(self):
         def _f(G): return pos_array(nx.random_layout(G))
+        self.kwargs.pop('pos', None)
         self.layout_func = _f
         return self
 
@@ -716,6 +738,7 @@ class OWNxCanvas(pg.GraphItem):
             nlist = list(map(sorted, filter(None, (isolates, independent, dominating, rest))))
             return pos_array(nx.shell_layout(G, nlist=nlist))
 
+        self.kwargs.pop('pos', None)
         self.layout_func = _f
         return self
 
@@ -729,5 +752,7 @@ class OWNxCanvas(pg.GraphItem):
             self.setData(pos=[[.5, .5]], text=['no network'])
             return
 
-        pos = np.array(self.layout_func(self.graph))
-        self.setData(pos=pos, **self.kwargs)
+        if 'pos' not in self.kwargs:
+            self.kwargs['pos'] = np.array(self.layout_func(self.graph))
+
+        self.setData(**self.kwargs)

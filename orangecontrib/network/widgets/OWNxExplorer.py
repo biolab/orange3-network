@@ -152,7 +152,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.networkCanvas.showMissingValues = self.showMissingValues
 
-        plot = pg.PlotWidget(background="w")
+        plot = pg.PlotWidget(background="w", enableAutoRange=True)
         for axis in ('bottom', 'left'):
             plot.plotItem.hideAxis(axis)
         plot.setFrameStyle(QFrame.StyledPanel)
@@ -827,16 +827,6 @@ class OWNxExplorer(widget.OWWidget):
         self.number_of_edges_label = self.graph.number_of_edges()
 
         self.networkCanvas.set_graph(self.graph)
-
-        items = self.graph.items()
-        if items is not None and 'x' in items.domain and 'y' in items.domain:
-            positions = dict((node, (items[node]['x'].value, items[node]['y'].value)) \
-                         for node in self.graph if items[node]['x'].value != '?' \
-                         and items[node]['y'].value != '?')
-
-            # ignore start position if all nodes are on the same coordinate
-            if len(set(positions.values())) > 1:
-                self.networkCanvas.networkCurve.set_node_coordinates(positions)
 
         self.networkCanvas.showEdgeLabels = self.showEdgeLabels
         self.networkCanvas.maxEdgeSize = self.maxLinkSize
