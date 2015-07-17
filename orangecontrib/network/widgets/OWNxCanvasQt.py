@@ -321,6 +321,7 @@ class OWNxCanvas(pg.GraphItem):
         super().__init__()
 
         self.kwargs = {}
+        self.textItems = []
         self.layout_fhr(False)
 
         self.master = master
@@ -739,8 +740,17 @@ class OWNxCanvas(pg.GraphItem):
         self.layout_func = _f
         return self
 
+    def _updateGraph(self):
+        # Update scatter plot (graph)
+        super().setData(**self.kwargs)
+        # Update text labels
+        for item, pos, text in zip(self.textItems,
+                                   self.kwargs['pos'],
+                                   self.kwargs.get('text', [])):
+            item.setPos(*pos[:2])
+            item.setText(text, 'k')
+
     def replot(self):
-        text_labels = []
         lines = []
         size = []
         data = []
@@ -752,4 +762,45 @@ class OWNxCanvas(pg.GraphItem):
         if 'pos' not in self.kwargs:
             self.kwargs['pos'] = np.array(self.layout_func(self.graph))
 
-        self.setData(**self.kwargs)
+        self.kwargs['data'] = np.arange(self.graph.number_of_nodes())
+
+        # Construct empty node labels
+        for i in self.textItems:
+            i.scene().removeItem(i)
+        self.textItems = []
+        for t in self.kwargs.get('text', []):
+            item = pg.TextItem(t, 'k')
+            self.textItems.append(item)
+            item.setParentItem(self)
+
+        self._updateGraph()
+
+    def mouseDragEvent(self, ev):
+        if ev.button() != Qt.LeftButton:
+            ev.ignore()
+            return
+
+        if ev.isStart():
+            # We are already one step into the drag.
+            # Find the point(s) at the mouse cursor when the button was first
+            # pressed:
+            pos = ev.buttonDownPos()
+            pts = self.scatter.pointsAt(pos)
+            if len(pts) == 0:
+                ev.ignore()
+                return
+            self.dragPoint = pts[0]
+            ind = pts[0].data()
+            self.dragOffset = self.kwargs['pos'][ind][:2] - pos
+        elif ev.isFinish():
+            self.dragPoint = None
+            return
+        else:
+            if self.dragPoint is None:
+                ev.ignore()
+                return
+
+        ind = self.dragPoint.data()
+        self.kwargs['pos'][ind][:2] = ev.pos() + self.dragOffset
+        ev.accept()
+        self._updateGraph()
