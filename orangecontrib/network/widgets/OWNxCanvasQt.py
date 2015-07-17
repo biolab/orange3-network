@@ -491,48 +491,17 @@ class OWNxCanvas(pg.GraphItem):
         self.kwargs['brush'] = brushes
         self.replot()
 
-    def set_node_labels(self, attributes=None):
-        if self.graph is None:
-            return
-
-        nodes = self.graph.nodes()
-
-        if attributes is not None:
-            self.node_label_attributes = attributes
-
-        label_attributes = []
-        if self.items is not None and isinstance(self.items, data.Table):
-            label_attributes = [self.items.domain[att] for att in \
-                self.node_label_attributes if att in self.items.domain]
-
-        indices = [[] for u in nodes]
-        if self.show_indices:
-            indices = [[str(u)] for u in nodes]
-
-        distances = [[] for u in nodes]
-        show_distances = False
-        if self.label_distances is not None and type(self.label_distances) == \
-                           type([]) and len(self.label_distances) == len(nodes):
-            distances = self.label_distances
-            show_distances = True
-
-        if len(label_attributes) == 0 and \
-                        not self.show_indices and not show_distances:
-            self.networkCurve.set_node_labels({})
-
-        elif self.trim_label_words > 0:
-            self.networkCurve.set_node_labels(dict((node,
-                ', '.join(distances[i] + indices[i] +
-                          [' '.join(str(self.items[node][att]).split(' ')[:min(self.trim_label_words, len(str(self.items[node][att]).split(' ')))])
-                for att in label_attributes])) for i, node in enumerate(nodes)))
+    def set_node_labels(self, attributes=[]):
+        assert isinstance(attributes, list)
+        if attributes:
+            table = self.graph.items()
+            for i, item in enumerate(self.textItems):
+                text = ', '.join(map(str, table[i, attributes][0].list))
+                item.setText(text, (30, 30, 30))
         else:
-            self.networkCurve.set_node_labels(dict((node, ', '.join(\
-                        distances[i] + indices[i] + \
-                           [str(self.items[node][att]) for att in \
-                           label_attributes])) for i, node in enumerate(nodes)))
-
+            for item in self.textItems:
+                item.setText('')
         self.replot()
-
 
     def set_edge_colors(self, attribute):
         if self.graph is None:
@@ -669,6 +638,12 @@ class OWNxCanvas(pg.GraphItem):
         self.graph = graph
         if graph:
             self.kwargs['adj'] = np.array(self.graph.edges())
+            # Construct empty node labels
+            self.textItems = []
+            for i in range(graph.number_of_nodes()):
+                item = pg.TextItem()
+                self.textItems.append(item)
+                item.setParentItem(self)
         self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
@@ -744,11 +719,8 @@ class OWNxCanvas(pg.GraphItem):
         # Update scatter plot (graph)
         super().setData(**self.kwargs)
         # Update text labels
-        for item, pos, text in zip(self.textItems,
-                                   self.kwargs['pos'],
-                                   self.kwargs.get('text', [])):
+        for item, pos in zip(self.textItems, self.kwargs['pos']):
             item.setPos(*pos[:2])
-            item.setText(text, 'k')
 
     def replot(self):
         lines = []
@@ -763,15 +735,6 @@ class OWNxCanvas(pg.GraphItem):
             self.kwargs['pos'] = np.array(self.layout_func(self.graph))
 
         self.kwargs['data'] = np.arange(self.graph.number_of_nodes())
-
-        # Construct empty node labels
-        for i in self.textItems:
-            i.scene().removeItem(i)
-        self.textItems = []
-        for t in self.kwargs.get('text', []):
-            item = pg.TextItem(t, 'k')
-            self.textItems.append(item)
-            item.setParentItem(self)
 
         self._updateGraph()
 

@@ -60,7 +60,7 @@ class OWNxExplorer(widget.OWWidget):
     "mdsSteps", "mdsRefresh", "mdsStressDelta", "organism", "showTextMiningInfo",
     "toolbarSelection", "minComponentEdgeWidth", "maxComponentEdgeWidth",
     "mdsFromCurrentPos", "labelsOnMarkedOnly", "tabIndex",
-    "networkCanvas.trim_label_words", "opt_from_curr", "networkCanvas.explore_distances",
+    "opt_from_curr", "networkCanvas.explore_distances",
     "networkCanvas.show_component_distances", "fontWeight", "networkCanvas.state",
     "networkCanvas.selection_behavior", "hubs", "markDistance",
     "markNConnections", "markNumber", "markSearchString"]
@@ -68,14 +68,14 @@ class OWNxExplorer(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="markerAttributes"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
+        #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
         self.networkCanvas = OWNxCanvas(self, self.mainArea, "Net Explorer")
         self.graph_attrs = []
         self.edges_attrs = []
 
 
-        self.markerAttributes = []
+        self.node_label_attrs = []
         self.tooltipAttributes = []
         self.edgeLabelAttributes = []
         self.autoSendSelection = False
@@ -190,11 +190,10 @@ class OWNxExplorer(widget.OWWidget):
         self.vertexSizeCombo = gui.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
         self.vertexSizeCombo.addItem("(none)")
 
-        self.attBox = gui.widgetBox(self.nodesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
-        hb = gui.widgetBox(self.attBox, orientation="horizontal", addSpace=False)
-        self.attListBox = gui.listBox(hb, self, "markerAttributes", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_att_lstbox)
+        lb = gui.widgetBox(self.nodesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
+        hb = gui.widgetBox(lb, orientation="horizontal", addSpace=False)
+        self.attListBox = gui.listBox(hb, self, "node_label_attrs", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._on_node_label_attrs_changed)
         self.tooltipListBox = gui.listBox(hb, self, "tooltipAttributes", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
-        gui.spin(self.attBox, self, "networkCanvas.trim_label_words", 0, 5, 1, label='Trim label words to', callback=self._clicked_att_lstbox)
 
         ib = gui.widgetBox(self.edgesTab, "General", orientation="vertical")
         gui.checkBox(ib, self, 'networkCanvas.show_weights', 'Show weights', callback=self.networkCanvas.set_edge_labels)
@@ -673,7 +672,7 @@ class OWNxExplorer(widget.OWWidget):
         for i in range(self.attListBox.count()):
             if str(self.attListBox.item(i).text()) in lastLabelColumns:
                 self.attListBox.item(i).setSelected(1)
-            self._clicked_att_lstbox()
+            self._on_node_label_attrs_changed()
 
         for i in range(self.tooltipListBox.count()):
             if str(self.tooltipListBox.item(i).text()) \
@@ -759,7 +758,7 @@ class OWNxExplorer(widget.OWWidget):
         self.set_edge_sizes()
         self.set_edge_colors()
 
-        self._clicked_att_lstbox()
+        self._on_node_label_attrs_changed()
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
@@ -867,7 +866,7 @@ class OWNxExplorer(widget.OWWidget):
         self.set_edge_sizes()
         self.set_edge_colors()
 
-        self._clicked_att_lstbox()
+        self._on_node_label_attrs_changed()
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
@@ -1140,13 +1139,11 @@ class OWNxExplorer(widget.OWWidget):
         c.setColorSchemas(colorSettings, selectedSchemaIndex)
         return c
 
-    def _clicked_att_lstbox(self):
+    def _on_node_label_attrs_changed(self):
         if self.graph is None:
             return
-
-        self.lastLabelColumns = [self.graph_attrs[i].name for i in self.markerAttributes]
-        #~ self.networkCanvas.set_node_labels(self.lastLabelColumns)
-        #~ self.networkCanvas.replot()
+        self.lastLabelColumns = [self.graph_attrs[i] for i in self.node_label_attrs]  # TODO
+        self.networkCanvas.set_node_labels(self.lastLabelColumns)
 
     def _clicked_tooltip_lstbox(self):
         if self.graph is None:
@@ -1246,11 +1243,11 @@ class OWNxExplorer(widget.OWWidget):
                              ("Vertices per edge", "%.3f" % self.verticesPerEdge),
                              ("Edges per vertex", "%.3f" % self.edgesPerVertex),
                              ])
-        if self.node_color_attr or self.vertexSize or self.markerAttributes or self.edgeColor:
+        if self.node_color_attr or self.vertexSize or self.node_label_attrs or self.edgeColor:
             self.reportSettings("Visual settings",
                                 [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
                                  self.vertexSize and ("Vertex size", str(self.vertexSizeCombo.currentText()) + " (inverted)" if self.invertSize else ""),
-                                 self.markerAttributes and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.markerAttributes)),
+                                 self.node_label_attrs and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
                                  self.edgeColor and ("Edge colors", self.edgeColorCombo.currentText()),
                                 ])
         self.reportSettings("Optimization",
