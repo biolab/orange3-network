@@ -87,7 +87,7 @@ class OWNxExplorer(widget.OWWidget):
         self.markDistance = 2
         self.frSteps = 1
         self.hubs = 0
-        self.color = 0
+        self.node_color_attr = 0
         self.edgeColor = 0
         self.vertexSize = 0
         self.nShown = self.nHidden = self.nMarked = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
@@ -105,8 +105,6 @@ class OWNxExplorer(widget.OWWidget):
         self.lastTooltipColumns = set()
         self.showWeights = 0
         self.showEdgeLabels = 0
-        self.colorSettings = None
-        self.selectedSchemaIndex = 0
         self.edgeColorSettings = [
             ('net_edges', [
                 [],
@@ -173,19 +171,16 @@ class OWNxExplorer(widget.OWWidget):
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
 
-        layoutBox = gui.widgetBox(self.nodesTab, "Graph layout")
-
-        self.optCombo = gui.comboBox(layoutBox, self, "optMethod", label='Method:', orientation='horizontal', callback=self.graph_layout_method)
-        for layout in Layout.all:
-            self.optCombo.addItem(layout)
-
+        drawingBox = gui.widgetBox(self.nodesTab, "Drawing preferences")
+        self.optCombo = gui.comboBox(
+            drawingBox, self, "optMethod", label='Layout:',
+            orientation='horizontal', callback=self.graph_layout_method)
+        for layout in Layout.all: self.optCombo.addItem(layout)
         self.optMethod = Layout.all.index(Layout.FHR)
         self.optCombo.setCurrentIndex(self.optMethod)
-
-        colorBox = gui.widgetBox(self.nodesTab, "Node color attribute", orientation="horizontal", addSpace=False)
-        self.colorCombo = gui.comboBox(colorBox, self, "color", callback=self.set_node_colors)
-        self.colorCombo.addItem("(same color)")
-        gui.button(colorBox, self, "palette", self._set_colors, tooltip="Set node color palette", width=60)
+        self.colorCombo = gui.comboBox(
+            drawingBox, self, "node_color_attr", label='Color nodes by:',
+            orientation='horizontal', callback=self.set_node_colors)
 
         ib = gui.widgetBox(self.nodesTab, "Node size attribute", orientation="vertical", addSpace=False)
         hb = gui.widgetBox(ib, orientation="horizontal", addSpace=False)
@@ -336,10 +331,6 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
         self.infoTab.layout().addStretch(1)
-
-        dlg = self._create_color_dialog(self.colorSettings, self.selectedSchemaIndex)
-        self.networkCanvas.contPalette = dlg.getContinuousPalette("contPalette")
-        self.networkCanvas.discPalette = dlg.getDiscretePalette("discPalette")
 
         dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
         self.networkCanvas.contEdgePalette = dlg.getContinuousPalette("contPalette")
@@ -631,8 +622,10 @@ class OWNxExplorer(widget.OWWidget):
         lastTooltipColumns = self.lastTooltipColumns
 
         for var in self.graph_attrs:
-            if var.is_discrete or var.is_continuous:
-                self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
+            if (var.is_discrete or
+                var.is_continuous or
+                var.is_string and var.name == 'label'):  # FIXME: whatis label?
+                self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
             if var.is_string and hasattr(self.graph, 'items') and self.graph_base.items() is not None and len(self.graph_base.items()) > 0:
 
@@ -673,7 +666,7 @@ class OWNxExplorer(widget.OWWidget):
 
         for i in range(self.colorCombo.count()):
             if self.lastColorColumn == self.colorCombo.itemText(i):
-                self.color = i
+                self.node_color_attr = i
                 self.set_node_colors()
                 break
 
@@ -703,7 +696,7 @@ class OWNxExplorer(widget.OWWidget):
         self.editCombo.clear()
         self.comboAttSelection.clear()
 
-        self.colorCombo.addItem("(same color)")
+        self.colorCombo.addItem('(none)', None)
         self.edgeColorCombo.addItem("(same color)")
         self.vertexSizeCombo.addItem("(same size)")
         self.nameComponentCombo.addItem("Select attribute")
@@ -1130,16 +1123,6 @@ class OWNxExplorer(widget.OWWidget):
     ### Network Visualization                                           ###
     #######################################################################
 
-    def _set_colors(self):
-        dlg = self._create_color_dialog(self.colorSettings, self.selectedSchemaIndex)
-        if dlg.exec_():
-            self.colorSettings = dlg.getColorSchemas()
-            self.selectedSchemaIndex = dlg.selectedSchemaIndex
-            self.networkCanvas.contPalette = dlg.getContinuousPalette("contPalette")
-            self.networkCanvas.discPalette = dlg.getDiscretePalette("discPalette")
-
-            self.set_node_colors()
-
     def _set_edge_color_palette(self):
         dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
         if dlg.exec_():
@@ -1182,14 +1165,8 @@ class OWNxExplorer(widget.OWWidget):
         #~ self.networkCanvas.replot()
 
     def set_node_colors(self):
-
-        return
-
-        if self.graph is None:
-            return
-
-        self.networkCanvas.set_node_colors(self.colorCombo.currentText())
-        self.lastColorColumn = self.colorCombo.currentText()
+        self.networkCanvas.set_node_colors(self.colorCombo.itemData(self.colorCombo.currentIndex()))
+        self.lastColorColumn = self.colorCombo.currentText()  # TODO
 
     def set_edge_colors(self):
 
@@ -1269,9 +1246,9 @@ class OWNxExplorer(widget.OWWidget):
                              ("Vertices per edge", "%.3f" % self.verticesPerEdge),
                              ("Edges per vertex", "%.3f" % self.edgesPerVertex),
                              ])
-        if self.color or self.vertexSize or self.markerAttributes or self.edgeColor:
+        if self.node_color_attr or self.vertexSize or self.markerAttributes or self.edgeColor:
             self.reportSettings("Visual settings",
-                                [self.color and ("Vertex color", self.colorCombo.currentText()),
+                                [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
                                  self.vertexSize and ("Vertex size", str(self.vertexSizeCombo.currentText()) + " (inverted)" if self.invertSize else ""),
                                  self.markerAttributes and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.markerAttributes)),
                                  self.edgeColor and ("Edge colors", self.edgeColorCombo.currentText()),

@@ -4,6 +4,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from Orange import data
+from Orange.util import scale
+from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 from Orange.projection.manifold import MDS
 
 import networkx as nx
@@ -28,6 +30,9 @@ import pyqtgraph as pg
 def pos_array(pos):
     """Return ndarray of positions from node-to-position dict"""
     return [i[1] for i in sorted(pos.items())]
+
+
+CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
 
 
 class NetworkCurve:
@@ -463,34 +468,26 @@ class OWNxCanvas(pg.GraphItem):
 
         return colorIndices, colorIndex, minValue, maxValue
 
-    def set_node_colors(self, attribute, nodes=None):
-        if self.graph is None:
+    def set_node_colors(self, attribute=None):
+        assert not attribute or isinstance(attribute, data.Variable)
+        assert self.graph
+
+        if not attribute:
+            self.kwargs.pop('brush', None)
+            self.replot()
             return
 
-        colorIndices, colorIndex, minValue, maxValue = self.getColorIndeces(self.items, attribute, self.discPalette)
-        colors = {}
-
-        if nodes is None:
-            nodes = self.graph.nodes()
-
-        if colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Continuous and minValue == maxValue:
-            colors.update((node, self.discPalette[0]) for node in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Continuous:
-            colors.update((v, self.contPalette[(float(self.items[v][colorIndex].value) - minValue) / (maxValue - minValue)])
-                          if str(self.items[v][colorIndex].value) != '?' else
-                          (v, self.discPalette[0]) for v in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Discrete:
-            colors.update((v, self.discPalette[colorIndices[self.items[v][colorIndex].value]]) for v in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.String and self.items.domain[colorIndex].name == "label":
-            colorIndices = dict((v, i) for i, v in enumerate(set(inst[colorIndex].value for inst in self.items)))
-            colors.update((v, self.discPalette[colorIndices[self.items[v][colorIndex].value]]) for v in nodes)
-        else:
-            colors.update((node, self.discPalette[0]) for node in nodes)
-
-        self.networkCurve.set_node_colors(colors)
+        table = self.graph.items()
+        if not table:
+            return
+        values = table[:, attribute].X[:, 0]
+        if attribute.is_continuous:
+            colors = CONTINUOUS_PALETTE[scale(values)]
+        elif attribute.is_discrete:
+            DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
+            colors = (DISCRETE_PALETTE[i] for i in values)
+        brushes = [QBrush(qcolor) for qcolor in colors]
+        self.kwargs['brush'] = brushes
         self.replot()
 
     def set_node_labels(self, attributes=None):
