@@ -668,7 +668,7 @@ class OWNxCanvas(pg.GraphItem):
         return True
 
     def set_graph(self, graph):
-        self.graph = graph and nx.convert_node_labels_to_integers(graph, label_attribute='_label')
+        self.graph = graph
         if graph:
             self.kwargs['adj'] = np.array(self.graph.edges())
         self.replot()

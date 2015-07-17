@@ -240,40 +240,35 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     """
 
     path = _check_network_dir(path)
-    return _wrap(rwpajek.read_pajek(path))
+    G = _wrap(rwpajek.read_pajek(path))
 
-    input = orangeom.GraphLayout().readPajek(path, project)
-    result = []
-    for g in input if project else [input]:
-        graphname, vertices, edges, arcs, items = g
-        if len(arcs) > 0:
-            # directed graph
-            G = DiGraph()
-            G.add_nodes_from(range(len(items)))
-            G.add_edges_from(((u,v,dict(d.items()+[('weight',w)])) for u,v,w,d in edges))
-            G.add_edges_from(((v,u,dict(d.items()+[('weight',w)])) for u,v,w,d in edges))
-            G.add_edges_from(((u,v,dict(d.items()+[('weight',w)])) for u,v,w,d in arcs))
-            if auto_table:
-                G.set_items(items)
-        else:
-            G = Graph()
-            G.add_nodes_from(range(len(items)))
-            G.add_edges_from(((u,v,dict(d.items()+[('weight',w)])) for u,v,w,d in edges))
-            if auto_table:
-                G.set_items(items)
-        for i, vdata in zip(range(len(G.node)), vertices):
-            G.node[i].update(vdata)
-        G.name = graphname
-
-        result.append(G)
-
-    if not project:
-        result = result[0]
-
-    return result
-    #fh=_get_fh(path, 'rb')
-    #lines = (line.decode(encoding) for line in fh)
-    #return parse_pajek(lines)
+    # Additionally read values into Table; needed to get G nodes properly sorted
+    # (Consult OWNxFile.readDataFile(), orangeom.GraphLayout.readPajek(), and the Pajek format spec)
+    import shlex, numpy as np
+    rows, remapping = [], {}
+    with open(path) as f:
+        for line in f:
+            if line.lower().startswith('*vertices'):
+                nvertices = int(line.split()[1])
+                break
+        # Read vertices lines
+        for line in f:
+            i, label, x, y = shlex.split(line)[:4]
+            i, x, y = int(i) - 1, float(x), float(y)  # -1 because pajek is 1-indexed
+            remapping[label] = i
+            rows.append((x, y))
+            nvertices -= 1
+            if not nvertices: break
+    # Construct x-y table (added in OWNxFile.readDataFile())
+    domain = Orange.data.Domain([Orange.data.ContinuousVariable('x'),
+                                 Orange.data.ContinuousVariable('y')])
+    table = Orange.data.Table.from_numpy(domain, np.array(rows, dtype=float))
+    G.set_items(table)
+    # Relabel nodes to integers, sorted by appearance
+    for node in G.node:
+        G.node[node]['label'] = node
+    nx.relabel_nodes(G, remapping, copy=False)
+    return G
 
 def write_pajek(G, path, encoding='UTF-8'):
     """A copy & paste of NetworkX's function with some bugs fixed (call the new

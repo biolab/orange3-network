@@ -303,10 +303,10 @@ class OWNxFile(widget.OWWidget):
                 'y' in items.domain and \
                 len(self.graph.items()) == len(table) and \
                 'x' not in table.domain and 'y' not in table.domain:
-            xvar = items.domain['x']
-            yvar = items.domain['y']
-            tmp = Orange.data.Table(Orange.data.Domain([xvar, yvar], False), items)
-            table = Orange.data.Table([table, tmp])
+            domain = Orange.data.Domain([items.domain['x'],
+                                         items.domain['y']])
+            tmp = Orange.data.Table.from_table(domain, items)
+            table = Orange.data.Table.concatenate([table, tmp])
 
         self.graph.set_items(table)
         self.infoc.setText("Vertices data file added")
