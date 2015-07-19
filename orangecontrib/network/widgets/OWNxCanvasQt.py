@@ -503,6 +503,26 @@ class OWNxCanvas(pg.GraphItem):
                 item.setText('')
         self.replot()
 
+    def set_node_sizes(self, attribute, max_size, invert):
+        MIN_SIZE = 8
+        try:
+            table = self.graph.items()
+            if attribute.is_string:
+                values = np.array([len(i.list[0].split(',')) for i in table[:, attribute]])
+            else:
+                values = np.array(table[:, attribute]).T[0]
+        except (AttributeError, TypeError, KeyError):
+            self.kwargs['size'] = MIN_SIZE
+        else:
+            if invert:
+                values = 1/values
+            k, n = np.polyfit([np.nanmin(values), np.nanmax(values)], [MIN_SIZE, max_size], 1)
+            sizes = values * k + n
+            sizes[np.isnan(sizes)] = np.nanmean(sizes)
+            self.kwargs['size'] = sizes
+        finally:
+            self.replot()
+
     def set_edge_colors(self, attribute):
         if self.graph is None:
             return

@@ -51,7 +51,7 @@ class OWNxExplorer(widget.OWWidget):
                ("Other Items", Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "maxLinkSize", "minVertexSize", "maxVertexSize", "invertSize", "optMethod",
+    "maxLinkSize", "maxNodeSize", "invertNodeSize", "optMethod",
     "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
     "lastNameComponentAttribute", "lastLabelColumns", "lastTooltipColumns",
     "showWeights", "showEdgeLabels", "colorSettings",
@@ -89,14 +89,13 @@ class OWNxExplorer(widget.OWWidget):
         self.hubs = 0
         self.node_color_attr = 0
         self.edgeColor = 0
-        self.vertexSize = 0
+        self.node_size_attr = 0
         self.nShown = self.nHidden = self.nMarked = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
         self.optimizeWhat = 1
         self.maxLinkSize = 3
-        self.maxVertexSize = 7
-        self.minVertexSize = 12
+        self.maxNodeSize = 50
         self.labelsOnMarkedOnly = 0
-        self.invertSize = 0
+        self.invertNodeSize = 0
         self.optMethod = 0
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
@@ -182,13 +181,11 @@ class OWNxExplorer(widget.OWWidget):
             drawingBox, self, "node_color_attr", label='Color nodes by:',
             orientation='horizontal', callback=self.set_node_colors)
 
-        ib = gui.widgetBox(self.nodesTab, "Node size attribute", orientation="vertical", addSpace=False)
-        hb = gui.widgetBox(ib, orientation="horizontal", addSpace=False)
-        gui.checkBox(hb, self, "invertSize", "Invert size", callback=self.set_node_sizes)
-        gui.spin(hb, self, "minVertexSize", 5, 200, 1, label="Min:", callback=self.set_node_sizes)
-        gui.spin(hb, self, "maxVertexSize", 5, 200, 1, label="Max:", callback=self.set_node_sizes)
-        self.vertexSizeCombo = gui.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
-        self.vertexSizeCombo.addItem("(none)")
+        hb = gui.widgetBox(drawingBox, orientation="horizontal", addSpace=False)
+        hb.layout().addWidget(QLabel('Size nodes by:', hb))
+        self.nodeSizeCombo = gui.comboBox(hb, self, "node_size_attr", callback=self.set_node_sizes)
+        gui.spin(hb, self, "maxNodeSize", 50, 200, step=10, label="Max:", callback=self.set_node_sizes)
+        gui.checkBox(hb, self, "invertNodeSize", "Invert", callback=self.set_node_sizes)
 
         lb = gui.widgetBox(self.nodesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
         hb = gui.widgetBox(lb, orientation="horizontal", addSpace=False)
@@ -626,26 +623,15 @@ class OWNxExplorer(widget.OWWidget):
                 var.is_string and var.name == 'label'):  # FIXME: whatis label?
                 self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
-            if var.is_string and hasattr(self.graph, 'items') and self.graph_base.items() is not None and len(self.graph_base.items()) > 0:
-
-                value = self.graph_base.items()[0][var].value
-
-                # can value be a list?
-                try:
-                    if type(eval(value)) == type([]):
-                        self.vertexSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
-                        continue
-                except:
-                    pass
-
-                if len(value.split(',')) > 1:
-                    self.vertexSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], "num of " + str(var.name))
-
-            elif var.is_continuous:
-                self.vertexSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
-
-            if var.is_string and var.name == "label":
-                self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
+            if var.is_continuous:
+                self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
+            elif var.is_string:
+                try: value = self.graph.items()[0][var].value
+                except (IndexError, TypeError): pass
+                else:
+                    # can value be a list?
+                    if len(value.split(',')) > 1:
+                        self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
             self.nameComponentCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
             self.showComponentCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
@@ -656,10 +642,10 @@ class OWNxExplorer(widget.OWWidget):
             if var.is_discrete or var.is_continuous:
                 self.edgeColorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
 
-        for i in range(self.vertexSizeCombo.count()):
+        for i in range(self.nodeSizeCombo.count()):
             if self.lastVertexSizeColumn == \
-                    self.vertexSizeCombo.itemText(i):
-                self.vertexSize = i
+                    self.nodeSizeCombo.itemText(i):
+                self.node_size_attr = i
                 self.set_node_sizes()
                 break
 
@@ -688,7 +674,7 @@ class OWNxExplorer(widget.OWWidget):
         self.edges_attrs = []
 
         self.colorCombo.clear()
-        self.vertexSizeCombo.clear()
+        self.nodeSizeCombo.clear()
         self.nameComponentCombo.clear()
         self.showComponentCombo.clear()
         self.edgeColorCombo.clear()
@@ -697,7 +683,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.colorCombo.addItem('(none)', None)
         self.edgeColorCombo.addItem("(same color)")
-        self.vertexSizeCombo.addItem("(same size)")
+        self.nodeSizeCombo.addItem("(uniform)")
         self.nameComponentCombo.addItem("Select attribute")
         self.showComponentCombo.addItem("Select attribute")
         self.editCombo.addItem("Select attribute")
@@ -745,7 +731,7 @@ class OWNxExplorer(widget.OWWidget):
 #            self.networkCanvas.use_antialiasing = 0
 #            self.networkCanvas.use_animations = 0
 #            self.minVertexSize = 5
-#            self.maxVertexSize = 5
+#            self.maxNodeSize = 5
 #            self.maxLinkSize = 1
 #            self.optMethod = 0
 #            self.graph_layout_method()
@@ -853,7 +839,7 @@ class OWNxExplorer(widget.OWWidget):
         if self.frSteps < 10:
             self.networkCanvas.update_antialiasing(False)
             self.minVertexSize = 5
-            self.maxVertexSize = 5
+            self.maxNodeSize = 5
             self.maxLinkSize = 1
             self.optMethod = 0
             self.graph_layout_method()
@@ -1186,42 +1172,8 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.replot()
 
     def set_node_sizes(self):
-
-        return
-
-        if self.graph is None or self.networkCanvas is None:
-            return
-
-        if self.minVertexSize > self.maxVertexSize:
-            self.maxVertexSize = self.minVertexSize
-
-        items = self.graph_base.items()
-
-        if items is None:
-            self.networkCanvas.networkCurve.set_node_sizes({}, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-            return
-
-        self.lastVertexSizeColumn = self.vertexSizeCombo.currentText()
-        column = str(self.vertexSizeCombo.currentText())
-
-        values = {}
-        if column in items.domain or (column.startswith("num of ") and column.replace("num of ", "") in items.domain):
-            if column in items.domain:
-                values = dict((x, items[x][column].value) for x in self.graph if not items[x][column].isSpecial())
-            else:
-                values = dict((x, len(items[x][column.replace("num of ", "")].value.split(','))) for x in self.graph)
-
-        if len(values) == 0:
-            values = dict((node, 1.) for node in self.graph)
-
-        if self.invertSize:
-            maxval = max(values.values())
-            values.update((key, maxval - val) for key, val in values.items())
-            self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-        else:
-            self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-
-        self.networkCanvas.replot()
+        attr = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
+        self.networkCanvas.set_node_sizes(attr, self.maxNodeSize, self.invertNodeSize)
 
     def set_font(self):
         if self.networkCanvas is None:
@@ -1243,10 +1195,10 @@ class OWNxExplorer(widget.OWWidget):
                              ("Vertices per edge", "%.3f" % self.verticesPerEdge),
                              ("Edges per vertex", "%.3f" % self.edgesPerVertex),
                              ])
-        if self.node_color_attr or self.vertexSize or self.node_label_attrs or self.edgeColor:
+        if self.node_color_attr or self.node_size_attr or self.node_label_attrs or self.edgeColor:
             self.reportSettings("Visual settings",
                                 [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
-                                 self.vertexSize and ("Vertex size", str(self.vertexSizeCombo.currentText()) + " (inverted)" if self.invertSize else ""),
+                                 self.node_size_attr and ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
                                  self.node_label_attrs and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
                                  self.edgeColor and ("Edge colors", self.edgeColorCombo.currentText()),
                                 ])
