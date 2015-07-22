@@ -1136,10 +1136,8 @@ class OWNxExplorer(widget.OWWidget):
     def _clicked_tooltip_lstbox(self):
         if self.graph is None:
             return
-
-        self.lastTooltipColumns = [self.graph_attrs[i].name for i in self.tooltipAttributes]
-        #~ self.networkCanvas.set_tooltip_attributes(self.lastTooltipColumns)
-        #~ self.networkCanvas.replot()
+        self.lastTooltipColumns = [self.graph_attrs[i] for i in self.tooltipAttributes]
+        self.networkCanvas.set_tooltip_attributes(self.lastTooltipColumns)
 
     def _clicked_edge_label_listbox(self):
         if self.graph is None:

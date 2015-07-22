@@ -575,16 +575,9 @@ class OWNxCanvas(pg.GraphItem):
 
         self.replot()
 
-    def set_tooltip_attributes(self, attributes):
-        if self.graph is None or self.items is None or \
-           not isinstance(self.items, data.Table):
-            return
-
-        tooltip_attributes = [self.items.domain[att] for att in \
-                                 attributes if att in self.items.domain]
-        self.networkCurve.set_node_tooltips(dict((node, ', '.join(str( \
-                   self.items[node][att]) for att in tooltip_attributes)) \
-                                                        for node in self.graph))
+    def set_tooltip_attributes(self, attributes=[]):
+        assert isinstance(attributes, list)
+        self.tooltip_attributes = attributes
 
     def change_graph(self, newgraph):
         old_nodes = set(self.graph.nodes_iter())
@@ -795,6 +788,17 @@ class OWNxCanvas(pg.GraphItem):
         # Update text labels
         for item, pos in zip(self.textItems, self.kwargs['pos']):
             item.setPos(*pos[:2])
+
+    def hoverEvent(self, ev):
+        self.scatter.setToolTip('')
+        try: point = self.scatter.pointsAt(ev.pos())
+        except AttributeError: return  # HoverEvent() excepts if tooltip if hovered (pyqtgraph bug, methinks)
+        if not point: return
+        ind = point[0].data()
+        try: row = self.graph.items()[ind, self.tooltip_attributes][0].list
+        except (TypeError, AttributeError): return
+        self.scatter.setToolTip('<br>'.join('<b>{.name}:</b> {}'.format(i[0], str(i[1]).replace('<', '&lt;'))
+                                            for i in zip(self.tooltip_attributes, row)))
 
     def mouseDragEvent(self, ev):
         if ev.button() != Qt.LeftButton:
