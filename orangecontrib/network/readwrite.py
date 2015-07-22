@@ -268,6 +268,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     for node in G.node:
         G.node[node]['label'] = node
     nx.relabel_nodes(G, remapping, copy=False)
+    assert len(table) == G.number_of_nodes(), 'There was a bug in NetworkX. Please update to git if need be'
     return G
 
 def write_pajek(G, path, encoding='UTF-8'):

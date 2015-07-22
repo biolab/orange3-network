@@ -1,4 +1,6 @@
 
+from functools import partial
+
 import numpy as np
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -29,7 +31,7 @@ import pyqtgraph as pg
 
 def pos_array(pos):
     """Return ndarray of positions from node-to-position dict"""
-    return [i[1] for i in sorted(pos.items())]
+    return np.array([i[1][:2] for i in sorted(pos.items())])
 
 
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
@@ -322,11 +324,12 @@ class OWNxCanvas(pg.GraphItem):
 
         self.kwargs = {}
         self.textItems = []
+        self.graph = None
+        self._pos_dict = None
         self.layout_fhr(False)
 
         self.master = master
         self.parent = parent
-        self.graph = None
 
         self.circles = []
         self.freezeNeighbours = False
@@ -493,6 +496,7 @@ class OWNxCanvas(pg.GraphItem):
 
     def set_node_labels(self, attributes=[]):
         assert isinstance(attributes, list)
+        if not self.graph: return
         if attributes:
             table = self.graph.items()
             for i, item in enumerate(self.textItems):
@@ -656,14 +660,23 @@ class OWNxCanvas(pg.GraphItem):
 
     def set_graph(self, graph):
         self.graph = graph
+        try:
+            for i in self.textItems:
+                i.scene().removeItem(i)
+        except AttributeError: pass  # No scene
         if graph:
-            self.kwargs['adj'] = np.array(self.graph.edges())
+            # Adjacency matrix
+            self.kwargs['adj'] = np.array(graph.edges())
+            # Custom node data (index used in mouseDragEvent)
+            self.kwargs['data'] = np.arange(graph.number_of_nodes())
             # Construct empty node labels
             self.textItems = []
             for i in range(graph.number_of_nodes()):
                 item = pg.TextItem()
                 self.textItems.append(item)
                 item.setParentItem(self)
+            # Position nodes according to selected layout optimization
+            self.layout_func()
         self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
@@ -681,82 +694,107 @@ class OWNxCanvas(pg.GraphItem):
         ...
 
     def layout_original(self):
-        def _f(G):
-            items = G.items()
+        def _f():
+            items = self.graph.items()
             if not items or 'x' not in items.domain or 'y' not in items.domain:
                 raise Exception('graph items table doesn\'t have x,y info')
-            positions = {node: (items[node]['x'].value,
-                                items[node]['y'].value)
-                         for node in self.graph.node
-                         if items[node]['x'].value != '?'
-                         and items[node]['y'].value != '?'}
-            if len(positions) == len(items):
-                return pos_array(positions)
-            else:
-                return layout_fhr(pos=positions, iterations=1)(G)
+            positions = {node: (items[node]['x'].value if items[node]['x'].value != '?' else np.random.rand(),
+                                items[node]['y'].value if items[node]['y'].value != '?' else np.random.rand())
+                         for node in self.graph.node}
+            return positions
+        return self._simple_layout(lambda _: _f())
 
-    def layout_fhr(self, weighted=False, pos=None, iterations=50):
-        def _f(G):
-            return pos_array(nx.spring_layout(G, dim=3, pos=pos,
-                                              iterations=iterations,
-                                              weight='weight' if weighted else None))
-        self.kwargs.pop('pos', None)
+    _is_animating = False
+
+    @property
+    def is_animating(self):
+        return self._is_animating
+
+    @is_animating.setter
+    def is_animating(self, value):
+        self._is_animating = value
+        if value:
+            self.parent.setCursor(QCursor(Qt.ForbiddenCursor))
+        else:
+            self.parent.unsetCursor()
+        qApp.processEvents()
+
+    def _animate(self, layout_func, dim=2):
+        if not self.graph: return
+        self.is_animating = True
+        prev_pos = self.kwargs.get('pos')
+        self._pos_dict = {k: list(p[:dim]) + [0]*(dim-len(p))
+                          for k, p in self._pos_dict.items()} if self._pos_dict else None
+        THRESHOLD, diff = .1, 10
+        while self.is_animating and diff > THRESHOLD:
+            pos_dict = layout_func(pos=self._pos_dict)
+            pos = pos_array(pos_dict)
+            if prev_pos is not None:
+                try:
+                    diff = np.sqrt(np.sum((prev_pos - pos)**2)) / pos.shape[1]
+                except ValueError:
+                    diff = 10
+            self.kwargs['pos'] = prev_pos = pos
+            self._pos_dict = pos_dict
+            self.replot()
+            qApp.processEvents()
+        if self.is_animating:
+            self.kwargs['pos'] = pos[:, :2]
+        self.is_animating = False
+
+    def layout_fhr(self, weighted=False):
+        def _f(pos=None):
+            return nx.spring_layout(self.graph,
+                                    pos=pos,
+                                    iterations=2,
+                                    weight='weight' if weighted else None)
+        self._animate(_f)
+        self.layout_func = lambda: self._animate(_f)
+
+    def _simple_layout(self, relayout):
+        def _f():
+            pos = self._pos_dict = relayout(self.graph)
+            return pos_array(pos)
         self.layout_func = _f
-        return self
+        self.kwargs['pos'] = _f()
+        self.replot()
 
     def layout_circular(self):
-        def _f(G): return pos_array(nx.circular_layout(G))
-        self.kwargs.pop('pos', None)
-        self.layout_func = _f
-        return self
+        self._simple_layout(nx.circular_layout)
 
     def layout_spectral(self):
-        def _f(G): return pos_array(nx.spectral_layout(G, dim=3))
-        self.kwargs.pop('pos', None)
-        self.layout_func = _f
-        return self
+        self._simple_layout(partial(nx.spectral_layout))
 
     def layout_random(self):
-        def _f(G): return pos_array(nx.random_layout(G))
-        self.kwargs.pop('pos', None)
-        self.layout_func = _f
-        return self
+        self._simple_layout(nx.random_layout)
 
     def layout_concentric(self):
-        def _f(G):
+        def _generate_nlist():
+            G = self.graph
+            # TODO: imaginative, but shit. revise.
             isolates = set(nx.isolates(G))
             independent = set(nx.maximal_independent_set(G)) - isolates
             dominating = set(nx.dominating_set(G)) - independent - isolates
             rest = set(G.nodes()) - dominating - independent - isolates
             nlist = list(map(sorted, filter(None, (isolates, independent, dominating, rest))))
-            return pos_array(nx.shell_layout(G, nlist=nlist))
+            return nlist
+        nlist = _generate_nlist()
+        self._simple_layout(partial(nx.shell_layout, nlist=nlist))
 
-        self.kwargs.pop('pos', None)
-        self.layout_func = _f
-        return self
-
-    def _updateGraph(self):
+    def replot(self):
+        if not self.graph:
+            self.adjacency = None  # bug in pyqtgraph.GraphItem
+            super().setData(pos=[[.5, .5]])
+            item = pg.TextItem('no network', 'k')
+            self.textItems.append(item)
+            item.setParentItem(self)
+            item.setPos(.5, .5)
+            return
         # Update scatter plot (graph)
         super().setData(**self.kwargs)
         # Update text labels
         for item, pos in zip(self.textItems, self.kwargs['pos']):
             item.setPos(*pos[:2])
-
-    def replot(self):
-        lines = []
-        size = []
-        data = []
-
-        if not self.graph:
-            self.setData(pos=[[.5, .5]], text=['no network'])
-            return
-
-        if 'pos' not in self.kwargs:
-            self.kwargs['pos'] = np.array(self.layout_func(self.graph))
-
-        self.kwargs['data'] = np.arange(self.graph.number_of_nodes())
-
-        self._updateGraph()
 
     def mouseDragEvent(self, ev):
         if ev.button() != Qt.LeftButton:
@@ -786,4 +824,4 @@ class OWNxCanvas(pg.GraphItem):
         ind = self.dragPoint.data()
         self.kwargs['pos'][ind][:2] = ev.pos() + self.dragOffset
         ev.accept()
-        self._updateGraph()
+        self.replot()

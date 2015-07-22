@@ -70,7 +70,7 @@ class OWNxExplorer(widget.OWWidget):
         super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
-        self.networkCanvas = OWNxCanvas(self, self.mainArea, "Net Explorer")
+        self.networkCanvas = networkCanvas = OWNxCanvas(self, self.mainArea, "Net Explorer")
         self.graph_attrs = []
         self.edges_attrs = []
 
@@ -149,7 +149,15 @@ class OWNxExplorer(widget.OWWidget):
 
         self.networkCanvas.showMissingValues = self.showMissingValues
 
-        plot = pg.PlotWidget(background="w", enableAutoRange=True)
+        class ViewBox(pg.ViewBox):
+            def mouseClickEvent(self, ev):
+                if (networkCanvas.is_animating and
+                    ev.button() == Qt.LeftButton):
+                    networkCanvas.is_animating = False
+                    ev.accept()
+                super().mouseClickEvent(ev)
+
+        plot = pg.PlotWidget(background="w", enableAutoRange=True, viewBox=ViewBox())
         for axis in ('bottom', 'left'):
             plot.plotItem.hideAxis(axis)
         plot.setFrameStyle(QFrame.StyledPanel)
@@ -804,16 +812,14 @@ class OWNxExplorer(widget.OWWidget):
         self.number_of_nodes_label = self.graph.number_of_nodes()
         self.number_of_edges_label = self.graph.number_of_edges()
 
-        self.networkCanvas.set_graph(self.graph)
-
         self.networkCanvas.showEdgeLabels = self.showEdgeLabels
         self.networkCanvas.maxEdgeSize = self.maxLinkSize
         self.networkCanvas.minComponentEdgeWidth = self.minComponentEdgeWidth
         self.networkCanvas.maxComponentEdgeWidth = self.maxComponentEdgeWidth
         #~ self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)
 
-        self.compute_network_info()
         self._set_combos()
+        self.compute_network_info()
 
         lastNameComponentAttributeFound = False
         for i in range(self.nameComponentCombo.count()):
@@ -847,6 +853,7 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.labelsOnMarkedOnly = self.labelsOnMarkedOnly
         self.networkCanvas.showWeights = self.showWeights
 
+        self.networkCanvas.set_graph(self.graph)
         self.set_node_sizes()
         self.set_node_colors()
         self.set_edge_sizes()
@@ -856,7 +863,6 @@ class OWNxExplorer(widget.OWWidget):
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
-        self.graph_layout()
         self.set_mark_mode()
 
     def set_network_view(self, nxView):
@@ -968,17 +974,13 @@ class OWNxExplorer(widget.OWWidget):
     def graph_layout(self):
         if self.graph is None or self.graph.number_of_nodes() <= 0:   #grafa se ni
             return
+
+        # Cancel previous animation if running
+        self.networkCanvas.is_animating = False
+
         layout = Layout.all[self.optMethod]
         if layout == Layout.NONE:
-            items = self.graph.items()
-            if items is not None and 'x' in items.domain and 'y' in items.domain:
-                positions = dict((node, (items[node]['x'].value, items[node]['y'].value)) \
-                             for node in self.graph if items[node]['x'].value != '?' \
-                             and items[node]['y'].value != '?')
-
-                # ignore start position if all nodes are on the same coordinate
-                if len(set(positions.values())) > 1:
-                    self.networkCanvas.networkCurve.set_node_coordinates(positions)
+            self.networkCanvas.layout_original()
         elif layout == Layout.RANDOM:
             self.networkCanvas.layout_random()
         elif layout == Layout.FHR:
