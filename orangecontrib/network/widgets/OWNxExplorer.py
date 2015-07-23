@@ -51,17 +51,17 @@ class OWNxExplorer(widget.OWWidget):
                ("Other Items", Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "maxLinkSize", "maxNodeSize", "invertNodeSize", "optMethod",
+    "maxNodeSize", "invertNodeSize", "optMethod",
     "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
-    "lastNameComponentAttribute", "lastLabelColumns", "lastTooltipColumns",
-    "showWeights", "showEdgeLabels", "colorSettings",
-    "selectedSchemaIndex", "edgeColorSettings", "selectedEdgeSchemaIndex",
+    "lastLabelColumns", "lastTooltipColumns",
+    "showWeights", "colorSettings",
+    "selectedSchemaIndex", "selectedEdgeSchemaIndex",
     "showMissingValues", "fontSize", "mdsTorgerson", "mdsAvgLinkage",
-    "mdsSteps", "mdsRefresh", "mdsStressDelta", "organism", "showTextMiningInfo",
+    "mdsSteps", "mdsRefresh", "mdsStressDelta", "showTextMiningInfo",
     "toolbarSelection", "minComponentEdgeWidth", "maxComponentEdgeWidth",
     "mdsFromCurrentPos", "labelsOnMarkedOnly", "tabIndex",
-    "opt_from_curr", "networkCanvas.explore_distances",
-    "networkCanvas.show_component_distances", "fontWeight", "networkCanvas.state",
+    "opt_from_curr",
+    "fontWeight", "networkCanvas.state",
     "networkCanvas.selection_behavior", "hubs", "markDistance",
     "markNConnections", "markNumber", "markSearchString"]
     # TODO: set settings
@@ -70,7 +70,7 @@ class OWNxExplorer(widget.OWWidget):
         super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
-        self.networkCanvas = networkCanvas = OWNxCanvas(self, self.mainArea, "Net Explorer")
+        self.networkCanvas = networkCanvas = OWNxCanvas(self.mainArea)
         self.graph_attrs = []
         self.edges_attrs = []
 
@@ -92,30 +92,16 @@ class OWNxExplorer(widget.OWWidget):
         self.node_size_attr = 0
         self.nShown = self.nHidden = self.nMarked = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
         self.optimizeWhat = 1
-        self.maxLinkSize = 3
         self.maxNodeSize = 50
         self.labelsOnMarkedOnly = 0
         self.invertNodeSize = 0
         self.optMethod = 0
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
-        self.lastNameComponentAttribute = ''
         self.lastLabelColumns = set()
         self.lastTooltipColumns = set()
         self.showWeights = 0
-        self.showEdgeLabels = 0
-        self.edgeColorSettings = [
-            ('net_edges', [
-                [],
-                [('contPalette', (4294967295, 4278190080, 0))],
-                [('discPalette', [(204, 204, 204), (179, 226, 205), (253, 205, 172), (203, 213, 232), (244, 202, 228), (230, 245, 201), (255, 242, 174), (241, 226, 204)])]
-            ]),
-            ('Default', [
-                [],
-                [('contPalette', (4294967295, 4278190080, 0))],
-                [('discPalette', [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 128, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (128, 0, 255), (0, 128, 255), (255, 223, 128), (127, 111, 64), (92, 46, 0), (0, 84, 0), (192, 192, 0), (0, 127, 127), (128, 0, 0), (127, 0, 127)])]
-            ]),
-        ]
+
         self.selectedEdgeSchemaIndex = 0
         self.items_matrix = None
         self.showDistances = 0
@@ -127,7 +113,6 @@ class OWNxExplorer(widget.OWWidget):
         self.mdsSteps = 10000
         self.mdsRefresh = 50
         self.mdsStressDelta = 0.0000001
-        self.organism = 'goa_human'
         self.showTextMiningInfo = 0
         self.toolbarSelection = 0
         self.minComponentEdgeWidth = 10
@@ -140,7 +125,6 @@ class OWNxExplorer(widget.OWWidget):
 
         self.checkSendMarkedNodes = True
         self.checkSendSelectedNodes = True
-        self.explore_distances = False
 
         self._network_view = None
         self.graph = None
@@ -165,8 +149,6 @@ class OWNxExplorer(widget.OWWidget):
         plot.setAspectLocked()
         plot.addItem(self.networkCanvas)
         self.mainArea.layout().addWidget(plot)
-
-        self.networkCanvas.maxLinkSize = self.maxLinkSize
 
         self.tabs = gui.tabWidget(self.controlArea)
 
@@ -288,66 +270,12 @@ class OWNxExplorer(widget.OWWidget):
         #~ self.zoomSelectToolbar.buttons[("buttonSSEL", "Show all nodes", None, None, "show_selection", 'Dlg_ShowSelection')].clicked.connect(self.show_selection)
         #self.zoomSelectToolbar.buttons[G.SendSelection].hide()
 
-        ib = gui.widgetBox(self.infoTab, "General")
-        gui.label(ib, self, "Number of nodes: %(number_of_nodes_label)i")
-        gui.label(ib, self, "Number of edges: %(number_of_edges_label)i")
-        gui.label(ib, self, "Nodes per edge: %(verticesPerEdge).2f")
-        gui.label(ib, self, "Edges per node: %(edgesPerVertex).2f")
-
-        ib = gui.widgetBox(self.infoTab, orientation="horizontal")
-
-        #~ gui.button(ib, self, "Save net", callback=self.save_network)
-        #~ gui.button(ib, self, "Save img", callback=self.networkCanvas.saveToFile, debuggingEnabled=False)
-        #~ self.reportButton = gui.button(ib, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
-        #~ self.reportButton.setAutoDefault(0)
-
-        #gui.button(self.edgesTab, self, "Clustering", callback=self.clustering)
-        ib = gui.widgetBox(self.infoTab, "Edit")
-        self.editAttribute = 0
-        self.editCombo = gui.comboBox(ib, self, "editAttribute", label="Edit attribute:", orientation="horizontal")
-        self.editCombo.addItem("Select attribute")
-        self.editValue = ''
-        hb = gui.widgetBox(ib, orientation="horizontal")
-        gui.lineEdit(hb, self, "editValue", "Value:", orientation='horizontal')
-        gui.button(hb, self, "Set", callback=self.edit)
-
-        ib = gui.widgetBox(self.infoTab, "Prototype")
-        ib.setVisible(True)
-
-        gui.lineEdit(ib, self, "organism", "Organism:", orientation='horizontal')
-
-        self.nameComponentAttribute = 0
-        self.nameComponentCombo = gui.comboBox(ib, self, "nameComponentAttribute", callback=self.nameComponents, label="Name components:", orientation="horizontal")
-        self.nameComponentCombo.addItem("Select attribute")
-
-        self.showComponentAttribute = 0
-        self.showComponentCombo = gui.comboBox(ib, self, "showComponentAttribute", callback=self.showComponents, label="Labels on components:", orientation="horizontal")
-        self.showComponentCombo.addItem("Select attribute")
-        gui.checkBox(ib, self, 'showTextMiningInfo', "Show text mining info")
-
-        #gui.spin(ib, self, "rotateSteps", 1, 10000, 1, label="Rotate max steps: ")
-        gui.spin(ib, self, "minComponentEdgeWidth", 0, 100, 1, label="Min component edge width: ", callback=(lambda changedMin=1: self.set_component_edge_width(changedMin)))
-        gui.spin(ib, self, "maxComponentEdgeWidth", 0, 200, 1, label="Max component edge width: ", callback=(lambda changedMin=0: self.set_component_edge_width(changedMin)))
-
-        self.attSelectionAttribute = 0
-        self.comboAttSelection = gui.comboBox(ib, self, "attSelectionAttribute", label='Send attribute selection list:', orientation='horizontal', callback=self.sendAttSelectionList)
-        self.comboAttSelection.addItem("Select attribute")
-        self.autoSendAttributes = 0
-        gui.checkBox(ib, self, 'autoSendAttributes', "auto send attributes", callback=self.setAutoSendAttributes)
-
         self.set_mark_mode()
 
-        self.nodesTab.layout().addStretch(1)
-        self.edgesTab.layout().addStretch(1)
+        self.displayTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
-        self.infoTab.layout().addStretch(1)
-
-        dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
-        self.networkCanvas.contEdgePalette = dlg.getContinuousPalette("contPalette")
-        self.networkCanvas.discEdgePalette = dlg.getDiscretePalette("discPalette")
 
         self.graph_layout_method()
-        self.set_font()
         self.set_graph(None)
 
         self.setMinimumWidth(900)
@@ -367,9 +295,6 @@ class OWNxExplorer(widget.OWWidget):
             return
 
         vars = [x.name for x in self.graph_base.items_vars()]
-        if not self.editCombo.currentText() in vars:
-            return
-        att = str(self.editCombo.currentText())
         vertices = self.networkCanvas.selected_nodes()
 
         if len(vertices) == 0:
@@ -387,9 +312,6 @@ class OWNxExplorer(widget.OWWidget):
         self.error()
         self.warning()
         self.information()
-
-        self.cb_show_distances.setEnabled(0)
-        self.cb_show_component_distances.setEnabled(0)
 
         if matrix is None:
             self.items_matrix = None
@@ -410,8 +332,6 @@ class OWNxExplorer(widget.OWWidget):
 
         self.items_matrix = matrix
         self.networkCanvas.items_matrix = matrix
-        self.cb_show_distances.setEnabled(1)
-        self.cb_show_component_distances.setEnabled(1)
 
         if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is not None and self.graph_base is not None and \
@@ -423,10 +343,6 @@ class OWNxExplorer(widget.OWWidget):
                     self.optMethod = Layout.all.index(Layout.FRAGVIZ)
 
             self.graph_layout()
-
-    def _set_canvas_attr(self, attr, value):
-        setattr(self.networkCanvas, attr, value)
-        self.networkCanvas.updateCanvas()
 
     def _set_curve_attr(self, attr, value):
         setattr(self.networkCanvas.networkCurve, attr, value)
@@ -647,14 +563,13 @@ class OWNxExplorer(widget.OWWidget):
                     if len(value.split(',')) > 1:
                         self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
-            self.nameComponentCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
-            self.showComponentCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
-            self.editCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
-            self.comboAttSelection.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
+        self.nodeSizeCombo.setDisabled(not self.graph_attrs)
+        self.colorCombo.setDisabled(not self.graph_attrs)
 
         for var in self.edges_attrs:
             if var.is_discrete or var.is_continuous:
                 self.edgeColorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
+        self.edgeColorCombo.setDisabled(not self.edges_attrs)
 
         for i in range(self.nodeSizeCombo.count()):
             if self.lastVertexSizeColumn == \
@@ -689,19 +604,11 @@ class OWNxExplorer(widget.OWWidget):
 
         self.colorCombo.clear()
         self.nodeSizeCombo.clear()
-        self.nameComponentCombo.clear()
-        self.showComponentCombo.clear()
         self.edgeColorCombo.clear()
-        self.editCombo.clear()
-        self.comboAttSelection.clear()
 
         self.colorCombo.addItem('(none)', None)
         self.edgeColorCombo.addItem("(same color)")
         self.nodeSizeCombo.addItem("(uniform)")
-        self.nameComponentCombo.addItem("Select attribute")
-        self.showComponentCombo.addItem("Select attribute")
-        self.editCombo.addItem("Select attribute")
-        self.comboAttSelection.addItem("Select attribute")
 
     def compute_network_info(self):
         self.nShown = self.graph.number_of_nodes()
@@ -824,21 +731,6 @@ class OWNxExplorer(widget.OWWidget):
         self._set_combos()
         self.compute_network_info()
 
-        lastNameComponentAttributeFound = False
-        for i in range(self.nameComponentCombo.count()):
-            if self.lastNameComponentAttribute == self.nameComponentCombo.itemText(i):
-                lastNameComponentAttributeFound = True
-                self.nameComponentAttribute = i
-                self.nameComponents()
-                self.showComponentAttribute = self.showComponentCombo.count() - 1
-                self.showComponents()
-                break
-
-        if not lastNameComponentAttributeFound:
-            self.lastNameComponentAttribute = ''
-
-        self.showComponentAttribute = None
-
         t = 1.13850193174e-008 * (self.graph.number_of_nodes() ** 2 + self.graph.number_of_edges())
         self.frSteps = int(2.0 / t)
         if self.frSteps < 1: self.frSteps = 1
@@ -947,12 +839,6 @@ class OWNxExplorer(widget.OWWidget):
 
             self.markInputRadioButton.setEnabled(True)
             self.set_mark_mode(9)
-
-    def set_explore_distances(self):
-        QObject.disconnect(self.networkCanvas, SIGNAL('selection_changed()'), self.explore_focused)
-
-        if self.explore_distances:
-            QObject.connect(self.networkCanvas, SIGNAL('selection_changed()'), self.explore_focused)
 
     def explore_focused(self):
         sel = self.networkCanvas.selected_nodes()
@@ -1110,23 +996,6 @@ class OWNxExplorer(widget.OWWidget):
     ### Network Visualization                                           ###
     #######################################################################
 
-    def _set_edge_color_palette(self):
-        dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
-        if dlg.exec_():
-            self.edgeColorSettings = dlg.getColorSchemas()
-            self.selectedEdgeSchemaIndex = dlg.selectedSchemaIndex
-            self.networkCanvas.contEdgePalette = dlg.getContinuousPalette("contPalette")
-            self.networkCanvas.discEdgePalette = dlg.getDiscretePalette("discPalette")
-
-            self.set_edge_colors()
-
-    def _create_color_dialog(self, colorSettings, selectedSchemaIndex):
-        c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        c.createContinuousPalette("contPalette", "Continuous Palette")
-        c.setColorSchemas(colorSettings, selectedSchemaIndex)
-        return c
-
     def _on_node_label_attrs_changed(self):
         if self.graph is None:
             return
@@ -1153,6 +1022,9 @@ class OWNxExplorer(widget.OWWidget):
 
     def set_node_sizes(self):
         attr = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
+        depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
+        for w in depending_widgets:
+            w.setDisabled(not bool(attr))
         self.networkCanvas.set_node_sizes(attr, self.maxNodeSize, self.invertNodeSize)
 
     def set_font(self):
@@ -1187,200 +1059,6 @@ class OWNxExplorer(widget.OWWidget):
                              ("Iterations", self.frSteps)])
         self.reportSection("Graph")
         self.reportImage(self.networkCanvas.saveToFileDirect)
-
-    #######################################################################
-    ### PROTOTYPE                                                       ###
-    #######################################################################
-
-    def set_component_edge_width(self, changedMin=True):
-        if self.networkCanvas is None:
-            return
-
-        canvas = self.networkCanvas
-        if changedMin:
-            if self.maxComponentEdgeWidth < self.minComponentEdgeWidth:
-                self.maxComponentEdgeWidth = self.minComponentEdgeWidth
-        else:
-            if self.minComponentEdgeWidth > self.maxComponentEdgeWidth:
-                self.minComponentEdgeWidth = self.maxComponentEdgeWidth
-
-        canvas.minComponentEdgeWidth = self.minComponentEdgeWidth
-        canvas.maxComponentEdgeWidth = self.maxComponentEdgeWidth
-        self.networkCanvas.updateCanvas()
-
-    def showComponents(self):
-        if self.graph is None or self.graph_base.items() is None:
-            return
-
-        vars = [x.name for x in self.graph_base.items_vars()]
-
-        if not self.showComponentCombo.currentText() in vars:
-            self.networkCanvas.showComponentAttribute = None
-            self.lastNameComponentAttribute = ''
-        else:
-            self.networkCanvas.showComponentAttribute = self.showComponentCombo.currentText()
-
-        self.networkCanvas.drawComponentKeywords()
-
-    def nameComponents(self):
-        """Names connected components of genes according to GO terms."""
-        self.progressBarFinished()
-        self.lastNameComponentAttribute = None
-
-        if self.graph is None or self.graph_base.items() is None:
-            return
-
-        vars = [x.name for x in self.graph_base.items_vars()]
-        if not self.nameComponentCombo.currentText() in vars:
-            return
-
-        self.progressBarInit()
-        components = [c for c in network.nx.algorithms.components.connected_components(self.graph) if len(c) > 1]
-        if 'component name' in self.graph_base.items().domain:
-            keyword_table = self.graph_base.items()
-        else:
-            keyword_table = Table(Domain(feature.String('component name')), [[''] for i in range(len(self.graph_base.items()))])
-
-        import obiGO
-        ontology = obiGO.Ontology.Load(progressCallback=self.progressBarSet)
-        annotations = obiGO.Annotations.Load(self.organism, ontology=ontology, progressCallback=self.progressBarSet)
-
-        allGenes = set([e[str(self.nameComponentCombo.currentText())].value for e in self.graph_base.items()])
-        foundGenesets = False
-        if len(annotations.geneNames & allGenes) < 1:
-            allGenes = set(reduce(add, [e[str(self.nameComponentCombo.currentText())].value.split(', ') for e in self.graph_base.items()]))
-            if len(annotations.geneNames & allGenes) < 1:
-                self.warning('no genes found')
-                return
-            else:
-                foundGenesets = True
-
-        def rank(a, j, reverse=False):
-            if len(a) <= 0: return
-
-            if reverse:
-                a.sort(lambda x, y: 1 if x[j] > y[j] else -1 if x[j] < y[j] else 0)
-                top_value = a[0][j]
-                top_rank = len(a)
-                max_rank = float(len(a))
-                int_ndx = 0
-                for k in range(len(a)):
-                    if top_value < a[k][j]:
-                        top_value = a[k][j]
-                        if k - int_ndx > 1:
-                            avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                            for l in range(int_ndx, k):
-                                a[l][j] = avg_rank
-
-                        int_ndx = k
-
-                    a[k][j] = top_rank / max_rank
-                    top_rank -= 1
-
-                k += 1
-                if k - int_ndx > 1:
-                    avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                    for l in range(int_ndx, k):
-                        a[l][j] = avg_rank
-
-            else:
-                a.sort(lambda x, y: 1 if x[j] < y[j] else -1 if x[j] > y[j] else 0)
-                top_value = a[0][j]
-                top_rank = len(a)
-                max_rank = float(len(a))
-                int_ndx = 0
-                for k in range(len(a)):
-                    if top_value > a[k][j]:
-                        top_value = a[k][j]
-                        if k - int_ndx > 1:
-                            avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                            for l in range(int_ndx, k):
-                                a[l][j] = avg_rank
-
-                        int_ndx = k
-
-                    a[k][j] = top_rank / max_rank
-                    top_rank -= 1
-
-                k += 1
-                if k - int_ndx > 1:
-                    avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                    for l in range(int_ndx, k):
-                        a[l][j] = avg_rank
-
-        for i in range(len(components)):
-            component = components[i]
-            if len(component) <= 1:
-                continue
-
-            if foundGenesets:
-                genes = reduce(add, [self.graph_base.items()[v][str(self.nameComponentCombo.currentText())].value.split(', ') for v in component])
-            else:
-                genes = [self.graph_base.items()[v][str(self.nameComponentCombo.currentText())].value for v in component]
-
-            res1 = annotations.GetEnrichedTerms(genes, aspect="P")
-            res2 = annotations.GetEnrichedTerms(genes, aspect="F")
-            res = res1.items() + res2.items()
-            #namingScore = [[(1-p_value) * (float(len(g)) / len(genes)) / (float(ref) / len(annotations.geneNames)), ontology.terms[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res.items() if p_value < 0.1]
-            #namingScore = [[(1-p_value) * len(g) / ref, ontology.terms[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res.items() if p_value < 0.1]
-
-            namingScore = [[len(g), ref, p_value, ontology[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res if p_value < 0.1]
-            if len(namingScore) == 0:
-                continue
-
-            annotated_genes = max([a[0] for a in namingScore])
-
-            rank(namingScore, 1, reverse=True)
-            rank(namingScore, 2, reverse=True)
-            rank(namingScore, 0)
-
-            namingScore = [[10 * rank_genes + 0.5 * rank_ref + rank_p_value, name, g, ref, p_value] for rank_genes, rank_ref, rank_p_value, name, g, ref, p_value in namingScore]
-            namingScore.sort(reverse=True)
-
-            if len(namingScore) < 1:
-                print("warning. no annotations found for group of genes: " + ", ".join(genes))
-                continue
-            elif len(namingScore[0]) < 2:
-                print("warning. error computing score for group of genes: " + ", ".join(genes))
-                continue
-
-            for v in component:
-                name = str(namingScore[0][1])
-                attrs = "%d/%d, %d, %lf" % (namingScore[0][2], annotated_genes, namingScore[0][3], namingScore[0][4])
-                info = ''
-                if self.showTextMiningInfo:
-                    info = "\n" + attrs + "\n" + str(namingScore[0][0])
-                keyword_table[v]['component name'] = name + info
-
-            self.progressBarSet(i * 100.0 / len(components))
-
-        self.lastNameComponentAttribute = self.nameComponentCombo.currentText()
-        self.set_items(Table([self.graph_base.items(), keyword_table]))
-        self.progressBarFinished()
-
-
-    def setAutoSendAttributes(self):
-        print('TODO setAutoSendAttributes')
-        #if self.autoSendAttributes:
-        #    self.networkCanvas.callbackSelectVertex = self.sendAttSelectionList
-        #else:
-        #    self.networkCanvas.callbackSelectVertex = None
-
-    def sendAttSelectionList(self):
-        if not self.graph is None:
-            vars = [x.name for x in self.graph_base.links_vars()]
-            if not self.comboAttSelection.currentText() in vars:
-                return
-            att = str(self.comboAttSelection.currentText())
-            vertices = self.networkCanvas.selected_nodes()
-
-            if len(vertices) != 1:
-                return
-
-            attributes = str(self.graph_base.items()[vertices[0]][att]).split(', ')
-        else:
-            attributes = None
-        self.send("Features", attributes)
 
 
 if __name__ == "__main__":

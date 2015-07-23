@@ -319,8 +319,9 @@ class NetworkCurve:
 
 
 class OWNxCanvas(pg.GraphItem):
-    def __init__(self, master, parent=None, name="None"):
+    def __init__(self, parent=None, name="Net Explorer"):
         super().__init__()
+        self.setParent(parent)
 
         self.kwargs = {}
         self.textItems = []
@@ -332,55 +333,22 @@ class OWNxCanvas(pg.GraphItem):
         self.relative_edge_widths = False
         self.edgeColors = []
 
-        self.master = master
-        self.parent = parent
-
-        self.circles = []
-        self.freezeNeighbours = False
-        self.labelsOnMarkedOnly = 0
-
-        self.show_indices = False
-        self.trim_label_words = 0
-
-        self.showComponentAttribute = None
-        self.forceVectors = None
-        #self.appendToSelection = 1
-        self.fontSize = 12
-
         self.networkCurve = NetworkCurve()
-
-        self.minComponentEdgeWidth = 0
-        self.maxComponentEdgeWidth = 0
-        self.items_matrix = None
-
-        self.items = None
-        self.links = None
-        self.label_distances = None
-
-        self.node_label_attributes = []
-        self.edge_label_attributes = []
-
-        self.axis_margin = 0
-        self.title_margin = 0
-        self.graph_margin = 1
-        self._legend_margin = QRectF(0, 0, 0, 0)
-
-        #self.setFocusPolicy(Qt.StrongFocus)
 
     def set_hidden_nodes(self, nodes):
         self.networkCurve.set_hidden_nodes(nodes)
 
     def hide_selected_nodes(self):
-      self.networkCurve.hide_selected_nodes()
-      self.drawPlotItems()
+        self.networkCurve.hide_selected_nodes()
+        self.drawPlotItems()
 
     def hide_unselected_nodes(self):
-      self.networkCurve.hide_unselected_nodes()
-      self.drawPlotItems()
+        self.networkCurve.hide_unselected_nodes()
+        self.drawPlotItems()
 
     def show_all_vertices(self):
-      self.networkCurve.show_all_vertices()
-      self.drawPlotItems()
+        self.networkCurve.show_all_vertices()
+        self.drawPlotItems()
 
     def selected_nodes(self):
         return [vertex.index() for vertex in self.networkCurve.nodes().values() if vertex.is_selected()]
@@ -690,10 +658,6 @@ class OWNxCanvas(pg.GraphItem):
         self.set_node_labels()
         self.replot()
 
-    def set_show_component_distances(self):
-        self.networkCurve.set_show_component_distances(self.show_component_distances)
-        self.replot()
-
     def update_graph_layout(self):
         self._bounds_cache = {}
         self._transform_cache = {}
@@ -720,9 +684,9 @@ class OWNxCanvas(pg.GraphItem):
     def is_animating(self, value):
         self._is_animating = value
         if value:
-            self.parent.setCursor(QCursor(Qt.ForbiddenCursor))
+            self.parent().setCursor(QCursor(Qt.ForbiddenCursor))
         else:
-            self.parent.unsetCursor()
+            self.parent().unsetCursor()
         qApp.processEvents()
 
     def _animate(self, layout_func, dim=2):
