@@ -1,5 +1,6 @@
 
 from functools import partial
+from itertools import zip_longest, chain
 
 import numpy as np
 from PyQt4.QtGui import *
@@ -317,16 +318,19 @@ class NetworkCurve:
 #          vertex.show()
 
 
-
 class OWNxCanvas(pg.GraphItem):
     def __init__(self, master, parent=None, name="None"):
         super().__init__()
 
         self.kwargs = {}
         self.textItems = []
+        self.edgeTextItems = []
         self.graph = None
         self._pos_dict = None
         self.layout_fhr(False)
+        self.show_edge_weights = False
+        self.relative_edge_widths = False
+        self.edgeColors = []
 
         self.master = master
         self.parent = parent
@@ -336,9 +340,7 @@ class OWNxCanvas(pg.GraphItem):
         self.labelsOnMarkedOnly = 0
 
         self.show_indices = False
-        self.show_weights = False
         self.trim_label_words = 0
-        self.show_component_distances = False
 
         self.showComponentAttribute = None
         self.forceVectors = None
@@ -527,52 +529,61 @@ class OWNxCanvas(pg.GraphItem):
         finally:
             self.replot()
 
-    def set_edge_colors(self, attribute):
-        if self.graph is None:
-            return
+    def set_edge_sizes(self):
+        self.kwargs['pen'] = pg.mkPen('#ccc')
+        G = self.graph
+        if self.relative_edge_widths or self.edgeColors:
+            if self.relative_edge_widths:
+                weights = [G.edge[u][v].get('weight', 1) for u, v in G.edges()]
+            else:
+                weights = [1] * G.number_of_edges()
+            if self.edgeColors:
+                colors = self.edgeColors
+            else:
+                colors = [(0xb4, 0xb4, 0xb4)] * G.number_of_edges()
 
-        colorIndices, colorIndex, minValue, maxValue = self.getColorIndeces(self.links, attribute, self.discPalette)
-        colors = []
-
-        if colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Continuous and minValue == maxValue:
-            colors = [self.discEdgePalette[0] for edge in self.networkCurve.edge_indices()]
-
-        elif colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Continuous:
-            colors = [self.contPalette[(float(self.links[edge.links_index()][colorIndex].value) - minValue) / (maxValue - minValue)]
-                          if str(self.links[edge.links_index()][colorIndex].value) != '?' else
-                          self.discPalette[0] for edge in self.networkCurve.edges()]
-
-        elif colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Discrete:
-            colors = [self.discEdgePalette[colorIndices[self.links[edge.links_index()][colorIndex].value]] for edge in self.networkCurve.edges()]
-
-        else:
-            colors = [self.discEdgePalette[0] for edge in self.networkCurve.edge_indices()]
-
-        self.networkCurve.set_edge_colors(colors)
+            self.kwargs['pen'] = np.array([c + (0xff, w) for c, w in zip(colors, weights)],
+                                          dtype=[('red',   int),
+                                                 ('green', int),
+                                                 ('blue',  int),
+                                                 ('alpha', int),
+                                                 ('width', float)])
+            self.kwargs['pen']['width'] = 5 * scale(self.kwargs['pen']['width'], .1, 1)
         self.replot()
 
-    def set_edge_labels(self, attributes=None):
-        if self.graph is None:
-            return
+    def set_edge_colors(self, attribute):
+        colors = []
+        if attribute:
+            assert self.graph.links()
+            values = self.graph.links()[:, attribute].X[:, 0]
+            if attribute.is_continuous:
+                colors = (tuple(i) for i in CONTINUOUS_PALETTE.getRGB(scale(values)))
+            elif attribute.is_discrete:
+                DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
+                colors = (DISCRETE_PALETTE[i] for i in values)
+                colors = (tuple(c.red(), c.green(), c.blue()) for c in colors)
+        self.edgeColors = colors
+        self.set_edge_sizes()
 
-        edges = self.networkCurve.edge_indices()
+    def set_edge_labels(self, attributes=[]):
+        G = self.graph
+        if not G: return
+        weights = ''
+        if self.show_edge_weights:
+            weights = ['{:.2f}'.format(G.edge[u][v].get('weight', 0))
+                       for u, v in G.edges()]
 
-        if attributes is not None:
-            self.edge_label_attributes = attributes
-
-        label_attributes = []
-        if self.links is not None and isinstance(self.links, data.Table):
-            label_attributes = [self.links.domain[att] for att in \
-                self.edge_label_attributes if att in self.links.domain]
-
-        weights = [[] for ex in edges]
-        if self.show_weights:
-            weights = [["%.2f" % self.graph[u][v].get('weight', 1)] for u, v in edges]
-
-        self.networkCurve.set_edge_labels([', '.join(weights[i] + \
-                           [str(self.links[i][att]) for att in \
-                           label_attributes]) for i, edge in enumerate(edges)])
-
+        for i in self.edgeTextItems:
+            i.scene().removeItem(i)
+        self.edgeTextItems = []
+        try: table = G.links()[:, attributes]
+        except TypeError: table = []
+        for weight, row in zip_longest(weights, table):
+            text = ','.join(chain([weight] if weight else [],
+                                  row[0].list if row else []))
+            item = pg.TextItem(text, (150, 150, 150))
+            item.setParentItem(self)
+            self.edgeTextItems.append(item)
         self.replot()
 
     def set_tooltip_attributes(self, attributes=[]):
@@ -670,6 +681,8 @@ class OWNxCanvas(pg.GraphItem):
                 item.setParentItem(self)
             # Position nodes according to selected layout optimization
             self.layout_func()
+            # Set edge weights
+            self.set_edge_sizes()
         self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
@@ -788,6 +801,10 @@ class OWNxCanvas(pg.GraphItem):
         # Update text labels
         for item, pos in zip(self.textItems, self.kwargs['pos']):
             item.setPos(*pos[:2])
+        # Update text labels for edges
+        pos = self.kwargs['pos']
+        for item, adj in zip(self.edgeTextItems, self.kwargs['adj']):
+            item.setPos(*((pos[adj[0]] + pos[adj[1]]) / 2))
 
     def hoverEvent(self, ev):
         self.scatter.setToolTip('')

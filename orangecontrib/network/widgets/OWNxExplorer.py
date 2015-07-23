@@ -170,60 +170,66 @@ class OWNxExplorer(widget.OWWidget):
 
         self.tabs = gui.tabWidget(self.controlArea)
 
-        self.nodesTab = gui.createTabPage(self.tabs, "Nodes")
-        self.edgesTab = gui.createTabPage(self.tabs, "Edges")
-        self.markTab = gui.createTabPage(self.tabs, "Mark")
-        self.infoTab = gui.createTabPage(self.tabs, "Info")
+        self.displayTab = gui.createTabPage(self.tabs, "Display")
+        self.markTab = gui.createTabPage(self.tabs, "Marking")
 
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
 
-        drawingBox = gui.widgetBox(self.nodesTab, "Drawing preferences")
+        ib = gui.widgetBox(self.displayTab, "Info")
+        gui.label(ib, self, "Nodes: %(number_of_nodes_label)i (%(verticesPerEdge).2f per edge)")
+        gui.label(ib, self, "Edges: %(number_of_edges_label)i (%(edgesPerVertex).2f per node)")
+
+        box = gui.widgetBox(self.displayTab, "Nodes")
         self.optCombo = gui.comboBox(
-            drawingBox, self, "optMethod", label='Layout:',
+            box, self, "optMethod", label='Layout:',
             orientation='horizontal', callback=self.graph_layout_method)
         for layout in Layout.all: self.optCombo.addItem(layout)
         self.optMethod = Layout.all.index(Layout.FHR)
         self.optCombo.setCurrentIndex(self.optMethod)
+
         self.colorCombo = gui.comboBox(
-            drawingBox, self, "node_color_attr", label='Color nodes by:',
+            box, self, "node_color_attr", label='Color by:',
             orientation='horizontal', callback=self.set_node_colors)
 
-        hb = gui.widgetBox(drawingBox, orientation="horizontal", addSpace=False)
-        hb.layout().addWidget(QLabel('Size nodes by:', hb))
-        self.nodeSizeCombo = gui.comboBox(hb, self, "node_size_attr", callback=self.set_node_sizes)
-        gui.spin(hb, self, "maxNodeSize", 50, 200, step=10, label="Max:", callback=self.set_node_sizes)
-        gui.checkBox(hb, self, "invertNodeSize", "Invert", callback=self.set_node_sizes)
+        hb = gui.widgetBox(box, orientation="horizontal", addSpace=False)
+        hb.layout().addWidget(QLabel('Size by:', hb))
+        self.nodeSizeCombo = gui.comboBox(
+            hb, self, "node_size_attr", callback=self.set_node_sizes)
+        self.maxNodeSizeSpin = gui.spin(
+            hb, self, "maxNodeSize", 20, 200, step=10, label="Max:",
+            callback=self.set_node_sizes)
+        self.maxNodeSizeSpin.setValue(50)
+        self.invertNodeSizeCheck = gui.checkBox(
+            hb, self, "invertNodeSize", "Invert",
+            callback=self.set_node_sizes)
 
-        lb = gui.widgetBox(self.nodesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
+        lb = gui.widgetBox(box, "Node labels | tooltips", orientation="vertical", addSpace=False)
         hb = gui.widgetBox(lb, orientation="horizontal", addSpace=False)
-        self.attListBox = gui.listBox(hb, self, "node_label_attrs", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._on_node_label_attrs_changed)
-        self.tooltipListBox = gui.listBox(hb, self, "tooltipAttributes", "graph_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
+        self.attListBox = gui.listBox(
+            hb, self, "node_label_attrs", "graph_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._on_node_label_attrs_changed)
+        self.tooltipListBox = gui.listBox(
+            hb, self, "tooltipAttributes", "graph_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._clicked_tooltip_lstbox)
 
-        ib = gui.widgetBox(self.edgesTab, "General", orientation="vertical")
-        gui.checkBox(ib, self, 'networkCanvas.show_weights', 'Show weights', callback=self.networkCanvas.set_edge_labels)
-        #gui.checkBox(ib, self, 'showEdgeLabels', 'Show labels on edges', callback=(lambda: self._set_canvas_attr('showEdgeLabels', self.showEdgeLabels)))
-        gui.spin(ib, self, "maxLinkSize", 1, 50, 1, label="Max edge width:", callback=self.set_edge_sizes)
-        self.cb_show_distances = gui.checkBox(ib, self, 'explore_distances', 'Explore node distances', callback=self.set_explore_distances, disabled=1)
-        self.cb_show_component_distances = gui.checkBox(ib, self, 'networkCanvas.show_component_distances', 'Show component distances', callback=self.networkCanvas.set_show_component_distances, disabled=1)
+        eb = gui.widgetBox(self.displayTab, "Edges", orientation="vertical")
+        gui.checkBox(eb, self, 'networkCanvas.relative_edge_widths', 'Relative edge widths',
+                     callback=self.networkCanvas.set_edge_sizes)
+        gui.checkBox(eb, self, 'networkCanvas.show_edge_weights', 'Show edge weights',
+                     callback=self.networkCanvas.set_edge_labels)
+        self.edgeColorCombo = gui.comboBox(
+            eb, self, "edgeColor", label='Color by:', orientation='horizontal',
+            callback=self.set_edge_colors)
+        elb = gui.widgetBox(eb, "Edge labels", addSpace=False)
+        self.edgeLabelListBox = gui.listBox(
+            elb, self, "edgeLabelAttributes", "edges_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._clicked_edge_label_listbox)
+        elb.setEnabled(False)
 
-        colorBox = gui.widgetBox(self.edgesTab, "Edge color attribute", orientation="horizontal", addSpace=False)
-        self.edgeColorCombo = gui.comboBox(colorBox, self, "edgeColor", callback=self.set_edge_colors)
-        self.edgeColorCombo.addItem("(same color)")
-        gui.button(colorBox, self, "palette", self._set_edge_color_palette, tooltip="Set edge color palette", width=60)
-
-        self.edgeLabelBox = gui.widgetBox(self.edgesTab, "Edge labels", addSpace=False)
-        self.edgeLabelListBox = gui.listBox(self.edgeLabelBox, self, "edgeLabelAttributes", "edges_attrs", selectionMode=QListWidget.MultiSelection, callback=self._clicked_edge_label_listbox)
-        #self.edgeLabelBox.setEnabled(False)
-
-        ib = gui.widgetBox(self.nodesTab, "General", orientation="vertical")
-        gui.checkBox(ib, self, 'networkCanvas.show_indices', 'Show indices', callback=self.networkCanvas.set_node_labels)
-        gui.checkBox(ib, self, 'labelsOnMarkedOnly', 'Show labels on marked nodes only', callback=(lambda: self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)))
-        gui.spin(ib, self, "fontSize", 4, 30, 1, label="Font size:", callback=self.set_font)
-        self.comboFontWeight = gui.comboBox(ib, self, "fontWeight", label='Font weight:', orientation='horizontal', callback=self.set_font)
-        self.comboFontWeight.addItem("Normal")
-        self.comboFontWeight.addItem("Bold")
-        self.comboFontWeight.setCurrentIndex(self.fontWeight)
 
         ib = gui.widgetBox(self.markTab, "Info", orientation="vertical")
         gui.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
@@ -749,7 +755,6 @@ class OWNxExplorer(widget.OWWidget):
 
         self.set_node_sizes()
         self.set_node_colors()
-        self.set_edge_sizes()
         self.set_edge_colors()
 
         self._on_node_label_attrs_changed()
@@ -812,8 +817,6 @@ class OWNxExplorer(widget.OWWidget):
         self.number_of_nodes_label = self.graph.number_of_nodes()
         self.number_of_edges_label = self.graph.number_of_edges()
 
-        self.networkCanvas.showEdgeLabels = self.showEdgeLabels
-        self.networkCanvas.maxEdgeSize = self.maxLinkSize
         self.networkCanvas.minComponentEdgeWidth = self.minComponentEdgeWidth
         self.networkCanvas.maxComponentEdgeWidth = self.maxComponentEdgeWidth
         #~ self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)
@@ -846,7 +849,6 @@ class OWNxExplorer(widget.OWWidget):
             self.networkCanvas.update_antialiasing(False)
             self.minVertexSize = 5
             self.maxNodeSize = 5
-            self.maxLinkSize = 1
             self.optMethod = 0
             self.graph_layout_method()
 
@@ -856,7 +858,6 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.set_graph(self.graph)
         self.set_node_sizes()
         self.set_node_colors()
-        self.set_edge_sizes()
         self.set_edge_colors()
 
         self._on_node_label_attrs_changed()
@@ -910,7 +911,6 @@ class OWNxExplorer(widget.OWWidget):
         self.set_node_sizes()
         self.networkCanvas.items = items
         self.networkCanvas.showWeights = self.showWeights
-        self.networkCanvas.showEdgeLabels = self.showEdgeLabels
         self._set_combos()
         #self.networkCanvas.updateData()
 
@@ -1140,36 +1140,16 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.set_tooltip_attributes(self.lastTooltipColumns)
 
     def _clicked_edge_label_listbox(self):
-        if self.graph is None:
-            return
-
-        self.lastEdgeLabelAttributes = set([self.edges_attrs[i].name for i in self.edgeLabelAttributes])
-        #~ self.networkCanvas.set_edge_labels(self.lastEdgeLabelAttributes)
-        #~ self.networkCanvas.replot()
+        self.lastEdgeLabelAttributes = [self.edges_attrs[i] for i in self.edgeLabelAttributes]
+        self.networkCanvas.set_edge_labels(self.lastEdgeLabelAttributes)
 
     def set_node_colors(self):
         self.networkCanvas.set_node_colors(self.colorCombo.itemData(self.colorCombo.currentIndex()))
         self.lastColorColumn = self.colorCombo.currentText()  # TODO
 
     def set_edge_colors(self):
-
-        return
-
-        if self.graph is None:
-            return
-
-        self.networkCanvas.set_edge_colors(self.edgeColorCombo.currentText())
+        self.networkCanvas.set_edge_colors(self.edgeColorCombo.itemData(self.edgeColorCombo.currentIndex()))
         self.lastEdgeColorColumn = self.edgeColorCombo.currentText()
-
-    def set_edge_sizes(self):
-
-        return
-
-        if self.graph is None:
-            return
-
-        self.networkCanvas.networkCurve.set_edge_sizes(self.maxLinkSize)
-        self.networkCanvas.replot()
 
     def set_node_sizes(self):
         attr = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
