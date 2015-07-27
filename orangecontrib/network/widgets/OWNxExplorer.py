@@ -1,3 +1,4 @@
+import os
 from operator import itemgetter, add
 from functools import reduce
 from itertools import chain
@@ -134,6 +135,23 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.showMissingValues = self.showMissingValues
 
         class ViewBox(pg.ViewBox):
+            def __init__(self):
+                super().__init__()
+
+            def mouseDragEvent(self, ev):
+                if not ev.isFinish():
+                    return super().mouseDragEvent(ev)
+                if self.state['mouseMode'] != self.RectMode:
+                    return
+                # Tap into pg.ViewBox's rbScaleBox ... it'll be fine.
+                self.rbScaleBox.hide()
+                ax = QRectF(pg.Point(ev.buttonDownPos(ev.button())),
+                            pg.Point(ev.pos()))
+                ax = self.childGroup.mapRectFromParent(ax)
+                networkCanvas.selectNodesInRect(ax)
+                self.setMouseMode(self.PanMode)
+                ev.accept()
+
             def mouseClickEvent(self, ev):
                 if (networkCanvas.is_animating and
                     ev.button() == Qt.LeftButton):
@@ -141,12 +159,56 @@ class OWNxExplorer(widget.OWWidget):
                     ev.accept()
                 super().mouseClickEvent(ev)
 
-        plot = pg.PlotWidget(background="w", enableAutoRange=True, viewBox=ViewBox())
-        for axis in ('bottom', 'left'):
-            plot.plotItem.hideAxis(axis)
+        class PlotItem(pg.PlotItem):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                for axis in ('bottom', 'left'):
+                    self.hideAxis(axis)
+
+                def _path(filename):
+                    return os.path.join(os.path.dirname(__file__), 'icons', filename + '.png')
+
+                self.rectBtn = pg.ButtonItem(_path('button_rect'), parentItem=self)
+                self.rectBtn.clicked.connect(self.rectBtnClicked)
+
+                self._qtBaseClass.setParentItem(self.autoBtn, None)
+                self.autoBtn.hide()
+                self.autoBtn = pg.ButtonItem(_path('button_autoscale'), parentItem=self)
+                self.autoBtn.mode = 'auto'
+                self.autoBtn.clicked.connect(self.autoBtnClicked)
+
+            def rectBtnClicked(self, ev):
+                self.vb.setMouseMode(self.vb.RectMode)
+
+            def updateButtons(self):
+                self.autoBtn.show()
+
+            def resizeEvent(self, ev):
+                super().resizeEvent(ev)
+                btnRect = self.mapRectFromItem(self.rectBtn, self.rectBtn.boundingRect())
+                LEFT_OFFSET, BOTTOM_OFFSET = 3, 5
+                y = self.size().height() - btnRect.height() - BOTTOM_OFFSET
+                self.autoBtn.setPos(LEFT_OFFSET, y)
+                self.rectBtn.setPos(2*LEFT_OFFSET + btnRect.width(), y)
+
+        class PlotWidget(pg.PlotWidget):
+            def __init__(self, *args, **kwargs):
+                pg.GraphicsView.__init__(self, *args, **kwargs)
+
+        plot = PlotWidget(self, background='w')
+        plot.plotItem = PlotItem(enableAutoRange=True, viewBox=ViewBox())
+        plot.setCentralItem(plot.plotItem)
+        # Required, copied from pg.PlotWidget constructor
+        for m in ['addItem', 'removeItem', 'autoRange', 'clear', 'setXRange',
+                  'setYRange', 'setRange', 'setAspectLocked', 'setMouseEnabled',
+                  'setXLink', 'setYLink', 'enableAutoRange', 'disableAutoRange',
+                  'setLimits', 'register', 'unregister', 'viewRect']:
+            setattr(plot, m, getattr(plot.plotItem, m))
+        plot.plotItem.sigRangeChanged.connect(plot.viewRangeChanged)
+
         plot.setFrameStyle(QFrame.StyledPanel)
         plot.setMinimumSize(500, 500)
-        plot.setAspectLocked()
+        plot.setAspectLocked(True)
         plot.addItem(self.networkCanvas)
         self.mainArea.layout().addWidget(plot)
 

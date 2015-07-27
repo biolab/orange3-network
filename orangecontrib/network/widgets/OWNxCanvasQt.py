@@ -37,6 +37,9 @@ def pos_array(pos):
 
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
 
+SELECTED_NODE_PEN = pg.mkPen('#dd1100', width=3)
+DEFAULT_NODE_PEN = pg.mkPen(.3, width=1)
+
 
 class NetworkCurve:
     def __init__(self, parent=None, pen=QPen(Qt.black), xData=None, yData=None):
@@ -332,8 +335,10 @@ class OWNxCanvas(pg.GraphItem):
         self.show_edge_weights = False
         self.relative_edge_widths = False
         self.edgeColors = []
+        self.selectedNodes = set()
 
         self.networkCurve = NetworkCurve()
+        self.scatter.sigClicked.connect(self.pointClicked)
 
     def set_hidden_nodes(self, nodes):
         self.networkCurve.set_hidden_nodes(nodes)
@@ -647,6 +652,11 @@ class OWNxCanvas(pg.GraphItem):
                 item = pg.TextItem()
                 self.textItems.append(item)
                 item.setParentItem(self)
+            # Node pens
+            pens = [DEFAULT_NODE_PEN] * graph.number_of_nodes()
+            for i in self.selectedNodes:
+                pens[i] = SELECTED_NODE_PEN
+            self.kwargs['symbolPen'] = pens
             # Position nodes according to selected layout optimization
             self.layout_func()
             # Set edge weights
@@ -781,6 +791,37 @@ class OWNxCanvas(pg.GraphItem):
         self.scatter.setToolTip('<br>'.join('<b>{.name}:</b> {}'.format(i[0], str(i[1]).replace('<', '&lt;'))
                                             for i in zip(self.tooltip_attributes, row)))
 
+    def setNodesState(self, nodes, selected):
+        points = self.scatter.points()
+        action, pen = ((self.selectedNodes.add, SELECTED_NODE_PEN)
+                       if selected else
+                       (self.selectedNodes.remove, DEFAULT_NODE_PEN))
+        for i in nodes:
+            action(i)
+            self.kwargs['symbolPen'][i] = pen
+            points[i].setPen(pen)
+
+    def selectNodesInRect(self, qrect):
+        if not self.graph: return
+        top, bottom, left, right = qrect.top(), qrect.bottom(), qrect.left(), qrect.right()
+        assert top < bottom and left < right
+        data = self.scatter.data
+        AND_ = np.logical_and
+        selected = AND_(AND_(left <= data['x'], data['x'] <= right),
+                        AND_(top <= data['y'], data['y'] <= bottom)).nonzero()[0]
+        self.setNodesState(selected, True)
+
+    def pointClicked(self, plot, points):
+        if not self.graph: return
+        i = points[0].data()
+        new_state = i not in self.selectedNodes
+        self.setNodesState([i], new_state)
+
+    def mouseClickEvent(self, ev):
+        """Mouse clicked on canvas => clear selection"""
+        points = self.scatter.points()
+        self.setNodesState(list(self.selectedNodes), False)
+
     def mouseDragEvent(self, ev):
         if ev.button() != Qt.LeftButton:
             ev.ignore()
@@ -795,8 +836,7 @@ class OWNxCanvas(pg.GraphItem):
             if len(pts) == 0:
                 ev.ignore()
                 return
-            self.dragPoint = pts[0]
-            ind = pts[0].data()
+            ind = self.dragPoint = pts[0].data()
             self.dragOffset = self.kwargs['pos'][ind][:2] - pos
         elif ev.isFinish():
             self.dragPoint = None
@@ -806,7 +846,13 @@ class OWNxCanvas(pg.GraphItem):
                 ev.ignore()
                 return
 
-        ind = self.dragPoint.data()
-        self.kwargs['pos'][ind][:2] = ev.pos() + self.dragOffset
+        ind = self.dragPoint
+        change = ev.pos() - ev.lastPos()
+        # If spot is part of the selection, also move the other selected spots
+        if ind in self.selectedNodes:
+            for i in self.selectedNodes:
+                self.kwargs['pos'][i][:2] += change
+        else:
+            self.kwargs['pos'][ind][:2] += change
         ev.accept()
         self.replot()
