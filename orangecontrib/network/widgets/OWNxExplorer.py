@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 import Orange
-from Orange.widgets import gui, widget
+from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.unsupervised.owmds import torgerson as MDS
 
@@ -33,6 +33,18 @@ class Layout:
     REQUIRES_DISTANCE_MATRIX = (FRAGVIZ, MDS, PIVOT_MDS)
 
 
+class SelectionMode:
+    NONE,       \
+    SEARCH,     \
+    NEIGHBORS,  \
+    AT_LEAST_N, \
+    AT_MOST_N,  \
+    ANY_NEIGH,  \
+    AVG_NEIGH,  \
+    MOST_CONN,  \
+    = range(8)  # FML
+
+
 class OWNxExplorer(widget.OWWidget):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
@@ -41,7 +53,6 @@ class OWNxExplorer(widget.OWWidget):
 
     inputs = [("Network", network.Graph, "set_graph", widget.Default),
               ("Items", Table, "set_items"),
-              ("Item Subset", Table, "mark_items"),
               ("Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
               ("Net View", network.NxView, "set_network_view")]
 
@@ -66,12 +77,13 @@ class OWNxExplorer(widget.OWWidget):
     "networkCanvas.selection_behavior", "hubs", "markDistance",
     "markNConnections", "markNumber", "markSearchString"]
     # TODO: set settings
+    do_auto_commit = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
-        self.networkCanvas = networkCanvas = OWNxCanvas(self.mainArea)
+        self.networkCanvas = networkCanvas = OWNxCanvas(self)
         self.graph_attrs = []
         self.edges_attrs = []
 
@@ -126,11 +138,11 @@ class OWNxExplorer(widget.OWWidget):
 
         self.checkSendMarkedNodes = True
         self.checkSendSelectedNodes = True
+        self.marked_nodes = []
 
         self._network_view = None
         self.graph = None
         self.graph_base = None
-        self.markInputItems = None
 
         self.networkCanvas.showMissingValues = self.showMissingValues
 
@@ -279,39 +291,34 @@ class OWNxExplorer(widget.OWWidget):
         gui.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
         gui.label(ib, self, "Selected: %(nSelected)i, marked: %(nMarked)i")
 
-        ribg = gui.radioButtonsInBox(self.markTab, self, "hubs", [], "Mark", callback=self.set_mark_mode)
+        ib = gui.widgetBox(self.markTab, "Highlight nodes ...")
+        ribg = gui.radioButtonsInBox(ib, self, "hubs", [], "Mark", callback=self.set_mark_mode)
         gui.appendRadioButton(ribg, "None")
-        gui.appendRadioButton(ribg, "Search")
+        gui.appendRadioButton(ribg, "... whose attributes contain:")
         self.ctrlMarkSearchString = gui.lineEdit(gui.indentedBox(ribg), self, "markSearchString", callback=self._set_search_string_timer, callbackOnType=True)
         self.searchStringTimer = QTimer(self)
         self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.set_mark_mode)
 
-        gui.appendRadioButton(ribg, "Neighbors of focused")
-        gui.appendRadioButton(ribg, "Neighbours of selected")
+        gui.appendRadioButton(ribg, "... neighbours of hand-selected, at most N hops away")
         ib = gui.indentedBox(ribg, orientation=0)
-        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance ",
-            callback=(lambda: self.set_mark_mode(2 if not self.hubs == 3 else 3)))
+        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance:",
+            callback=lambda: self.set_mark_mode(SelectionMode.NEIGHBORS))
         #self.ctrlMarkFreeze = gui.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
-        gui.widgetLabel(ribg, "Mark nodes with ...")
-        gui.appendRadioButton(ribg, "at least N connections")
-        gui.appendRadioButton(ribg, "at most N connections")
-        self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N ",
-            callback=(lambda: self.set_mark_mode(4 if not self.hubs == 5 else 5)))
-        gui.appendRadioButton(ribg, "more connections than any neighbour")
-        gui.appendRadioButton(ribg, "more connections than avg neighbour")
-        gui.appendRadioButton(ribg, "most connections")
+        gui.appendRadioButton(ribg, "... with at least N connections")
+        gui.appendRadioButton(ribg, "... with at most N connections")
+        self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N:",
+            callback=lambda: self.set_mark_mode(SelectionMode.AVG_NEIGH if self.hubs == SelectionMode.AVG_NEIGH else SelectionMode.ANY_NEIGH))
+        gui.appendRadioButton(ribg, "... with more connections than any neighbor")
+        gui.appendRadioButton(ribg, "... with more connections than average neighbor")
+        gui.appendRadioButton(ribg, "... with most connections")
         ib = gui.indentedBox(ribg)
-        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 0, 1000000, 1, label="Number of nodes:", callback=(lambda h=8: self.set_mark_mode(h)))
-        gui.widgetLabel(ib, "(More nodes are marked in case of ties)")
-        self.markInputRadioButton = gui.appendRadioButton(ribg, "Mark nodes given in the input signal")
-        ib = gui.indentedBox(ribg)
-        self.markInput = 0
-        self.markInputCombo = gui.comboBox(ib, self, "markInput", callback=(lambda h=9: self.set_mark_mode(h)))
-        self.markInputRadioButton.setEnabled(False)
+        #~ self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=(lambda h=7: self.set_mark_mode(h)))
+        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
+
+        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output highlighted nodes')
 
         #ib = gui.widgetBox(self.markTab, "General", orientation="vertical")
         #self.checkSendMarkedNodes = True
-        #gui.checkBox(ib, self, 'checkSendMarkedNodes', 'Send marked nodes', callback = self.send_marked_nodes, disabled=0)
 
         self.toolbar = gui.widgetBox(self.controlArea, orientation='horizontal')
         #~ G = self.networkCanvas.gui
@@ -342,8 +349,10 @@ class OWNxExplorer(widget.OWWidget):
 
         self.setMinimumWidth(900)
 
-        self.connect(self.networkCanvas, SIGNAL("marked_points_changed()"), self.send_marked_nodes)
         self.connect(self.networkCanvas, SIGNAL("selection_changed()"), self.send_data)
+
+    def commit(self):
+        self.send_marked_nodes()
 
     def hide_selection(self):
         nodes = set(self.graph.nodes()).difference(self.networkCanvas.selected_nodes())
@@ -413,7 +422,7 @@ class OWNxExplorer(widget.OWWidget):
     def _set_search_string_timer(self):
         self.hubs = 1
         self.searchStringTimer.stop()
-        self.searchStringTimer.start(1000)
+        self.searchStringTimer.start(300)
 
     def set_mark_mode(self, i=None):
         self.searchStringTimer.stop()
@@ -428,93 +437,45 @@ class OWNxExplorer(widget.OWWidget):
 
         hubs = self.hubs
 
-        if hubs in [0, 1, 2, 3]:
-            if hubs == 0:
-                #~ self.networkCanvas.networkCurve.clear_node_marks()
-                ...
-            elif hubs == 1:
-                if self.graph_base.items() is None or self.markSearchString == '':
-                    #~ self.networkCanvas.networkCurve.clear_node_marks()
-                    return
+        if hubs != SelectionMode.NEIGHBORS:
+            self.networkCanvas.select_neighbors_distance = 0
 
-                txt = self.markSearchString
-                toMark = set(i for i, values in enumerate(self.graph_base.items())
-                             if txt.lower() in " ".join(str(values[ndx]).lower()
-                                                        for ndx in chain(range(len(self.graph_base.items().domain)),
-                                                                         self.graph_base.items().domain.getmetas().keys())))
-                toMark = toMark.intersection(self.graph.nodes())
-                #~ self.networkCanvas.networkCurve.clear_node_marks()
-                #~ self.networkCanvas.networkCurve.set_node_marks(dict((i, True) for i in toMark))
-            elif hubs == 2:
-                #print "mark on focus"
-                self.networkCanvas.mark_neighbors = self.markDistance
-                QObject.connect(self.networkCanvas, SIGNAL('point_hovered(Point*)'), self.networkCanvas.mark_on_focus_changed)
-            elif hubs == 3:
-                #print "mark selected"
-                self.networkCanvas.mark_neighbors = self.markDistance
-                QObject.connect(self.networkCanvas, SIGNAL('selection_changed()'), self.networkCanvas.mark_on_selection_changed)
-                #~ self.networkCanvas.mark_on_selection_changed()
+        if hubs == SelectionMode.NONE:
+            self.networkCanvas.setAlgoNodesState([])
+        elif hubs == SelectionMode.SEARCH:
+            table, txt = self.graph.items(), self.markSearchString.lower()
+            if not table or not txt: return
+            toMark = set(i for i, instance in enumerate(table)
+                         if txt in " ".join(map(str, instance.list)).lower())
+            self.networkCanvas.setAlgoNodesState(toMark)
+        elif hubs == SelectionMode.NEIGHBORS:
+            self.networkCanvas.select_neighbors_distance = self.markDistance
+            self.networkCanvas.updateNeighborSelection()
+        elif hubs == SelectionMode.AT_LEAST_N:
+            self.networkCanvas.setAlgoNodesState(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree >= self.markNConnections))
+        elif hubs == SelectionMode.AT_MOST_N:
+            self.networkCanvas.setAlgoNodesState(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree <= self.markNConnections))
+        elif hubs == SelectionMode.ANY_NEIGH:
+            self.networkCanvas.setAlgoNodesState(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree > max(self.graph.degree(self.graph[node]).values(), default=0)))
+        elif hubs == SelectionMode.AVG_NEIGH:
+            self.networkCanvas.setAlgoNodesState(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree > np.nan_to_num(np.mean(list(self.graph.degree(self.graph[node]).values())))))
+        elif hubs == SelectionMode.MOST_CONN:
+            degrees = np.array(sorted(self.graph.degree().items(), key=lambda i: i[1], reverse=True))
+            cut_ind = max(1, min(self.markNumber, self.graph.number_of_nodes()))
+            cut_degree = degrees[cut_ind - 1, 1]
+            toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
+            self.networkCanvas.setAlgoNodesState(toMark)
 
-        elif hubs in [4, 5, 6, 7, 8, 9]:
-
-            powers = sorted(self.graph.degree_iter(), key=itemgetter(1), reverse=True)
-
-            if hubs == 4:
-                #print "mark at least N connections"
-                N = self.markNConnections
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d >= N else (i, False) for i, d in powers))
-            elif hubs == 5:
-                #print "mark at most N connections"
-                N = self.markNConnections
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d <= N else (i, False) for i, d in powers))
-            elif hubs == 6:
-                #print "mark more than any"
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > max(0, max(self.graph.degree(self.graph.neighbors(i)).values())) \
-                    else (i, False) for i, d in powers))
-            elif hubs == 7:
-                #print "mark more than avg"
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > np.mean([0] + list(self.graph.degree(self.graph.neighbors(i)).values())) \
-                    else (i, False) for i, d in powers))
-                self.networkCanvas.replot()
-            elif hubs == 8:
-                #print "mark most"
-                self.networkCanvas.networkCurve.clear_node_marks()
-
-                if self.markNumber < 1:
-                    return
-
-                cut = min(self.markNumber, len(powers))
-                cutPower = powers[cut - 1][1]
-                while cut < len(powers) and powers[cut][1] == cutPower:
-                    cut += 1
-
-                self.networkCanvas.networkCurve.clear_node_marks()
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) for \
-                    i, d in powers[:cut]))
-
-            elif hubs == 9:
-                if self.graph_base.items() is None:
-                    self.networkCanvas.networkCurve.clear_node_marks()
-                    return
-
-                var = str(self.markInputCombo.currentText())
-                if self.markInputItems is not None and len(self.markInputItems) > 0:
-                    if var == 'ID':
-                        values = [x.id for x in self.markInputItems]
-                        tomark = dict((x, True) for x in self.graph.nodes() if self.graph_base.items()[x].id in values)
-                    else:
-                        values = [str(x[var]).strip().upper() for x in self.markInputItems]
-                        tomark = dict((x, True) for x in self.graph.nodes() if str(self.graph_base.items()[x][var]).strip().upper() in values)
-                    self.networkCanvas.networkCurve.clear_node_marks()
-                    self.networkCanvas.networkCurve.set_node_marks(tomark)
-
-                else:
-                    self.networkCanvas.networkCurve.clear_node_marks()
-
+        self.marked_nodes = self.networkCanvas.selectedNodes
+        self.commit()
         #~ self.nMarked = len(self.networkCanvas.marked_nodes())
 
     def save_network(self):
@@ -551,7 +512,7 @@ class OWNxExplorer(widget.OWWidget):
             network.readwrite.write(self.graph, fn)
 
     def send_data(self):
-        selected_nodes = self.networkCanvas.selected_nodes()
+        selected_nodes = self.networkCanvas.selectedNodes
         self.nSelected = len(selected_nodes)
 
         if len(self.signalManager.getLinks(self, None, \
@@ -588,19 +549,11 @@ class OWNxExplorer(widget.OWWidget):
             self.send("Distance Matrix", matrix)
 
     def send_marked_nodes(self):
-        if self.checkSendMarkedNodes and \
-            len(self.signalManager.getLinks(self, None, \
-                                            "Marked Items", None)) > 0:
-            # signal connected
-            markedNodes = self.networkCanvas.marked_nodes()
-
-            if len(markedNodes) > 0 and self.graph is not None and\
-                                     self.graph_base.items() is not None:
-
-                items = self.graph_base.items().getitems(markedNodes)
-                self.send("Marked Items", items)
-            else:
-                self.send("Marked Items", None)
+        if len(self.marked_nodes) and self.graph and self.graph.items():
+            items = self.graph.items()[sorted(self.marked_nodes), :]
+            self.send("Marked Items", items)
+        else:
+            self.send("Marked Items", None)
 
     def _set_combos(self):
         self._clear_combos()
@@ -867,40 +820,6 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.showWeights = self.showWeights
         self._set_combos()
         #self.networkCanvas.updateData()
-
-    def mark_items(self, items):
-        self.markInputCombo.clear()
-        self.markInputRadioButton.setEnabled(False)
-        self.markInputItems = items
-
-        self.error()
-        self.warning()
-        self.information()
-
-        if items is None:
-            return
-
-        if self.graph is None or self.graph_base.items() is None or items is None:
-            self.warning('No graph found or no items attached to the graph.')
-            return
-
-        if len(items) > 0:
-            lstOrgDomain = [x.name for x in self.graph_base.items().domain] + [self.graph_base.items().domain[x].name for x in self.graph_base.items().domain.getmetas()]
-            lstNewDomain = [x.name for x in items.domain] + [items.domain[x].name for x in items.domain.getmetas()]
-            commonVars = set(lstNewDomain) & set(lstOrgDomain)
-
-            self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(DiscreteVariable())], str("ID"))
-
-            if len(commonVars) > 0:
-                for var in commonVars:
-                    orgVar = self.graph_base.items().domain[var]
-                    mrkVar = items.domain[var]
-
-                    if orgVar.varType == mrkVar.varType and orgVar.varType == feature.Type.String:
-                        self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(orgVar)], str(orgVar.name))
-
-            self.markInputRadioButton.setEnabled(True)
-            self.set_mark_mode(9)
 
     def explore_focused(self):
         sel = self.networkCanvas.selected_nodes()
