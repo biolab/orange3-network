@@ -875,14 +875,21 @@ class OWNxCanvas(pg.GraphItem):
             if self.dragPoint is None:
                 ev.ignore()
                 return
-
+        ev.accept()
         ind = self.dragPoint
         change = ev.pos() - ev.lastPos()
+
+        self.scatter.prepareGeometryChange()
+        self.scatter.informViewBoundsChanged()
+        self.scatter.bounds = [None, None]
+
         # If spot is part of the selection, also move the other selected spots
-        if ind in self.selectedNodes:
-            for i in self.selectedNodes:
-                self.kwargs['pos'][i][:2] += change
-        else:
-            self.kwargs['pos'][ind][:2] += change
-        ev.accept()
-        self.replot()
+        to_move = self.selectedNodes if ind in self.selectedNodes else [ind]
+        for i in to_move:
+            self.kwargs['pos'][i][:2] += change
+            item = self.scatter.data[i]['item']
+            item._data['x'] += change[0]
+            item._data['y'] += change[1]
+            item.updateItem()
+
+        self.generatePicture()
