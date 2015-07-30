@@ -78,6 +78,8 @@ class OWNxFile(widget.OWWidget):
         self.connect(self.datacombo, SIGNAL('activated(int)'), self.selectDataFile)
         self.connect(self.edgescombo, SIGNAL('activated(int)'), self.selectEdgesFile)
 
+        self.setFileLists()
+
     # set the comboboxes
     def setFileLists(self):
         self.filecombo.clear()
