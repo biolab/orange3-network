@@ -136,6 +136,23 @@ class OWNxAnalysis(widget.OWWidget):
             ("eccentricity", False, "Eccentricity", NODELEVEL, nx.eccentricity),
             ("closeness_vitality", False, "Closeness vitality", NODELEVEL, nx.closeness_vitality),
         ]
+        """
+        TODO: add
+            average-degree_connectivity
+            is_bipartite
+            is_chordal
+            katz_centrality
+            katz_centrality_numpy
+            communicability
+            communicability_exp
+            communicability_centrality
+            communicability_centrality_exp
+            communicability_betweenness_centrality
+            average_node_connectivity
+            is_directed_acyclic_graph
+            center
+            ??
+        """
 
         self.methods = [method for method in self.methods if method[-1] is not None]
 
@@ -187,8 +204,8 @@ class OWNxAnalysis(widget.OWWidget):
         self.btnStopC.setEnabled(False)
         self.btnStopA.setEnabled(False)
 
-        self.reportButton = gui.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
-        self.reportButton.setAutoDefault(0)
+        #~ self.reportButton = gui.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
+        #~ self.reportButton.setAutoDefault(0)
 
     def set_graph(self, graph):
         if graph is None:
@@ -311,7 +328,7 @@ class OWNxAnalysis(widget.OWWidget):
             if job.error is not None:
                 setattr(self, "lbl_" + job.name, "     error")
                 tooltop = getattr(self, "tool_" + job.name)
-                tooltop.setToolTip(job.error.message)
+                tooltop.setToolTip(job.error.args[0])
 
             elif job.result is not None:
                 if job.type == NODELEVEL:
@@ -378,8 +395,9 @@ class OWNxAnalysis(widget.OWWidget):
                     analdata.append(self.analdata[name])
                     vars.append(var)
 
-                analitems  = Orange.data.Table(Orange.data.Domain(vars, False), [list(t) for t in zip(*analdata)])
-                self.graph.set_items(Orange.data.Table([analitems, self.items_analysis]))
+                analitems  = Orange.data.Table(Orange.data.Domain(vars),
+                                               [list(t) for t in zip(*analdata)])
+                self.graph.set_items(Orange.data.Table.concatenate((analitems, self.items_analysis)))
 
             self.send("Network", self.graph)
             self.send("Items", self.graph.items())

@@ -178,7 +178,7 @@ class BaseGraph():
 
     def subgraph(self, nbunch):
         G = self.__class__.__bases__[1].subgraph(self, nbunch)
-        items = self.items().get_items(G.nodes())
+        items = self.items()[sorted(G.nodes()), :]
         G = G.to_orange_network()
         G.set_items(items)
         return G
