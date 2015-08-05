@@ -1,12 +1,14 @@
 import copy
 import random
+import sys
 
 import Orange
 from Orange.widgets import gui, widget
 import orangecontrib.network as network
 
-from .OWNxHist import *
-from OWHist import *
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+from orangecontrib.network.widgets.OWNxHist import *
 
 
 class OWNxFromDistances(widget.OWWidget, OWNxHist):
@@ -30,13 +32,12 @@ class OWNxFromDistances(widget.OWWidget, OWNxHist):
         super().__init__()
         OWNxHist.__init__(self)
 
-        self.addHistogramControls()
-
         # GUI
         # general settings
         boxHistogram = gui.widgetBox(self.mainArea, box = "Distance histogram")
-        self.histogram = OWHist(self, boxHistogram)
+        self.histogram = Histogram(self)
         boxHistogram.layout().addWidget(self.histogram)
+        self.addHistogramControls()
 
         boxHistogram.setMinimumWidth(500)
         boxHistogram.setMinimumHeight(300)
