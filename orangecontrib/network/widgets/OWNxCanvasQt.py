@@ -37,8 +37,15 @@ def pos_array(pos):
 
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
 
-SELECTED_NODE_PEN = pg.mkPen('#dd1100', width=3)
-DEFAULT_NODE_PEN = pg.mkPen(.3, width=1)
+class NodePenColor:
+    DEFAULT = .3
+    SELECTED = '#dd1100'
+    HIGHLIGHTED = '#dd7700'
+
+class NodePen:
+    DEFAULT = pg.mkPen(NodePenColor.DEFAULT, width=1)
+    SELECTED = pg.mkPen(NodePenColor.SELECTED, width=3)
+    HIGHLIGHTED = pg.mkPen(NodePenColor.HIGHLIGHTED, width=3)
 
 
 class NetworkCurve:
@@ -336,10 +343,7 @@ class OWNxCanvas(pg.GraphItem):
         self.relative_edge_widths = False
         self.edgeColors = []
         self.selectedNodes = set()
-        self.algoSelectedNodes = set()
-        self.handSelectedNodes = set()
-        self.select_neighbors_distance = 0
-
+        self.highlightedNodes = set()
         self.networkCurve = NetworkCurve()
         self.scatter.sigClicked.connect(self.pointClicked)
 
@@ -381,21 +385,6 @@ class OWNxCanvas(pg.GraphItem):
             newNeighbours = tNewNeighbours - neighbours
             neighbours |= newNeighbours
         return neighbours
-
-    def mark_on_selection_changed(self):
-        toMark = set()
-        for ndx in self.selected_nodes():
-            toMark |= self.get_neighbors_upto(ndx, self.mark_neighbors)
-
-        self.networkCurve.clear_node_marks()
-        self.networkCurve.set_node_marks(dict((i, True) for i in toMark))
-
-    def mark_on_focus_changed(self, node):
-        self.networkCurve.clear_node_marks()
-
-        if node is not None:
-            toMark = set(self.get_neighbors_upto(node.index(), self.mark_neighbors))
-            self.networkCurve.set_node_marks(dict((i, True) for i in toMark))
 
     def drawComponentKeywords(self):
         self.clear_markers()
@@ -656,9 +645,9 @@ class OWNxCanvas(pg.GraphItem):
                 self.textItems.append(item)
                 item.setParentItem(self)
             # Node pens
-            pens = [DEFAULT_NODE_PEN] * graph.number_of_nodes()
+            pens = [NodePen.DEFAULT] * graph.number_of_nodes()
             for i in self.selectedNodes:
-                pens[i] = SELECTED_NODE_PEN
+                pens[i] = NodePen.SELECTED
             self.kwargs['symbolPen'] = pens
             # Position nodes according to selected layout optimization
             self.layout_func()
@@ -794,43 +783,35 @@ class OWNxCanvas(pg.GraphItem):
         self.scatter.setToolTip('<br>'.join('<b>{.name}:</b> {}'.format(i[0], str(i[1]).replace('<', '&lt;'))
                                             for i in zip(self.tooltip_attributes, row)))
 
-    def updateNeighborSelection(self):
-        if not self.select_neighbors_distance: return
-        # Get all neighbors at most X hops away
-        neighbors = set(self.handSelectedNodes)
-        for _ in range(self.select_neighbors_distance):
-            for neigh in list(neighbors):
-                neighbors |= set(self.graph[neigh].keys())
-        neighbors -= self.handSelectedNodes
-        # Mark them
-        self.setAlgoNodesState(neighbors)
+    def updateNodeCounters(self):
+        self.parent().nSelected = len(self.selectedNodes)
+        self.parent().nHighlighted = len(self.highlightedNodes)
 
-    def setAlgoNodesState(self, nodes, is_selected=True):
+    def selectHighlighted(self):
+        self.selectedNodes |= self.highlightedNodes
+        self._setNodesPen(select=self.highlightedNodes)
+        self.highlightedNodes = set()
+        self.updateNodeCounters()
+
+    def setHighlighted(self, nodes):
         nodes = nodes if isinstance(nodes, set) else set(nodes)
-        self.algoSelectedNodes -= self.handSelectedNodes
-        to_deselect = self.algoSelectedNodes - nodes
-        to_select = nodes - self.algoSelectedNodes
-        if to_deselect:
-            self._setNodesState(to_deselect, False, self.algoSelectedNodes)
-        if to_select:
-            self._setNodesState(to_select, True, self.algoSelectedNodes)
+        nodes -= self.selectedNodes
+        self._setNodesPen(highlight=nodes, default=self.highlightedNodes)
+        self.highlightedNodes = nodes
+        self.updateNodeCounters()
 
-    def setHandNodesState(self, nodes, is_selected):
-        self._setNodesState(nodes, is_selected, self.handSelectedNodes)
-        self.updateNeighborSelection()
-
-    def _setNodesState(self, nodes, is_selected, nodes_set):
-        assert nodes_set in (self.handSelectedNodes, self.algoSelectedNodes)
+    def _setNodesPen(self, select=[], highlight=[], default=[]):
         points = self.scatter.points()
-        action, pen = ('add', SELECTED_NODE_PEN) if is_selected else ('remove', DEFAULT_NODE_PEN)
-        for i in set(nodes):
-            getattr(nodes_set, action)(i)
-            getattr(self.selectedNodes, action)(i)
-            self.kwargs['symbolPen'][i] = pen
-            points[i].setPen(pen)
-        self.parent().nSelected = len(self.selectedNodes) + len(self.algoSelectedNodes)
-        # Hand-selected overrides algo-selected
-        self.algoSelectedNodes -= self.handSelectedNodes
+        def setPen(nodes, pen):
+            for i in nodes:
+                self.kwargs['symbolPen'][i] = pen
+                points[i]._data['pen'] = pen
+                points[i]._data['sourceRect'] = None
+            self.scatter.updateSpots()
+
+        if select: setPen(select, NodePen.SELECTED)
+        if default: setPen(default, NodePen.DEFAULT)
+        if highlight: setPen(highlight, NodePen.HIGHLIGHTED)
 
     def selectNodesInRect(self, qrect):
         if not self.graph: return
@@ -840,17 +821,33 @@ class OWNxCanvas(pg.GraphItem):
         AND_ = np.logical_and
         selected = AND_(AND_(left <= data['x'], data['x'] <= right),
                         AND_(top <= data['y'], data['y'] <= bottom)).nonzero()[0]
-        self.setHandNodesState(selected, True)
+        selected = set(selected)
+        selected -= self.selectedNodes
+        self._setNodesPen(select=selected)
+        self.selectedNodes |= selected
+        self.updateNodeCounters()
 
     def pointClicked(self, plot, points):
         if not self.graph: return
         i = points[0].data()
-        new_state = i not in self.handSelectedNodes
-        self.setHandNodesState([i], new_state)
+        is_selected = i not in self.selectedNodes
+        if is_selected:
+            self._setNodesPen(select=[i])
+            self.selectedNodes.add(i)
+            self.highlightedNodes.discard(i)
+        else:
+            self._setNodesPen(default=[i])
+            self.selectedNodes.remove(i)
+        self.updateNodeCounters()
+        self.parent().set_mark_mode()  # Re-evaluate highlighted nodes
 
     def mouseClickEvent(self, ev):
         """Mouse clicked on canvas => clear selection"""
-        self.setHandNodesState(self.handSelectedNodes, False)
+        self._setNodesPen(default=self.selectedNodes | self.highlightedNodes)
+        self.selectedNodes = set()
+        self.highlightedNodes = set()
+        self.updateNodeCounters()
+        self.parent().set_mark_mode()
 
     def mouseDragEvent(self, ev):
         if ev.button() != Qt.LeftButton:

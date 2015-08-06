@@ -103,7 +103,7 @@ class OWNxExplorer(widget.OWWidget):
         self.node_color_attr = 0
         self.edgeColor = 0
         self.node_size_attr = 0
-        self.nShown = self.nHidden = self.nMarked = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
+        self.nShown = self.nHidden = self.nHighlighted = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
         self.optimizeWhat = 1
         self.maxNodeSize = 50
         self.labelsOnMarkedOnly = 0
@@ -165,10 +165,12 @@ class OWNxExplorer(widget.OWWidget):
                 ev.accept()
 
             def mouseClickEvent(self, ev):
-                if (networkCanvas.is_animating and
-                    ev.button() == Qt.LeftButton):
-                    networkCanvas.is_animating = False
-                    ev.accept()
+                if ev.button() == Qt.LeftButton:
+                    if networkCanvas.is_animating:
+                        networkCanvas.is_animating = False
+                        ev.accept()
+                    else:
+                        networkCanvas.mouseClickEvent(ev)
                 super().mouseClickEvent(ev)
 
         class PlotItem(pg.PlotItem):
@@ -189,6 +191,15 @@ class OWNxExplorer(widget.OWWidget):
                 self.autoBtn.mode = 'auto'
                 self.autoBtn.clicked.connect(self.autoBtnClicked)
 
+                self.textEnterToSelect = pg.TextItem(
+                    html='<div style="background-color:#f0f0f0; padding:5px;">'
+                         '<font color="#444444"><b>Press <tt>Enter</tt> to add '
+                         '<i><font color="{}">highlighted</font></i> nodes to '
+                         '<i><font color="{}">selection</font></i> ...</font></b></div>'
+                         .format(NodePenColor.HIGHLIGHTED, NodePenColor.SELECTED))
+                self.textEnterToSelect.setParentItem(self)
+                self.textEnterToSelect.hide()
+
             def rectBtnClicked(self, ev):
                 self.vb.setMouseMode(self.vb.RectMode)
 
@@ -202,6 +213,7 @@ class OWNxExplorer(widget.OWWidget):
                 y = self.size().height() - btnRect.height() - BOTTOM_OFFSET
                 self.autoBtn.setPos(LEFT_OFFSET, y)
                 self.rectBtn.setPos(2*LEFT_OFFSET + btnRect.width(), y)
+                self.textEnterToSelect.setPos(LEFT_OFFSET, BOTTOM_OFFSET)
 
         class PlotWidget(pg.PlotWidget):
             def __init__(self, *args, **kwargs):
@@ -217,6 +229,7 @@ class OWNxExplorer(widget.OWWidget):
                   'setLimits', 'register', 'unregister', 'viewRect']:
             setattr(plot, m, getattr(plot.plotItem, m))
         plot.plotItem.sigRangeChanged.connect(plot.viewRangeChanged)
+        self.textEnterToSelect = plot.plotItem.textEnterToSelect
 
         plot.setFrameStyle(QFrame.StyledPanel)
         plot.setMinimumSize(500, 500)
@@ -228,6 +241,14 @@ class OWNxExplorer(widget.OWWidget):
 
         self.displayTab = gui.createTabPage(self.tabs, "Display")
         self.markTab = gui.createTabPage(self.tabs, "Marking")
+
+        def showTextOnMarkingTab(index):
+            if self.tabs.widget(index) == self.markTab:
+                self.set_mark_mode()
+            else:
+                self.acceptingEnterKeypress = False
+
+        self.tabs.currentChanged.connect(showTextOnMarkingTab)
 
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
@@ -288,8 +309,9 @@ class OWNxExplorer(widget.OWWidget):
 
 
         ib = gui.widgetBox(self.markTab, "Info", orientation="vertical")
-        gui.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
-        gui.label(ib, self, "Selected: %(nSelected)i, marked: %(nMarked)i")
+        gui.label(ib, self, "Nodes: %(number_of_nodes_label)i")
+        gui.label(ib, self, "Selected: %(nSelected)i")
+        gui.label(ib, self, "Highlighted: %(nHighlighted)i")
 
         ib = gui.widgetBox(self.markTab, "Highlight nodes ...")
         ribg = gui.radioButtonsInBox(ib, self, "hubs", [], "Mark", callback=self.set_mark_mode)
@@ -299,7 +321,7 @@ class OWNxExplorer(widget.OWWidget):
         self.searchStringTimer = QTimer(self)
         self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.set_mark_mode)
 
-        gui.appendRadioButton(ribg, "... neighbours of hand-selected, at most N hops away")
+        gui.appendRadioButton(ribg, "... neighbours of selected, ≤ N hops away")
         ib = gui.indentedBox(ribg, orientation=0)
         self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance:",
             callback=lambda: self.set_mark_mode(SelectionMode.NEIGHBORS))
@@ -424,47 +446,54 @@ class OWNxExplorer(widget.OWWidget):
         self.searchStringTimer.stop()
         self.searchStringTimer.start(300)
 
+    @property
+    def acceptingEnterKeypress(self):
+        return self.textEnterToSelect.isVisible()
+
+    @acceptingEnterKeypress.setter
+    def acceptingEnterKeypress(self, v):
+        if v: self.textEnterToSelect.show()
+        else: self.textEnterToSelect.hide()
+
     def set_mark_mode(self, i=None):
         self.searchStringTimer.stop()
-        if not i is None:
-            self.hubs = i
-
-        QObject.disconnect(self.networkCanvas, SIGNAL('selection_changed()'), self.networkCanvas.mark_on_selection_changed)
-        QObject.disconnect(self.networkCanvas, SIGNAL('point_hovered(Point*)'), self.networkCanvas.mark_on_focus_changed)
-
-        if self.graph is None:
+        hubs = self.hubs = i or self.hubs
+        if (self.graph is None or
+            self.tabs.widget(self.tabs.currentIndex()) != self.markTab):
             return
 
-        hubs = self.hubs
-
-        if hubs != SelectionMode.NEIGHBORS:
-            self.networkCanvas.select_neighbors_distance = 0
+        self.acceptingEnterKeypress = True
 
         if hubs == SelectionMode.NONE:
-            self.networkCanvas.setAlgoNodesState([])
+            self.networkCanvas.setHighlighted([])
+            self.acceptingEnterKeypress = False
         elif hubs == SelectionMode.SEARCH:
             table, txt = self.graph.items(), self.markSearchString.lower()
             if not table or not txt: return
             toMark = set(i for i, instance in enumerate(table)
                          if txt in " ".join(map(str, instance.list)).lower())
-            self.networkCanvas.setAlgoNodesState(toMark)
+            self.networkCanvas.setHighlighted(toMark)
         elif hubs == SelectionMode.NEIGHBORS:
-            self.networkCanvas.select_neighbors_distance = self.markDistance
-            self.networkCanvas.updateNeighborSelection()
+            neighbors = set(self.networkCanvas.selectedNodes)
+            for _ in range(self.markDistance):
+                for neigh in list(neighbors):
+                    neighbors |= set(self.graph[neigh].keys())
+            neighbors -= self.networkCanvas.selectedNodes
+            self.networkCanvas.setHighlighted(neighbors)
         elif hubs == SelectionMode.AT_LEAST_N:
-            self.networkCanvas.setAlgoNodesState(
+            self.networkCanvas.setHighlighted(
                 set(node for node, degree in self.graph.degree().items()
                     if degree >= self.markNConnections))
         elif hubs == SelectionMode.AT_MOST_N:
-            self.networkCanvas.setAlgoNodesState(
+            self.networkCanvas.setHighlighted(
                 set(node for node, degree in self.graph.degree().items()
                     if degree <= self.markNConnections))
         elif hubs == SelectionMode.ANY_NEIGH:
-            self.networkCanvas.setAlgoNodesState(
+            self.networkCanvas.setHighlighted(
                 set(node for node, degree in self.graph.degree().items()
                     if degree > max(self.graph.degree(self.graph[node]).values(), default=0)))
         elif hubs == SelectionMode.AVG_NEIGH:
-            self.networkCanvas.setAlgoNodesState(
+            self.networkCanvas.setHighlighted(
                 set(node for node, degree in self.graph.degree().items()
                     if degree > np.nan_to_num(np.mean(list(self.graph.degree(self.graph[node]).values())))))
         elif hubs == SelectionMode.MOST_CONN:
@@ -472,11 +501,21 @@ class OWNxExplorer(widget.OWWidget):
             cut_ind = max(1, min(self.markNumber, self.graph.number_of_nodes()))
             cut_degree = degrees[cut_ind - 1, 1]
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
-            self.networkCanvas.setAlgoNodesState(toMark)
+            self.networkCanvas.setHighlighted(toMark)
 
-        self.marked_nodes = self.networkCanvas.selectedNodes
+        self.marked_nodes = set(self.networkCanvas.selectedNodes)
+        # TODO: newly selected nodes arent sent out with SM.NEIGHBORS
+
+    def keyReleaseEvent(self, ev):
+        """On Enter, expand the selected set with the highlighted"""
+        if (not self.acceptingEnterKeypress or
+            ev.key() not in (Qt.Key_Return, Qt.Key_Enter)):
+            super().keyReleaseEvent(ev)
+            return
+        self.networkCanvas.selectHighlighted()
+        self.set_mark_mode()
         self.commit()
-        #~ self.nMarked = len(self.networkCanvas.marked_nodes())
+
 
     def save_network(self):
         if self.networkCanvas is None or self.graph is None:
@@ -512,7 +551,7 @@ class OWNxExplorer(widget.OWWidget):
             network.readwrite.write(self.graph, fn)
 
     def send_data(self):
-        selected_nodes = self.networkCanvas.selectedNodes
+        selected_nodes = set(self.networkCanvas.selectedNodes)
         self.nSelected = len(selected_nodes)
 
         if len(self.signalManager.getLinks(self, None, \
