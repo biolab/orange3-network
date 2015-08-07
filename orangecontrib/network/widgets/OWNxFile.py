@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 import Orange
-from Orange.widgets import gui, widget
+from Orange.widgets import gui, widget, settings
 import orangecontrib.network as network
 
 
@@ -18,17 +18,13 @@ class OWNxFile(widget.OWWidget):
     outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
-    settingsList = ["recentFiles", "recentDataFiles", "recentEdgesFiles", "auto_table"]
-    # TODO: set settings
+    recentFiles = settings.Setting(['(none)'])
+    recentDataFiles = settings.Setting(['(none)'])
+    recentEdgesFiles = settings.Setting(['(none)'])
+    auto_table = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
-
-        #set default settings
-        self.recentFiles = ["(none)"]
-        self.recentDataFiles = ["(none)"]
-        self.recentEdgesFiles = ["(none)"]
-        self.auto_table = True
 
         self.domain = None
         self.graph = None
@@ -79,6 +75,8 @@ class OWNxFile(widget.OWWidget):
         self.connect(self.edgescombo, SIGNAL('activated(int)'), self.selectEdgesFile)
 
         self.setFileLists()
+        self.openFile(self.recentFiles[0])
+
 
     # set the comboboxes
     def setFileLists(self):
@@ -230,6 +228,7 @@ class OWNxFile(widget.OWWidget):
             pass
 
         self.graph = net
+        self.warning(0)
 
         # Find items data file for selected network
         items_candidate = os.path.splitext(fn)[0] + ".tab"
@@ -268,25 +267,24 @@ class OWNxFile(widget.OWWidget):
             self.send("Items", None)
 
     def addDataFile(self, fn):
-        if fn == "(none)" or self.graph == None:
-
-            if self.auto_items is not None:
-                self.infoc.setText("Vertices data generated and added automatically")
-                self.graph.set_items(self.auto_items)
-            else:
-                self.infoc.setText("No vertices data file specified")
-                self.graph.set_items(None)
-
-            self.send("Network", self.graph)
-            self.send("Items", self.graph.items())
-            return
-
-        self.readDataFile(fn)
+        if fn == "(none)":
+            if self.graph:
+                if self.auto_items is not None:
+                    self.infoc.setText("Vertices data generated and added automatically")
+                    self.graph.set_items(self.auto_items)
+                else:
+                    self.infoc.setText("No vertices data file specified")
+                    self.graph.set_items(None)
+        else:
+            self.readDataFile(fn)
 
         self.send("Network", self.graph)
-        self.send("Items", self.graph.items())
+        self.send("Items", self.graph.items() if self.graph else None)
 
     def readDataFile(self, fn):
+        if not self.graph:
+            self.warning(0, 'No network file loaded. Load the network first.')
+            return
         table = Orange.data.Table.from_file(fn)
 
         if len(table) != self.graph.number_of_nodes():
@@ -324,9 +322,12 @@ class OWNxFile(widget.OWWidget):
         self.readEdgesFile(fn)
 
         self.send("Network", self.graph)
-        self.send("Items", self.graph.items())
+        self.send("Items", self.graph.items() if self.graph else None)
 
     def readEdgesFile(self, fn):
+        if not self.graph:
+            self.warning(0, 'No network file loaded. Load the network first.')
+            return
         table = Orange.data.Table.from_file(fn)
         if self.graph.is_directed():
             nEdges = len(self.graph.getEdges())
