@@ -10,50 +10,61 @@ Community Detection in Graphs
 
 """
 
+import re
 import random
 import itertools
 import networkx as nx
 
-import Orange.data
+from Orange.data import Domain, Table, DiscreteVariable
+
+
+CLUSTERING_LABEL = 'clustering label propagation'
 
 
 def add_results_to_items(G, lblhistory):
     items = G.items()
-    if items is not None and 'clustering label propagation' in items.domain:
-        exclude = [attr for attr in items.domain if attr.name == \
-                   'clustering label propagation']
-        items = Orange.core.Preprocessor_ignore(items, attributes=exclude)
+    if items is not None and CLUSTERING_LABEL in items.domain:
+        domain = Domain([a for a in items.domain.attributes
+                         if a.name != CLUSTERING_LABEL],
+                        items.domain.class_vars,
+                        items.domain.metas)
+        items = Table.from_table(domain, items)
 
-    attrs = [Orange.data.DiscreteVariable('clustering label propagation',
-                            values=list(set([l for l in lblhistory[-1]])))]
-
-    dom = Orange.data.Domain(attrs, 0)
-    data = Orange.data.Table(dom, [[l] for l in lblhistory[-1]])
+    attrs = [DiscreteVariable(CLUSTERING_LABEL,
+                              values=list(set([l for l in lblhistory[-1]])))]
+    domain = Domain(attrs)
+    data = Table(domain, [[l] for l in lblhistory[-1]])
 
     if items is None:
         G.set_items(data)
     else:
-        G.set_items(Orange.data.Table([items, data]))
+        G.set_items(Table.concatenate((items, data)))
+
+
+_is_history_attr = re.compile('^c\d+$').match
 
 
 def add_history_to_items(G, lblhistory):
     items = G.items()
     if items is not None:
-        exclude = [attr for attr in items.domain if attr.name in \
-                   ['c' + str(i) for i in range(1000)]]
-        items = Orange.core.Preprocessor_ignore(items, attributes=exclude)
+        domain = Domain([a for a in items.domain.attributes
+                         if not _is_history_attr(a.name)],
+                        items.domain.class_vars,
+                        items.domain.metas)
+        items = Table.from_table(domain, items)
 
-    attrs = [Orange.data.DiscreteVariable('c' + str(i), values=list(set(\
-            [l for l in lblhistory[0]]))) for i, _ in enumerate(lblhistory)]
+    attrs = [DiscreteVariable('c' + str(i),
+                              values=list(set(lblhistory[0])))
+             for i in range(len(lblhistory))]
 
-    dom = Orange.data.Domain(attrs, 0)
+    domain = Domain(attrs)
     # transpose history
     data = [list(i) for i in zip(*lblhistory)]
-    data = Orange.data.Table(dom, data)
+    data = Table(domain, data)
     if items is None:
         G.set_items(data)
     else:
-        G.set_items(Orange.data.Table([items, data]))
+        G.set_items(Table.concatenate((items, data)))
 
 
 class CommunityDetection(object):

@@ -26,40 +26,33 @@ class OWNxClustering(widget.OWWidget):
         self.iterations = 1000
         self.hop_attenuation = 0.1
 
+        commit = lambda: self.commit()
         gui.spin(self.controlArea, self, "iterations", 1,
-                   100000, 1, label="Iterations: ")
-        ribg = gui.radioButtonsInBox(self.controlArea, self, "method",
-                                       [], "Method", callback=self.cluster)
-        gui.appendRadioButton(ribg, self, "method",
-                        "Label propagation clustering (Raghavan et al., 2007)",
-                        callback=self.cluster)
+                   100000, 1, label="Iterations: ",
+                   callback=commit)
+        ribg = gui.radioButtonsInBox(
+            self.controlArea, self, "method",
+            btnLabels=["Label propagation clustering (Raghavan et al., 2007)",
+                    "Label propagation clustering (Leung et al., 2009)"],
+            label="Method", callback=commit)
 
-        gui.appendRadioButton(ribg, self, "method",
-                        "Label propagation clustering (Leung et al., 2009)",
-                        callback=self.cluster)
         gui.doubleSpin(gui.indentedBox(ribg), self, "hop_attenuation",
                          0, 1, 0.01, label="Hop attenuation (delta): ")
 
         self.info = gui.widgetLabel(self.controlArea, ' ')
         gui.checkBox(self.controlArea, self, "iterationHistory",
                        "Append clustering data on each iteration",
-                       callback=self.cluster)
-        gui.checkBox(self.controlArea, self, "autoApply",
-                       "Commit automatically")
-        gui.button(self.controlArea, self, "Commit",
-                     callback=lambda b=True: self.cluster(b))
+                       callback=commit)
 
-        self.cluster()
+        gui.auto_commit(self.controlArea, self, "autoApply", 'Commit',
+                        checkbox_label='Auto-commit')
+        commit()
 
     def setNetwork(self, net):
         self.net = net
-        if self.autoApply:
-            self.cluster()
+        self.commit()
 
-    def cluster(self, btn=False):
-        if not btn and not self.autoApply:
-            return
-
+    def commit(self):
         self.info.setText(' ')
 
         if self.method == 0:
@@ -85,3 +78,24 @@ class OWNxClustering(widget.OWWidget):
 
         self.info.setText('%d clusters found' % len(set(labels.values())))
         self.send("Network", self.net)
+
+
+if __name__ == "__main__":
+    from PyQt4.QtGui import *
+    a = QApplication([])
+    ow = OWNxClustering()
+    ow.show()
+
+    def setNetwork(signal, data, id=None):
+        if signal == 'Network':
+            ow.setNetwork(data)
+
+    import OWNxFile
+    from os.path import join, dirname
+    owFile = OWNxFile.OWNxFile()
+    owFile.send = setNetwork
+    owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+
+    a.exec_()
+    ow.saveSettings()
+    owFile.saveSettings()
