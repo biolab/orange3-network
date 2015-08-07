@@ -504,7 +504,6 @@ class OWNxExplorer(widget.OWWidget):
             self.networkCanvas.setHighlighted(toMark)
 
         self.marked_nodes = set(self.networkCanvas.selectedNodes)
-        # TODO: newly selected nodes arent sent out with SM.NEIGHBORS
 
     def keyReleaseEvent(self, ev):
         """On Enter, expand the selected set with the highlighted"""
@@ -514,7 +513,6 @@ class OWNxExplorer(widget.OWWidget):
             return
         self.networkCanvas.selectHighlighted()
         self.set_mark_mode()
-        self.commit()
 
 
     def save_network(self):

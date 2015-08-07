@@ -809,7 +809,10 @@ class OWNxCanvas(pg.GraphItem):
                 points[i]._data['sourceRect'] = None
             self.scatter.updateSpots()
 
-        if select: setPen(select, NodePen.SELECTED)
+        if select:
+            setPen(select, NodePen.SELECTED)
+            # Export selected nodes
+            self.parent().commit()
         if default: setPen(default, NodePen.DEFAULT)
         if highlight: setPen(highlight, NodePen.HIGHLIGHTED)
 
