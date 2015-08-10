@@ -721,6 +721,7 @@ class OWNxCanvas(pg.GraphItem):
             return nx.spring_layout(self.graph,
                                     pos=pos,
                                     iterations=2,
+                                    k=.8/np.sqrt(self.graph.number_of_nodes()),
                                     weight='weight' if weighted else None)
         self._animate(_f)
         self.layout_func = lambda: self._animate(_f)

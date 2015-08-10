@@ -58,7 +58,7 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
-    'networkx',
+    'networkx>=1.10',
     'pyparsing>=2.0.1'
 ),
 

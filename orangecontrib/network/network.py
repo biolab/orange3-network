@@ -70,8 +70,7 @@ class MdsTypeClass():
 MdsType = MdsTypeClass()
 
 def _get_doc(doc):
-    tmp = doc.replace('nx.', 'Orange.network.')
-    return tmp
+    return doc.replace('nx.', 'Orange.network.') if doc else ''
 
 class BaseGraph():
     """A collection of methods inherited by all graph types (:obj:`Graph`,
