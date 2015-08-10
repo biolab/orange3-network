@@ -698,7 +698,9 @@ class OWNxCanvas(pg.GraphItem):
         self._pos_dict = {k: list(p[:dim]) + [0]*(dim-len(p))
                           for k, p in self._pos_dict.items()} if self._pos_dict else None
         THRESHOLD, diff = .1, 10
-        while self.is_animating and diff > THRESHOLD:
+        max_iteration = 50
+        while self.is_animating and diff > THRESHOLD and max_iteration:
+            max_iteration -= 1
             pos_dict = layout_func(pos=self._pos_dict)
             pos = pos_array(pos_dict)
             if prev_pos is not None:
