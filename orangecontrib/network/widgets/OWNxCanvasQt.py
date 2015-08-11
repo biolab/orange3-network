@@ -441,7 +441,6 @@ class OWNxCanvas(pg.GraphItem):
 
     def set_node_colors(self, attribute=None):
         assert not attribute or isinstance(attribute, data.Variable)
-        assert self.graph
 
         if not attribute:
             self.kwargs.pop('brush', None)
@@ -463,7 +462,9 @@ class OWNxCanvas(pg.GraphItem):
 
     def set_node_labels(self, attributes=[]):
         assert isinstance(attributes, list)
-        if not self.graph: return
+        if not self.graph:
+            for i in self.textItems: i.setText('')
+            return
         if attributes:
             table = self.graph.items()
             for i, item in enumerate(self.textItems):
@@ -627,6 +628,9 @@ class OWNxCanvas(pg.GraphItem):
 
         return True
 
+    def set_antialias(self, value):
+        self.kwargs['antialias'] = bool(value)
+
     def set_graph(self, graph):
         self.graph = graph
         try:
@@ -669,7 +673,9 @@ class OWNxCanvas(pg.GraphItem):
         def _f():
             items = self.graph.items()
             if not items or 'x' not in items.domain or 'y' not in items.domain:
-                raise Exception('graph items table doesn\'t have x,y info')
+                return nx.spring_layout(self.graph,
+                                        iterations=2,
+                                        k=.5/np.sqrt(self.graph.number_of_nodes()))
             positions = {node: (items[node]['x'].value if items[node]['x'].value != '?' else np.random.rand(),
                                 items[node]['y'].value if items[node]['y'].value != '?' else np.random.rand())
                          for node in self.graph.node}
@@ -728,6 +734,7 @@ class OWNxCanvas(pg.GraphItem):
 
     def _simple_layout(self, relayout):
         def _f():
+            if not self.graph: return []
             pos = self._pos_dict = relayout(self.graph)
             return pos_array(pos)
         self.layout_func = _f
@@ -789,6 +796,8 @@ class OWNxCanvas(pg.GraphItem):
     def updateNodeCounters(self):
         self.parent().nSelected = len(self.selectedNodes)
         self.parent().nHighlighted = len(self.highlightedNodes)
+        # Export selected nodes
+        self.parent().commit()
 
     def selectHighlighted(self):
         self.selectedNodes |= self.highlightedNodes
@@ -814,8 +823,6 @@ class OWNxCanvas(pg.GraphItem):
 
         if select:
             setPen(select, NodePen.SELECTED)
-            # Export selected nodes
-            self.parent().commit()
         if default: setPen(default, NodePen.DEFAULT)
         if highlight: setPen(highlight, NodePen.HIGHLIGHTED)
 

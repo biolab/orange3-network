@@ -329,7 +329,7 @@ class OWNxExplorer(widget.OWWidget):
         gui.appendRadioButton(ribg, "... with at least N connections")
         gui.appendRadioButton(ribg, "... with at most N connections")
         self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N:",
-            callback=lambda: self.set_mark_mode(SelectionMode.AVG_NEIGH if self.hubs == SelectionMode.AVG_NEIGH else SelectionMode.ANY_NEIGH))
+            callback=lambda: self.set_mark_mode(SelectionMode.AT_MOST_N if self.hubs == SelectionMode.AT_MOST_N else SelectionMode.AT_LEAST_N))
         gui.appendRadioButton(ribg, "... with more connections than any neighbor")
         gui.appendRadioButton(ribg, "... with more connections than average neighbor")
         gui.appendRadioButton(ribg, "... with most connections")
@@ -337,7 +337,7 @@ class OWNxExplorer(widget.OWWidget):
         #~ self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=(lambda h=7: self.set_mark_mode(h)))
         self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
 
-        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output highlighted nodes')
+        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output selected nodes')
 
         #ib = gui.widgetBox(self.markTab, "General", orientation="vertical")
         #self.checkSendMarkedNodes = True
@@ -503,8 +503,6 @@ class OWNxExplorer(widget.OWWidget):
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
             self.networkCanvas.setHighlighted(toMark)
 
-        self.marked_nodes = set(self.networkCanvas.selectedNodes)
-
     def keyReleaseEvent(self, ev):
         """On Enter, expand the selected set with the highlighted"""
         if (not self.acceptingEnterKeypress or
@@ -513,7 +511,6 @@ class OWNxExplorer(widget.OWWidget):
             return
         self.networkCanvas.selectHighlighted()
         self.set_mark_mode()
-
 
     def save_network(self):
         if self.networkCanvas is None or self.graph is None:
@@ -586,8 +583,9 @@ class OWNxExplorer(widget.OWWidget):
             self.send("Distance Matrix", matrix)
 
     def send_marked_nodes(self):
-        if len(self.marked_nodes) and self.graph and self.graph.items():
-            items = self.graph.items()[sorted(self.marked_nodes), :]
+        if (len(self.networkCanvas.selectedNodes) and
+            self.graph and self.graph.items()):
+            items = self.graph.items()[sorted(self.networkCanvas.selectedNodes), :]
             self.send("Marked Items", items)
         else:
             self.send("Marked Items", None)
@@ -734,6 +732,8 @@ class OWNxExplorer(widget.OWWidget):
         self._clear_combos()
         self.number_of_nodes_label = -1
         self.number_of_edges_label = -1
+        self.verticesPerEdge = -1
+        self.edgesPerVertex = -1
         self._items = None
         self._links = None
         self.set_items_distance_matrix(None)
@@ -790,12 +790,13 @@ class OWNxExplorer(widget.OWWidget):
         if self.frSteps < 1: self.frSteps = 1
         if self.frSteps > 100: self.frSteps = 100
 
+        self.networkCanvas.set_antialias(self.graph.number_of_nodes() +
+                                         self.graph.number_of_edges() < 1000)
         # if graph is large, set random layout, min vertex size, min edge size
         if self.frSteps < 10:
-            self.networkCanvas.update_antialiasing(False)
             self.minVertexSize = 5
             self.maxNodeSize = 5
-            self.optMethod = 0
+            #~ self.optMethod = 0
             self.graph_layout_method()
 
         self.networkCanvas.labelsOnMarkedOnly = self.labelsOnMarkedOnly
