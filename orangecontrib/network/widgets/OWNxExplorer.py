@@ -748,6 +748,8 @@ class OWNxExplorer(widget.OWWidget):
             self.set_graph_none()
             return
 
+        self.optCombo.model().item(0).setEnabled(bool(graph.items()))
+
         if graph.number_of_nodes() < 2:
             self.set_graph_none()
             self.information('I\'m not really in a mood to visualize just one node. Try again tomorrow.')
