@@ -29,7 +29,7 @@ class Layout:
     PIVOT_MDS = 'Pivot MDS'
     all = (NONE,      FHR,        FHR_WEIGHTED,
            CIRCULAR,  CONCENTRIC, RANDOM,
-           SPECTRAL,  FRAGVIZ,    MDS, PIVOT_MDS)
+           SPECTRAL)
     REQUIRES_DISTANCE_MATRIX = (FRAGVIZ, MDS, PIVOT_MDS)
 
 
