@@ -1,90 +1,96 @@
-"""
-<name>Net Explorer</name>
-<description>Orange widget for network exploration.</description>
-<icon>icons/NetworkExplorer.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6420</priority>
-"""
-import operator
-import statc
-from operator import itemgetter
+import os
+from operator import itemgetter, add
+from functools import reduce
+from itertools import chain
 
-import OWGUI
-import OWColorPalette
-import orngMDS
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
-from Orange import core, data, feature, network
-from OWWidget import *
+import Orange
+from Orange.widgets import gui, widget, settings
+from Orange.widgets.utils.colorpalette import ColorPaletteDlg
+from Orange.widgets.unsupervised.owmds import torgerson as MDS
 
-from OWNxCanvasQt import *
+from Orange.data import Table, Domain, DiscreteVariable
+import orangecontrib.network as network
+from orangecontrib.network.widgets.OWNxCanvasQt import *
 
 
-NAME = "Net Explorer"
-DESCRIPTIPN = "Orange widget for network exploration."
-ICON = "icons/NetworkExplorer.svg"
-PRIORITY = 6420
-
-INPUTS = [("Network", network.Graph, "set_graph", Default),
-          ("Items", data.Table, "set_items"),
-          ("Item Subset", data.Table, "mark_items"),
-          ("Distances", core.SymMatrix, "set_items_distance_matrix"),
-          ("Net View", network.NxView, "set_network_view")]
-
-OUTPUTS = [("Selected Network", network.Graph),
-           ("Distance Matrix", core.SymMatrix),
-           ("Marked Items", data.Table),
-           ("Selected Items", data.Table),
-           ("Other Items", data.Table)]
-
-WIDGET_CLASS = "OWNxExplorer"
-
-REPLACES = ["_network.widgets.OWNxExplorer.OWNxExplorer"]
+class Layout:
+    NONE = 'None'
+    FHR = 'Fruchterman-Reingold'
+    FHR_WEIGHTED = 'Weighted Fruchterman-Reingold'
+    RANDOM = 'Random'
+    CIRCULAR = 'Circular'
+    CONCENTRIC = 'Concentric'
+    SPECTRAL = 'Spectral'
+    FRAGVIZ = 'FragViz'
+    MDS = 'Multi-dimensional scaling'
+    PIVOT_MDS = 'Pivot MDS'
+    all = (NONE,      FHR,        FHR_WEIGHTED,
+           CIRCULAR,  CONCENTRIC, RANDOM,
+           SPECTRAL)
+    REQUIRES_DISTANCE_MATRIX = (FRAGVIZ, MDS, PIVOT_MDS)
 
 
-class OWNxExplorer(OWWidget):
+class SelectionMode:
+    NONE,       \
+    SEARCH,     \
+    NEIGHBORS,  \
+    AT_LEAST_N, \
+    AT_MOST_N,  \
+    ANY_NEIGH,  \
+    AVG_NEIGH,  \
+    MOST_CONN,  \
+    = range(8)  # FML
+
+
+class OWNxExplorer(widget.OWWidget):
+    name = "Network Explorer"
+    description = "Visually explore the network and its properties."
+    icon = "icons/NetworkExplorer.svg"
+    priority = 6420
+
+    inputs = [("Network", network.Graph, "set_graph", widget.Default),
+              ("Items", Table, "set_items"),
+              ("Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
+              ("Net View", network.NxView, "set_network_view")]
+
+    outputs = [("Selected Network", network.Graph),
+               ("Distance Matrix", Orange.misc.DistMatrix),
+               ("Marked Items", Table),
+               ("Selected Items", Table),
+               ("Other Items", Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "maxLinkSize", "minVertexSize", "maxVertexSize", "networkCanvas.animate_plot",
-    "networkCanvas.animate_points", "networkCanvas.antialias_plot",
-    "networkCanvas.antialias_points", "networkCanvas.antialias_lines",
-    "networkCanvas.auto_adjust_performance", "invertSize", "optMethod",
+    "maxNodeSize", "invertNodeSize", "optMethod",
     "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
-    "lastNameComponentAttribute", "lastLabelColumns", "lastTooltipColumns",
-    "showWeights", "showEdgeLabels", "colorSettings",
-    "selectedSchemaIndex", "edgeColorSettings", "selectedEdgeSchemaIndex",
+    "lastLabelColumns", "lastTooltipColumns",
+    "showWeights", "colorSettings",
+    "selectedSchemaIndex", "selectedEdgeSchemaIndex",
     "showMissingValues", "fontSize", "mdsTorgerson", "mdsAvgLinkage",
-    "mdsSteps", "mdsRefresh", "mdsStressDelta", "organism", "showTextMiningInfo",
+    "mdsSteps", "mdsRefresh", "mdsStressDelta", "showTextMiningInfo",
     "toolbarSelection", "minComponentEdgeWidth", "maxComponentEdgeWidth",
     "mdsFromCurrentPos", "labelsOnMarkedOnly", "tabIndex",
-    "networkCanvas.trim_label_words", "opt_from_curr", "networkCanvas.explore_distances",
-    "networkCanvas.show_component_distances", "fontWeight", "networkCanvas.state",
+    "opt_from_curr",
+    "fontWeight", "networkCanvas.state",
     "networkCanvas.selection_behavior", "hubs", "markDistance",
     "markNConnections", "markNumber", "markSearchString"]
+    # TODO: set settings
+    do_auto_commit = settings.Setting(True)
 
-    def __init__(self, parent=None, signalManager=None, name='Net Explorer',
-                 NetworkCanvas=OWNxCanvas):
-        OWWidget.__init__(self, parent, signalManager, name, noReport=True)
-        #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="markerAttributes"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
-        self.inputs = [("Network", network.Graph, self.set_graph, Default),
-                       ("Items", data.Table, self.set_items),
-                       ("Item Subset", data.Table, self.mark_items),
-                       ("Distances", core.SymMatrix, self.set_items_distance_matrix),
-                       ("Net View", network.NxView, self.set_network_view)]
+    def __init__(self):
+        super().__init__()
+        #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
-        self.outputs = [("Selected Network", network.Graph),
-                        ("Distance Matrix", core.SymMatrix),
-                        ("Marked Items", data.Table),
-                        ("Selected Items", data.Table),
-                        ("Other Items", data.Table)]
-                        #("Attribute Selection List", AttributeList)]
+        self.networkCanvas = networkCanvas = OWNxCanvas(self)
+        self.graph_attrs = []
+        self.edges_attrs = []
 
-        self.networkCanvas = NetworkCanvas(self, self.mainArea, "Net Explorer")
 
-        self.markerAttributes = []
+        self.node_label_attrs = []
         self.tooltipAttributes = []
         self.edgeLabelAttributes = []
-        self.attributes = []
-        self.edgeAttributes = []
         self.autoSendSelection = False
         self.graphShowGrid = 1  # show gridlines in the graph
         self.markNConnections = 2
@@ -94,27 +100,21 @@ class OWNxExplorer(OWWidget):
         self.markDistance = 2
         self.frSteps = 1
         self.hubs = 0
-        self.color = 0
+        self.node_color_attr = 0
         self.edgeColor = 0
-        self.vertexSize = 0
-        self.nShown = self.nHidden = self.nMarked = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
+        self.node_size_attr = 0
+        self.nShown = self.nHidden = self.nHighlighted = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
         self.optimizeWhat = 1
-        self.maxLinkSize = 3
-        self.maxVertexSize = 7
-        self.minVertexSize = 12
+        self.maxNodeSize = 50
         self.labelsOnMarkedOnly = 0
-        self.invertSize = 0
+        self.invertNodeSize = 0
         self.optMethod = 0
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
-        self.lastNameComponentAttribute = ''
         self.lastLabelColumns = set()
         self.lastTooltipColumns = set()
         self.showWeights = 0
-        self.showEdgeLabels = 0
-        self.colorSettings = None
-        self.selectedSchemaIndex = 0
-        self.edgeColorSettings = [('net_edges', [[], [('contPalette', (4294967295L, 4278190080L, 0))], [('discPalette', [(204, 204, 204), (179, 226, 205), (253, 205, 172), (203, 213, 232), (244, 202, 228), (230, 245, 201), (255, 242, 174), (241, 226, 204)])]]), ('Default', [[], [('contPalette', (4294967295L, 4278190080L, 0))], [('discPalette', [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 128, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (128, 0, 255), (0, 128, 255), (255, 223, 128), (127, 111, 64), (92, 46, 0), (0, 84, 0), (192, 192, 0), (0, 127, 127), (128, 0, 0), (127, 0, 127)])]])]
+
         self.selectedEdgeSchemaIndex = 0
         self.items_matrix = None
         self.showDistances = 0
@@ -126,7 +126,6 @@ class OWNxExplorer(OWWidget):
         self.mdsSteps = 10000
         self.mdsRefresh = 50
         self.mdsStressDelta = 0.0000001
-        self.organism = 'goa_human'
         self.showTextMiningInfo = 0
         self.toolbarSelection = 0
         self.minComponentEdgeWidth = 10
@@ -139,236 +138,243 @@ class OWNxExplorer(OWWidget):
 
         self.checkSendMarkedNodes = True
         self.checkSendSelectedNodes = True
-        self.explore_distances = False
-
-        self.loadSettings()
+        self.marked_nodes = []
 
         self._network_view = None
         self.graph = None
         self.graph_base = None
-        self.markInputItems = None
-
-        # if optimization method is set to FragViz, set it to FR
-        if self.optMethod == 9:
-            self.optMethod = 3
 
         self.networkCanvas.showMissingValues = self.showMissingValues
-        self.mainArea.layout().addWidget(self.networkCanvas)
 
-        self.networkCanvas.maxLinkSize = self.maxLinkSize
+        class ViewBox(pg.ViewBox):
+            def __init__(self):
+                super().__init__()
 
-        self.tabs = OWGUI.tabWidget(self.controlArea)
+            def mouseDragEvent(self, ev):
+                if not ev.isFinish():
+                    return super().mouseDragEvent(ev)
+                if self.state['mouseMode'] != self.RectMode:
+                    return
+                # Tap into pg.ViewBox's rbScaleBox ... it'll be fine.
+                self.rbScaleBox.hide()
+                ax = QRectF(pg.Point(ev.buttonDownPos(ev.button())),
+                            pg.Point(ev.pos()))
+                ax = self.childGroup.mapRectFromParent(ax)
+                networkCanvas.selectNodesInRect(ax)
+                self.setMouseMode(self.PanMode)
+                ev.accept()
 
-        self.verticesTab = OWGUI.createTabPage(self.tabs, "Nodes")
-        self.edgesTab = OWGUI.createTabPage(self.tabs, "Edges")
-        self.markTab = OWGUI.createTabPage(self.tabs, "Mark")
-        self.infoTab = OWGUI.createTabPage(self.tabs, "Info")
-        self.performanceTab = OWGUI.createTabPage(self.tabs, "Performance")
+            def mouseClickEvent(self, ev):
+                if ev.button() == Qt.LeftButton:
+                    if networkCanvas.is_animating:
+                        networkCanvas.is_animating = False
+                        ev.accept()
+                    else:
+                        networkCanvas.mouseClickEvent(ev)
+                super().mouseClickEvent(ev)
+
+        class PlotItem(pg.PlotItem):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                for axis in ('bottom', 'left'):
+                    self.hideAxis(axis)
+
+                def _path(filename):
+                    return os.path.join(os.path.dirname(__file__), 'icons', filename + '.png')
+
+                self.rectBtn = pg.ButtonItem(_path('button_rect'), parentItem=self)
+                self.rectBtn.clicked.connect(self.rectBtnClicked)
+
+                self._qtBaseClass.setParentItem(self.autoBtn, None)
+                self.autoBtn.hide()
+                self.autoBtn = pg.ButtonItem(_path('button_autoscale'), parentItem=self)
+                self.autoBtn.mode = 'auto'
+                self.autoBtn.clicked.connect(self.autoBtnClicked)
+
+                self.textEnterToSelect = pg.TextItem(
+                    html='<div style="background-color:#f0f0f0; padding:5px;">'
+                         '<font color="#444444"><b>Press <tt>Enter</tt> to add '
+                         '<i><font color="{}">highlighted</font></i> nodes to '
+                         '<i><font color="{}">selection</font></i> ...</font></b></div>'
+                         .format(NodePenColor.HIGHLIGHTED, NodePenColor.SELECTED))
+                self.textEnterToSelect.setParentItem(self)
+                self.textEnterToSelect.hide()
+
+            def rectBtnClicked(self, ev):
+                self.vb.setMouseMode(self.vb.RectMode)
+
+            def updateButtons(self):
+                self.autoBtn.show()
+
+            def resizeEvent(self, ev):
+                super().resizeEvent(ev)
+                btnRect = self.mapRectFromItem(self.rectBtn, self.rectBtn.boundingRect())
+                LEFT_OFFSET, BOTTOM_OFFSET = 3, 5
+                y = self.size().height() - btnRect.height() - BOTTOM_OFFSET
+                self.autoBtn.setPos(LEFT_OFFSET, y)
+                self.rectBtn.setPos(2*LEFT_OFFSET + btnRect.width(), y)
+                self.textEnterToSelect.setPos(LEFT_OFFSET, BOTTOM_OFFSET)
+
+        class PlotWidget(pg.PlotWidget):
+            def __init__(self, *args, **kwargs):
+                pg.GraphicsView.__init__(self, *args, **kwargs)
+
+        plot = PlotWidget(self, background='w')
+        plot.plotItem = PlotItem(enableAutoRange=True, viewBox=ViewBox())
+        plot.setCentralItem(plot.plotItem)
+        # Required, copied from pg.PlotWidget constructor
+        for m in ['addItem', 'removeItem', 'autoRange', 'clear', 'setXRange',
+                  'setYRange', 'setRange', 'setAspectLocked', 'setMouseEnabled',
+                  'setXLink', 'setYLink', 'enableAutoRange', 'disableAutoRange',
+                  'setLimits', 'register', 'unregister', 'viewRect']:
+            setattr(plot, m, getattr(plot.plotItem, m))
+        plot.plotItem.sigRangeChanged.connect(plot.viewRangeChanged)
+        self.textEnterToSelect = plot.plotItem.textEnterToSelect
+
+        plot.setFrameStyle(QFrame.StyledPanel)
+        plot.setMinimumSize(500, 500)
+        plot.setAspectLocked(True)
+        plot.addItem(self.networkCanvas)
+        self.mainArea.layout().addWidget(plot)
+
+        self.tabs = gui.tabWidget(self.controlArea)
+
+        self.displayTab = gui.createTabPage(self.tabs, "Display")
+        self.markTab = gui.createTabPage(self.tabs, "Marking")
+
+        def showTextOnMarkingTab(index):
+            if self.tabs.widget(index) == self.markTab:
+                self.set_mark_mode()
+            else:
+                self.acceptingEnterKeypress = False
+
+        self.tabs.currentChanged.connect(showTextOnMarkingTab)
 
         self.tabs.setCurrentIndex(self.tabIndex)
         self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tabIndex', index))
 
-        self.optimizeBox = OWGUI.radioButtonsInBox(self.verticesTab, self, "optimizeWhat", [], "Optimize", addSpace=False)
+        ib = gui.widgetBox(self.displayTab, "Info")
+        gui.label(ib, self, "Nodes: %(number_of_nodes_label)i (%(verticesPerEdge).2f per edge)")
+        gui.label(ib, self, "Edges: %(number_of_edges_label)i (%(edgesPerVertex).2f per node)")
 
-        self.optCombo = OWGUI.comboBox(self.optimizeBox, self, "optMethod", label='Method:     ', orientation='horizontal', callback=self.graph_layout_method)
-        self.optCombo.addItem("No optimization")
-        self.optCombo.addItem("Random")
-        self.optCombo.addItem("Fruchterman Reingold")
-        self.optCombo.addItem("Fruchterman Reingold Weighted")
-        self.optCombo.addItem("Fruchterman Reingold Radial")
-        self.optCombo.addItem("Circular Crossing Reduction")
-        self.optCombo.addItem("Circular Original")
-        self.optCombo.addItem("Circular Random")
-        self.optCombo.addItem("FragViz")
-        self.optCombo.addItem("MDS")
-        self.optCombo.addItem("Pivot MDS")
+        box = gui.widgetBox(self.displayTab, "Nodes")
+        self.optCombo = gui.comboBox(
+            box, self, "optMethod", label='Layout:',
+            orientation='horizontal', callback=self.graph_layout_method)
+        for layout in Layout.all: self.optCombo.addItem(layout)
+        self.optMethod = Layout.all.index(Layout.FHR)
         self.optCombo.setCurrentIndex(self.optMethod)
-        self.stepsSpin = OWGUI.spin(self.optimizeBox, self, "frSteps", 1, 100000, 1, label="Iterations: ")
-        self.cb_opt_from_curr = OWGUI.checkBox(self.optimizeBox, self, "opt_from_curr", label="Optimize from current positions")
-        self.cb_opt_from_curr.setEnabled(False)
-        self.stepsSpin.setEnabled(False)
 
-        self.optButton = OWGUI.button(self.optimizeBox, self, "Optimize layout", callback=self.graph_layout, toggleButton=1)
+        self.colorCombo = gui.comboBox(
+            box, self, "node_color_attr", label='Color by:',
+            orientation='horizontal', callback=self.set_node_colors)
 
-        colorBox = OWGUI.widgetBox(self.verticesTab, "Node color attribute", orientation="horizontal", addSpace=False)
-        self.colorCombo = OWGUI.comboBox(colorBox, self, "color", callback=self.set_node_colors)
-        self.colorCombo.addItem("(same color)")
-        OWGUI.button(colorBox, self, "palette", self._set_colors, tooltip="Set node color palette", width=60, debuggingEnabled=0)
+        hb = gui.widgetBox(box, orientation="horizontal", addSpace=False)
+        hb.layout().addWidget(QLabel('Size by:', hb))
+        self.nodeSizeCombo = gui.comboBox(
+            hb, self, "node_size_attr", callback=self.set_node_sizes)
+        self.maxNodeSizeSpin = gui.spin(
+            hb, self, "maxNodeSize", 20, 200, step=10, label="Max:",
+            callback=self.set_node_sizes)
+        self.maxNodeSizeSpin.setValue(50)
+        self.invertNodeSizeCheck = gui.checkBox(
+            hb, self, "invertNodeSize", "Invert",
+            callback=self.set_node_sizes)
 
-        ib = OWGUI.widgetBox(self.verticesTab, "Node size attribute", orientation="vertical", addSpace=False)
-        hb = OWGUI.widgetBox(ib, orientation="horizontal", addSpace=False)
-        OWGUI.checkBox(hb, self, "invertSize", "Invert size", callback=self.set_node_sizes)
-        OWGUI.spin(hb, self, "minVertexSize", 5, 200, 1, label="Min:", callback=self.set_node_sizes)
-        OWGUI.spin(hb, self, "maxVertexSize", 5, 200, 1, label="Max:", callback=self.set_node_sizes)
-        self.vertexSizeCombo = OWGUI.comboBox(ib, self, "vertexSize", callback=self.set_node_sizes)
-        self.vertexSizeCombo.addItem("(none)")
+        lb = gui.widgetBox(box, "Node labels | tooltips", orientation="vertical", addSpace=False)
+        hb = gui.widgetBox(lb, orientation="horizontal", addSpace=False)
+        self.attListBox = gui.listBox(
+            hb, self, "node_label_attrs", "graph_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._on_node_label_attrs_changed)
+        self.tooltipListBox = gui.listBox(
+            hb, self, "tooltipAttributes", "graph_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._clicked_tooltip_lstbox)
 
-        self.attBox = OWGUI.widgetBox(self.verticesTab, "Node labels | tooltips", orientation="vertical", addSpace=False)
-        hb = OWGUI.widgetBox(self.attBox, orientation="horizontal", addSpace=False)
-        self.attListBox = OWGUI.listBox(hb, self, "markerAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_att_lstbox)
-        self.tooltipListBox = OWGUI.listBox(hb, self, "tooltipAttributes", "attributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_tooltip_lstbox)
-        OWGUI.spin(self.attBox, self, "networkCanvas.trim_label_words", 0, 5, 1, label='Trim label words to', callback=self._clicked_att_lstbox)
+        eb = gui.widgetBox(self.displayTab, "Edges", orientation="vertical")
+        gui.checkBox(eb, self, 'networkCanvas.relative_edge_widths', 'Relative edge widths',
+                     callback=self.networkCanvas.set_edge_sizes)
+        gui.checkBox(eb, self, 'networkCanvas.show_edge_weights', 'Show edge weights',
+                     callback=self.networkCanvas.set_edge_labels)
+        self.edgeColorCombo = gui.comboBox(
+            eb, self, "edgeColor", label='Color by:', orientation='horizontal',
+            callback=self.set_edge_colors)
+        elb = gui.widgetBox(eb, "Edge labels", addSpace=False)
+        self.edgeLabelListBox = gui.listBox(
+            elb, self, "edgeLabelAttributes", "edges_attrs",
+            selectionMode=QListWidget.MultiSelection,
+            callback=self._clicked_edge_label_listbox)
+        elb.setEnabled(False)
 
-        ib = OWGUI.widgetBox(self.edgesTab, "General", orientation="vertical")
-        OWGUI.checkBox(ib, self, 'networkCanvas.show_weights', 'Show weights', callback=self.networkCanvas.set_edge_labels)
-        #OWGUI.checkBox(ib, self, 'showEdgeLabels', 'Show labels on edges', callback=(lambda: self._set_canvas_attr('showEdgeLabels', self.showEdgeLabels)))
-        OWGUI.spin(ib, self, "maxLinkSize", 1, 50, 1, label="Max edge width:", callback=self.set_edge_sizes)
-        self.cb_show_distances = OWGUI.checkBox(ib, self, 'explore_distances', 'Explore node distances', callback=self.set_explore_distances, disabled=1)
-        self.cb_show_component_distances = OWGUI.checkBox(ib, self, 'networkCanvas.show_component_distances', 'Show component distances', callback=self.networkCanvas.set_show_component_distances, disabled=1)
 
-        colorBox = OWGUI.widgetBox(self.edgesTab, "Edge color attribute", orientation="horizontal", addSpace=False)
-        self.edgeColorCombo = OWGUI.comboBox(colorBox, self, "edgeColor", callback=self.set_edge_colors)
-        self.edgeColorCombo.addItem("(same color)")
-        OWGUI.button(colorBox, self, "palette", self._set_edge_color_palette, tooltip="Set edge color palette", width=60, debuggingEnabled=0)
+        ib = gui.widgetBox(self.markTab, "Info", orientation="vertical")
+        gui.label(ib, self, "Nodes: %(number_of_nodes_label)i")
+        gui.label(ib, self, "Selected: %(nSelected)i")
+        gui.label(ib, self, "Highlighted: %(nHighlighted)i")
 
-        self.edgeLabelBox = OWGUI.widgetBox(self.edgesTab, "Edge labels", addSpace=False)
-        self.edgeLabelListBox = OWGUI.listBox(self.edgeLabelBox, self, "edgeLabelAttributes", "edgeAttributes", selectionMode=QListWidget.MultiSelection, callback=self._clicked_edge_label_listbox)
-        #self.edgeLabelBox.setEnabled(False)
-
-        ib = OWGUI.widgetBox(self.verticesTab, "General", orientation="vertical")
-        OWGUI.checkBox(ib, self, 'networkCanvas.show_indices', 'Show indices', callback=self.networkCanvas.set_node_labels)
-        OWGUI.checkBox(ib, self, 'labelsOnMarkedOnly', 'Show labels on marked nodes only', callback=(lambda: self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)))
-        OWGUI.spin(ib, self, "fontSize", 4, 30, 1, label="Font size:", callback=self.set_font)
-        self.comboFontWeight = OWGUI.comboBox(ib, self, "fontWeight", label='Font weight:', orientation='horizontal', callback=self.set_font)
-        self.comboFontWeight.addItem("Normal")
-        self.comboFontWeight.addItem("Bold")
-        self.comboFontWeight.setCurrentIndex(self.fontWeight)
-
-        ib = OWGUI.widgetBox(self.markTab, "Info", orientation="vertical")
-        OWGUI.label(ib, self, "Nodes (shown/hidden): %(number_of_nodes_label)i (%(nShown)i/%(nHidden)i)")
-        OWGUI.label(ib, self, "Selected: %(nSelected)i, marked: %(nMarked)i")
-
-        ribg = OWGUI.radioButtonsInBox(self.markTab, self, "hubs", [], "Mark", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "None", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Search", callback=self.set_mark_mode)
-        self.ctrlMarkSearchString = OWGUI.lineEdit(OWGUI.indentedBox(ribg), self, "markSearchString", callback=self._set_search_string_timer, callbackOnType=True)
+        ib = gui.widgetBox(self.markTab, "Highlight nodes ...")
+        ribg = gui.radioButtonsInBox(ib, self, "hubs", [], "Mark", callback=self.set_mark_mode)
+        gui.appendRadioButton(ribg, "None")
+        gui.appendRadioButton(ribg, "... whose attributes contain:")
+        self.ctrlMarkSearchString = gui.lineEdit(gui.indentedBox(ribg), self, "markSearchString", callback=self._set_search_string_timer, callbackOnType=True)
         self.searchStringTimer = QTimer(self)
         self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.set_mark_mode)
 
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Neighbors of focused", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "Neighbours of selected", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg, orientation=0)
-        self.ctrlMarkDistance = OWGUI.spin(ib, self, "markDistance", 0, 100, 1, label="Distance ",
-            callback=(lambda: self.set_mark_mode(2 if not self.hubs == 3 else 3)))
-        #self.ctrlMarkFreeze = OWGUI.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
-        OWGUI.widgetLabel(ribg, "Mark nodes with ...")
-        OWGUI.appendRadioButton(ribg, self, "hubs", "at least N connections", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "at most N connections", callback=self.set_mark_mode)
-        self.ctrlMarkNConnections = OWGUI.spin(OWGUI.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N ",
-            callback=(lambda: self.set_mark_mode(4 if not self.hubs == 5 else 5)))
-        OWGUI.appendRadioButton(ribg, self, "hubs", "more connections than any neighbour", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "more connections than avg neighbour", callback=self.set_mark_mode)
-        OWGUI.appendRadioButton(ribg, self, "hubs", "most connections", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg)
-        self.ctrlMarkNumber = OWGUI.spin(ib, self, "markNumber", 0, 1000000, 1, label="Number of nodes:", callback=(lambda h=8: self.set_mark_mode(h)))
-        OWGUI.widgetLabel(ib, "(More nodes are marked in case of ties)")
-        self.markInputRadioButton = OWGUI.appendRadioButton(ribg, self, "hubs", "Mark nodes given in the input signal", callback=self.set_mark_mode)
-        ib = OWGUI.indentedBox(ribg)
-        self.markInput = 0
-        self.markInputCombo = OWGUI.comboBox(ib, self, "markInput", callback=(lambda h=9: self.set_mark_mode(h)))
-        self.markInputRadioButton.setEnabled(False)
+        gui.appendRadioButton(ribg, "... neighbours of selected, ≤ N hops away")
+        ib = gui.indentedBox(ribg, orientation=0)
+        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance:",
+            callback=lambda: self.set_mark_mode(SelectionMode.NEIGHBORS))
+        #self.ctrlMarkFreeze = gui.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
+        gui.appendRadioButton(ribg, "... with at least N connections")
+        gui.appendRadioButton(ribg, "... with at most N connections")
+        self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N:",
+            callback=lambda: self.set_mark_mode(SelectionMode.AT_MOST_N if self.hubs == SelectionMode.AT_MOST_N else SelectionMode.AT_LEAST_N))
+        gui.appendRadioButton(ribg, "... with more connections than any neighbor")
+        gui.appendRadioButton(ribg, "... with more connections than average neighbor")
+        gui.appendRadioButton(ribg, "... with most connections")
+        ib = gui.indentedBox(ribg)
+        #~ self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=(lambda h=7: self.set_mark_mode(h)))
+        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
 
-        #ib = OWGUI.widgetBox(self.markTab, "General", orientation="vertical")
+        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output selected nodes')
+
+        #ib = gui.widgetBox(self.markTab, "General", orientation="vertical")
         #self.checkSendMarkedNodes = True
-        #OWGUI.checkBox(ib, self, 'checkSendMarkedNodes', 'Send marked nodes', callback = self.send_marked_nodes, disabled=0)
 
-        self.toolbar = OWGUI.widgetBox(self.controlArea, orientation='horizontal')
-        prevstate = self.networkCanvas.state
-        prevselbeh = self.networkCanvas.selection_behavior
-        G = self.networkCanvas.gui
-        self.zoomSelectToolbar = G.zoom_select_toolbar(self.toolbar, nomargin=True, buttons=
-            G.default_zoom_select_buttons +
-            [
-                G.Spacing,
-                ("buttonM2S", "Marked to selection", None, None, "marked_to_selected", 'Dlg_Mark2Sel'),
-                ("buttonS2M", "Selection to marked", None, None, "selected_to_marked", 'Dlg_Sel2Mark'),
-                ("buttonHSEL", "Hide selection", None, None, "hide_selection", 'Dlg_HideSelection'),
-                ("buttonSSEL", "Show all nodes", None, None, "show_selection", 'Dlg_ShowSelection'),
-                #("buttonUN", "Hide unselected", None, None, "hideUnSelectedVertices", 'Dlg_SelectedNodes'),
-                #("buttonSW", "Show all nodes", None, None, "showAllVertices", 'Dlg_clear'),
-            ])
-        self.zoomSelectToolbar.buttons[G.SendSelection].clicked.connect(self.send_data)
-        self.zoomSelectToolbar.buttons[G.SendSelection].clicked.connect(self.send_marked_nodes)
-        self.zoomSelectToolbar.buttons[("buttonHSEL", "Hide selection", None, None, "hide_selection", 'Dlg_HideSelection')].clicked.connect(self.hide_selection)
-        self.zoomSelectToolbar.buttons[("buttonSSEL", "Show all nodes", None, None, "show_selection", 'Dlg_ShowSelection')].clicked.connect(self.show_selection)
+        self.toolbar = gui.widgetBox(self.controlArea, orientation='horizontal')
+        #~ G = self.networkCanvas.gui
+        #~ self.zoomSelectToolbar = G.zoom_select_toolbar(self.toolbar, nomargin=True, buttons=
+            #~ G.default_zoom_select_buttons +
+            #~ [
+                #~ G.Spacing,
+                #~ ("buttonM2S", "Marked to selection", None, None, "marked_to_selected", 'Dlg_Mark2Sel'),
+                #~ ("buttonS2M", "Selection to marked", None, None, "selected_to_marked", 'Dlg_Sel2Mark'),
+                #~ ("buttonHSEL", "Hide selection", None, None, "hide_selection", 'Dlg_HideSelection'),
+                #~ ("buttonSSEL", "Show all nodes", None, None, "show_selection", 'Dlg_ShowSelection'),
+                #~ #("buttonUN", "Hide unselected", None, None, "hideUnSelectedVertices", 'Dlg_SelectedNodes'),
+                #~ #("buttonSW", "Show all nodes", None, None, "showAllVertices", 'Dlg_clear'),
+            #~ ])
+        #~ self.zoomSelectToolbar.buttons[G.SendSelection].clicked.connect(self.send_data)
+        #~ self.zoomSelectToolbar.buttons[G.SendSelection].clicked.connect(self.send_marked_nodes)
+        #~ self.zoomSelectToolbar.buttons[("buttonHSEL", "Hide selection", None, None, "hide_selection", 'Dlg_HideSelection')].clicked.connect(self.hide_selection)
+        #~ self.zoomSelectToolbar.buttons[("buttonSSEL", "Show all nodes", None, None, "show_selection", 'Dlg_ShowSelection')].clicked.connect(self.show_selection)
         #self.zoomSelectToolbar.buttons[G.SendSelection].hide()
-        self.zoomSelectToolbar.select_selection_behaviour(prevselbeh)
-        self.zoomSelectToolbar.select_state(prevstate)
 
-        ib = OWGUI.widgetBox(self.infoTab, "General")
-        OWGUI.label(ib, self, "Number of nodes: %(number_of_nodes_label)i")
-        OWGUI.label(ib, self, "Number of edges: %(number_of_edges_label)i")
-        OWGUI.label(ib, self, "Nodes per edge: %(verticesPerEdge).2f")
-        OWGUI.label(ib, self, "Edges per node: %(edgesPerVertex).2f")
-
-        ib = OWGUI.widgetBox(self.infoTab, orientation="horizontal")
-
-        OWGUI.button(ib, self, "Save net", callback=self.save_network, debuggingEnabled=False)
-        OWGUI.button(ib, self, "Save img", callback=self.networkCanvas.saveToFile, debuggingEnabled=False)
-        self.reportButton = OWGUI.button(ib, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
-        self.reportButton.setAutoDefault(0)
-
-        #OWGUI.button(self.edgesTab, self, "Clustering", callback=self.clustering)
-        ib = OWGUI.widgetBox(self.infoTab, "Edit")
-        self.editAttribute = 0
-        self.editCombo = OWGUI.comboBox(ib, self, "editAttribute", label="Edit attribute:", orientation="horizontal")
-        self.editCombo.addItem("Select attribute")
-        self.editValue = ''
-        hb = OWGUI.widgetBox(ib, orientation="horizontal")
-        OWGUI.lineEdit(hb, self, "editValue", "Value:", orientation='horizontal')
-        OWGUI.button(hb, self, "Set", callback=self.edit)
-
-        ib = OWGUI.widgetBox(self.infoTab, "Prototype")
-        ib.setVisible(True)
-
-        OWGUI.lineEdit(ib, self, "organism", "Organism:", orientation='horizontal')
-
-        self.nameComponentAttribute = 0
-        self.nameComponentCombo = OWGUI.comboBox(ib, self, "nameComponentAttribute", callback=self.nameComponents, label="Name components:", orientation="horizontal")
-        self.nameComponentCombo.addItem("Select attribute")
-
-        self.showComponentAttribute = 0
-        self.showComponentCombo = OWGUI.comboBox(ib, self, "showComponentAttribute", callback=self.showComponents, label="Labels on components:", orientation="horizontal")
-        self.showComponentCombo.addItem("Select attribute")
-        OWGUI.checkBox(ib, self, 'showTextMiningInfo', "Show text mining info")
-
-        #OWGUI.spin(ib, self, "rotateSteps", 1, 10000, 1, label="Rotate max steps: ")
-        OWGUI.spin(ib, self, "minComponentEdgeWidth", 0, 100, 1, label="Min component edge width: ", callback=(lambda changedMin=1: self.set_component_edge_width(changedMin)))
-        OWGUI.spin(ib, self, "maxComponentEdgeWidth", 0, 200, 1, label="Max component edge width: ", callback=(lambda changedMin=0: self.set_component_edge_width(changedMin)))
-
-        self.attSelectionAttribute = 0
-        self.comboAttSelection = OWGUI.comboBox(ib, self, "attSelectionAttribute", label='Send attribute selection list:', orientation='horizontal', callback=self.sendAttSelectionList)
-        self.comboAttSelection.addItem("Select attribute")
-        self.autoSendAttributes = 0
-        OWGUI.checkBox(ib, self, 'autoSendAttributes', "auto send attributes", callback=self.setAutoSendAttributes)
-
-        self.icons = self.createAttributeIconDict()
         self.set_mark_mode()
 
-        self.networkCanvas.gui.effects_box(self.performanceTab)
-
-        self.verticesTab.layout().addStretch(1)
-        self.edgesTab.layout().addStretch(1)
+        self.displayTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
-        self.infoTab.layout().addStretch(1)
-        self.performanceTab.layout().addStretch(1)
-
-        dlg = self._create_color_dialog(self.colorSettings, self.selectedSchemaIndex)
-        self.networkCanvas.contPalette = dlg.getContinuousPalette("contPalette")
-        self.networkCanvas.discPalette = dlg.getDiscretePalette("discPalette")
-
-        dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
-        self.networkCanvas.contEdgePalette = dlg.getContinuousPalette("contPalette")
-        self.networkCanvas.discEdgePalette = dlg.getDiscretePalette("discPalette")
 
         self.graph_layout_method()
-        self.set_font()
         self.set_graph(None)
 
         self.setMinimumWidth(900)
 
-        self.connect(self.networkCanvas, SIGNAL("marked_points_changed()"), self.send_marked_nodes)
         self.connect(self.networkCanvas, SIGNAL("selection_changed()"), self.send_data)
+
+    def commit(self):
+        self.send_marked_nodes()
 
     def hide_selection(self):
         nodes = set(self.graph.nodes()).difference(self.networkCanvas.selected_nodes())
@@ -382,16 +388,13 @@ class OWNxExplorer(OWWidget):
             return
 
         vars = [x.name for x in self.graph_base.items_vars()]
-        if not self.editCombo.currentText() in vars:
-            return
-        att = str(self.editCombo.currentText())
         vertices = self.networkCanvas.selected_nodes()
 
         if len(vertices) == 0:
             return
 
         items = self.graph_base.items()
-        if items.domain[att].var_type == feature.Type.Continuous:
+        if items.domain[att].is_continuous:
             for v in vertices:
                 items[v][att] = float(self.editValue)
         else:
@@ -403,12 +406,11 @@ class OWNxExplorer(OWWidget):
         self.warning()
         self.information()
 
-        self.cb_show_distances.setEnabled(0)
-        self.cb_show_component_distances.setEnabled(0)
-
         if matrix is None:
             self.items_matrix = None
             return
+
+        assert isinstance(matrix, Orange.misc.DistMatrix)
 
         if self.graph_base is None:
             self.networkCanvas.items_matrix = None
@@ -423,29 +425,17 @@ class OWNxExplorer(OWWidget):
 
         self.items_matrix = matrix
         self.networkCanvas.items_matrix = matrix
-        self.cb_show_distances.setEnabled(1)
-        self.cb_show_component_distances.setEnabled(1)
 
-        if self.optMethod in [8, 9, 10]:
+        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is not None and self.graph_base is not None and \
                                 self.items_matrix.dim == self.graph_base.number_of_nodes():
-                self.optButton.setEnabled(True)
 
-                if self.optMethod in [8, 9]:
-                    self.cb_opt_from_curr.setEnabled(True)
-
-                if self.optMethod == 8: # if FragViz, run FR first
-                    self.optMethod = 2
-                    self.optButton.setChecked(True)
+                if self.optMethod == Layout.FRAGVIZ: # if FragViz, run FR first
+                    self.optMethod = Layout.all.index(Layout.FHR)
                     self.graph_layout()
-                    self.optMethod = 8
+                    self.optMethod = Layout.all.index(Layout.FRAGVIZ)
 
-            self.optButton.setChecked(True)
             self.graph_layout()
-
-    def _set_canvas_attr(self, attr, value):
-        setattr(self.networkCanvas, attr, value)
-        self.networkCanvas.updateCanvas()
 
     def _set_curve_attr(self, attr, value):
         setattr(self.networkCanvas.networkCurve, attr, value)
@@ -454,105 +444,73 @@ class OWNxExplorer(OWWidget):
     def _set_search_string_timer(self):
         self.hubs = 1
         self.searchStringTimer.stop()
-        self.searchStringTimer.start(1000)
+        self.searchStringTimer.start(300)
+
+    @property
+    def acceptingEnterKeypress(self):
+        return self.textEnterToSelect.isVisible()
+
+    @acceptingEnterKeypress.setter
+    def acceptingEnterKeypress(self, v):
+        if v: self.textEnterToSelect.show()
+        else: self.textEnterToSelect.hide()
 
     def set_mark_mode(self, i=None):
         self.searchStringTimer.stop()
-        if not i is None:
-            self.hubs = i
-
-        QObject.disconnect(self.networkCanvas, SIGNAL('selection_changed()'), self.networkCanvas.mark_on_selection_changed)
-        QObject.disconnect(self.networkCanvas, SIGNAL('point_hovered(Point*)'), self.networkCanvas.mark_on_focus_changed)
-
-        if self.graph is None:
+        hubs = self.hubs = i or self.hubs
+        if (self.graph is None or
+            self.tabs.widget(self.tabs.currentIndex()) != self.markTab):
             return
 
-        hubs = self.hubs
+        self.acceptingEnterKeypress = True
 
-        if hubs in [0, 1, 2, 3]:
-            if hubs == 0:
-                self.networkCanvas.networkCurve.clear_node_marks()
-            elif hubs == 1:
-                if self.graph_base.items() is None or self.markSearchString == '':
-                    self.networkCanvas.networkCurve.clear_node_marks()
-                    return
+        if hubs == SelectionMode.NONE:
+            self.networkCanvas.setHighlighted([])
+            self.acceptingEnterKeypress = False
+        elif hubs == SelectionMode.SEARCH:
+            table, txt = self.graph.items(), self.markSearchString.lower()
+            if not table or not txt: return
+            toMark = set(i for i, instance in enumerate(table)
+                         if txt in " ".join(map(str, instance.list)).lower())
+            self.networkCanvas.setHighlighted(toMark)
+        elif hubs == SelectionMode.NEIGHBORS:
+            neighbors = set(self.networkCanvas.selectedNodes)
+            for _ in range(self.markDistance):
+                for neigh in list(neighbors):
+                    neighbors |= set(self.graph[neigh].keys())
+            neighbors -= self.networkCanvas.selectedNodes
+            self.networkCanvas.setHighlighted(neighbors)
+        elif hubs == SelectionMode.AT_LEAST_N:
+            self.networkCanvas.setHighlighted(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree >= self.markNConnections))
+        elif hubs == SelectionMode.AT_MOST_N:
+            self.networkCanvas.setHighlighted(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree <= self.markNConnections))
+        elif hubs == SelectionMode.ANY_NEIGH:
+            self.networkCanvas.setHighlighted(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree > max(self.graph.degree(self.graph[node]).values(), default=0)))
+        elif hubs == SelectionMode.AVG_NEIGH:
+            self.networkCanvas.setHighlighted(
+                set(node for node, degree in self.graph.degree().items()
+                    if degree > np.nan_to_num(np.mean(list(self.graph.degree(self.graph[node]).values())))))
+        elif hubs == SelectionMode.MOST_CONN:
+            degrees = np.array(sorted(self.graph.degree().items(), key=lambda i: i[1], reverse=True))
+            cut_ind = max(1, min(self.markNumber, self.graph.number_of_nodes()))
+            cut_degree = degrees[cut_ind - 1, 1]
+            toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
+            self.networkCanvas.setHighlighted(toMark)
 
-                txt = self.markSearchString
-                toMark = set(i for i, values in enumerate(self.graph_base.items()) if txt.lower() in " ".join([str(values[ndx]).decode("ascii", "ignore").lower() for ndx in range(len(self.graph_base.items().domain)) + self.graph_base.items().domain.getmetas().keys()]))
-                toMark = toMark.intersection(self.graph.nodes())
-                self.networkCanvas.networkCurve.clear_node_marks()
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) for i in toMark))
-            elif hubs == 2:
-                #print "mark on focus"
-                self.networkCanvas.mark_neighbors = self.markDistance
-                QObject.connect(self.networkCanvas, SIGNAL('point_hovered(Point*)'), self.networkCanvas.mark_on_focus_changed)
-            elif hubs == 3:
-                #print "mark selected"
-                self.networkCanvas.mark_neighbors = self.markDistance
-                QObject.connect(self.networkCanvas, SIGNAL('selection_changed()'), self.networkCanvas.mark_on_selection_changed)
-                self.networkCanvas.mark_on_selection_changed()
-
-        elif hubs in [4, 5, 6, 7, 8, 9]:
-
-            powers = sorted(self.graph.degree_iter(), key=itemgetter(1), reverse=True)
-
-            if hubs == 4:
-                #print "mark at least N connections"
-                N = self.markNConnections
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d >= N else (i, False) for i, d in powers))
-            elif hubs == 5:
-                #print "mark at most N connections"
-                N = self.markNConnections
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d <= N else (i, False) for i, d in powers))
-            elif hubs == 6:
-                #print "mark more than any"
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > max([0] + self.graph.degree(self.graph.neighbors(i)).values()) \
-                    else (i, False) for i, d in powers))
-            elif hubs == 7:
-                #print "mark more than avg"
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) if \
-                    d > statc.mean([0] + self.graph.degree(self.graph.neighbors(i)).values()) \
-                    else (i, False) for i, d in powers))
-                self.networkCanvas.replot()
-            elif hubs == 8:
-                #print "mark most"
-                self.networkCanvas.networkCurve.clear_node_marks()
-
-                if self.markNumber < 1:
-                    return
-
-                cut = min(self.markNumber, len(powers))
-                cutPower = powers[cut - 1][1]
-                while cut < len(powers) and powers[cut][1] == cutPower:
-                    cut += 1
-
-                self.networkCanvas.networkCurve.clear_node_marks()
-                self.networkCanvas.networkCurve.set_node_marks(dict((i, True) for \
-                    i, d in powers[:cut]))
-
-            elif hubs == 9:
-                if self.graph_base.items() is None:
-                    self.networkCanvas.networkCurve.clear_node_marks()
-                    return
-
-                var = str(self.markInputCombo.currentText())
-                if self.markInputItems is not None and len(self.markInputItems) > 0:
-                    if var == 'ID':
-                        values = [x.id for x in self.markInputItems]
-                        tomark = dict((x, True) for x in self.graph.nodes() if self.graph_base.items()[x].id in values)
-                    else:
-                        values = [str(x[var]).strip().upper() for x in self.markInputItems]
-                        tomark = dict((x, True) for x in self.graph.nodes() if str(self.graph_base.items()[x][var]).strip().upper() in values)
-                    self.networkCanvas.networkCurve.clear_node_marks()
-                    self.networkCanvas.networkCurve.set_node_marks(tomark)
-
-                else:
-                    self.networkCanvas.networkCurve.clear_node_marks()
-
-        self.nMarked = len(self.networkCanvas.marked_nodes())
+    def keyReleaseEvent(self, ev):
+        """On Enter, expand the selected set with the highlighted"""
+        if (not self.acceptingEnterKeypress or
+            ev.key() not in (Qt.Key_Return, Qt.Key_Enter)):
+            super().keyReleaseEvent(ev)
+            return
+        self.networkCanvas.selectHighlighted()
+        self.set_mark_mode()
 
     def save_network(self):
         if self.networkCanvas is None or self.graph is None:
@@ -561,7 +519,7 @@ class OWNxExplorer(OWWidget):
         filename = QFileDialog.getSaveFileName(self, 'Save Network File', \
             '', 'NetworkX graph as Python pickle (*.gpickle)\nPajek ' + \
             'network (*.net)\nGML network (*.gml)')
-        filename = unicode(filename)
+        filename = str(filename)
         if filename:
             fn = ""
             head, tail = os.path.splitext(filename)
@@ -588,7 +546,7 @@ class OWNxExplorer(OWWidget):
             network.readwrite.write(self.graph, fn)
 
     def send_data(self):
-        selected_nodes = self.networkCanvas.selected_nodes()
+        selected_nodes = set(self.networkCanvas.selectedNodes)
         self.nSelected = len(selected_nodes)
 
         if len(self.signalManager.getLinks(self, None, \
@@ -625,84 +583,61 @@ class OWNxExplorer(OWWidget):
             self.send("Distance Matrix", matrix)
 
     def send_marked_nodes(self):
-        if self.checkSendMarkedNodes and \
-            len(self.signalManager.getLinks(self, None, \
-                                            "Marked Items", None)) > 0:
-            # signal connected
-            markedNodes = self.networkCanvas.marked_nodes()
-
-            if len(markedNodes) > 0 and self.graph is not None and\
-                                     self.graph_base.items() is not None:
-
-                items = self.graph_base.items().getitems(markedNodes)
-                self.send("Marked Items", items)
-            else:
-                self.send("Marked Items", None)
+        if (len(self.networkCanvas.selectedNodes) and
+            self.graph and self.graph.items()):
+            items = self.graph.items()[sorted(self.networkCanvas.selectedNodes), :]
+            self.send("Marked Items", items)
+        else:
+            self.send("Marked Items", None)
 
     def _set_combos(self):
-        vars = self.graph_base.items_vars()
-        edgeVars = self.graph_base.links_vars()
+        self._clear_combos()
+        self.graph_attrs = self.graph_base.items_vars()
+        self.edges_attrs = self.graph_base.links_vars()
         lastLabelColumns = self.lastLabelColumns
         lastTooltipColumns = self.lastTooltipColumns
 
-        self._clear_combos()
+        for var in self.graph_attrs:
+            if (var.is_discrete or
+                var.is_continuous or
+                var.is_string and var.name == 'label'):  # FIXME: whatis label?
+                self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
-        self.attributes = [(var.name, var.varType) for var in vars]
-        self.edgeAttributes = [(var.name, var.varType) for var in edgeVars]
+            if var.is_continuous:
+                self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
+            elif var.is_string:
+                try: value = self.graph.items()[0][var].value
+                except (IndexError, TypeError): pass
+                else:
+                    # can value be a list?
+                    if len(value.split(',')) > 1:
+                        self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
-        for var in vars:
-            if var.varType in [feature.Type.Discrete, \
-                               feature.Type.Continuous]:
-                self.colorCombo.addItem(self.icons.get(var.varType, \
-                                        self.icons[-1]), unicode(var.name))
+        self.nodeSizeCombo.setDisabled(not self.graph_attrs)
+        self.colorCombo.setDisabled(not self.graph_attrs)
 
-            if var.varType in [feature.Type.String] and hasattr(self.graph, 'items') and self.graph_base.items() is not None and len(self.graph_base.items()) > 0:
+        for var in self.edges_attrs:
+            if var.is_discrete or var.is_continuous:
+                self.edgeColorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], str(var.name))
+        self.edgeColorCombo.setDisabled(not self.edges_attrs)
 
-                value = self.graph_base.items()[0][var].value
-
-                # can value be a list?
-                try:
-                    if type(eval(value)) == type([]):
-                        self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-                        continue
-                except:
-                    pass
-
-                if len(value.split(',')) > 1:
-                    self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), "num of " + unicode(var.name))
-
-            elif var.varType in [feature.Type.Continuous]:
-                self.vertexSizeCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-
-            if var.varType in [feature.Type.String] and var.name == "label":
-                self.colorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-
-            self.nameComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.showComponentCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.editCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-            self.comboAttSelection.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-
-        for var in edgeVars:
-            if var.varType in [feature.Type.Discrete, feature.Type.Continuous]:
-                self.edgeColorCombo.addItem(self.icons.get(var.varType, self.icons[-1]), unicode(var.name))
-
-        for i in range(self.vertexSizeCombo.count()):
+        for i in range(self.nodeSizeCombo.count()):
             if self.lastVertexSizeColumn == \
-                    self.vertexSizeCombo.itemText(i):
-                self.vertexSize = i
+                    self.nodeSizeCombo.itemText(i):
+                self.node_size_attr = i
                 self.set_node_sizes()
                 break
 
         for i in range(self.colorCombo.count()):
             if self.lastColorColumn == self.colorCombo.itemText(i):
-                self.color = i
+                self.node_color_attr = i
                 self.set_node_colors()
                 break
 
         for i in range(self.attListBox.count()):
             if str(self.attListBox.item(i).text()) in lastLabelColumns:
                 self.attListBox.item(i).setSelected(1)
-            self._clicked_att_lstbox()
+            self._on_node_label_attrs_changed()
 
         for i in range(self.tooltipListBox.count()):
             if str(self.tooltipListBox.item(i).text()) \
@@ -714,24 +649,16 @@ class OWNxExplorer(OWWidget):
         self.lastTooltipColumns = lastTooltipColumns
 
     def _clear_combos(self):
-        self.attributes = []
-        self.edgeAttributes = []
+        self.graph_attrs = []
+        self.edges_attrs = []
 
         self.colorCombo.clear()
-        self.vertexSizeCombo.clear()
-        self.nameComponentCombo.clear()
-        self.showComponentCombo.clear()
+        self.nodeSizeCombo.clear()
         self.edgeColorCombo.clear()
-        self.editCombo.clear()
-        self.comboAttSelection.clear()
 
-        self.colorCombo.addItem("(same color)")
+        self.colorCombo.addItem('(none)', None)
         self.edgeColorCombo.addItem("(same color)")
-        self.vertexSizeCombo.addItem("(same size)")
-        self.nameComponentCombo.addItem("Select attribute")
-        self.showComponentCombo.addItem("Select attribute")
-        self.editCombo.addItem("Select attribute")
-        self.comboAttSelection.addItem("Select attribute")
+        self.nodeSizeCombo.addItem("(uniform)")
 
     def compute_network_info(self):
         self.nShown = self.graph.number_of_nodes()
@@ -775,7 +702,7 @@ class OWNxExplorer(OWWidget):
 #            self.networkCanvas.use_antialiasing = 0
 #            self.networkCanvas.use_animations = 0
 #            self.minVertexSize = 5
-#            self.maxVertexSize = 5
+#            self.maxNodeSize = 5
 #            self.maxLinkSize = 1
 #            self.optMethod = 0
 #            self.graph_layout_method()
@@ -785,10 +712,9 @@ class OWNxExplorer(OWWidget):
 
         self.set_node_sizes()
         self.set_node_colors()
-        self.set_edge_sizes()
         self.set_edge_colors()
 
-        self._clicked_att_lstbox()
+        self._on_node_label_attrs_changed()
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
@@ -806,12 +732,14 @@ class OWNxExplorer(OWWidget):
         self._clear_combos()
         self.number_of_nodes_label = -1
         self.number_of_edges_label = -1
+        self.verticesPerEdge = -1
+        self.edgesPerVertex = -1
         self._items = None
         self._links = None
         self.set_items_distance_matrix(None)
         self.networkCanvas.set_graph(None)
 
-    def set_graph(self, graph, curve=None):
+    def set_graph(self, graph):
         self.information()
         self.warning()
         self.error()
@@ -819,6 +747,8 @@ class OWNxExplorer(OWWidget):
         if graph is None:
             self.set_graph_none()
             return
+
+        self.optCombo.model().item(0).setEnabled(bool(graph.items()))
 
         if graph.number_of_nodes() < 2:
             self.set_graph_none()
@@ -830,12 +760,10 @@ class OWNxExplorer(OWWidget):
             self.set_items(graph.items())
             return
 
-        self.graph_base = graph
-
         if self._network_view is not None:
             graph = self._network_view.init_network(graph)
 
-        self.graph = graph
+        self.graph = self.graph_base = graph
 
         # if graph has more nodes and edges than pixels in 1600x1200 display,
         # it is too big to visualize!
@@ -850,71 +778,39 @@ class OWNxExplorer(OWWidget):
         self.number_of_nodes_label = self.graph.number_of_nodes()
         self.number_of_edges_label = self.graph.number_of_edges()
 
-        self.networkCanvas.set_graph(self.graph, curve, items=self.graph_base.items(), links=self.graph_base.links())
-
-        items = self.graph.items()
-        if items is not None and 'x' in items.domain and 'y' in items.domain:
-            positions = dict((node, (items[node]['x'].value, items[node]['y'].value)) \
-                         for node in self.graph if items[node]['x'].value != '?' \
-                         and items[node]['y'].value != '?')
-
-            # ignore start position if all nodes are on the same coordinate
-            if len(set(positions.values())) > 1:
-                self.networkCanvas.networkCurve.set_node_coordinates(positions)
-
-        self.networkCanvas.showEdgeLabels = self.showEdgeLabels
-        self.networkCanvas.maxEdgeSize = self.maxLinkSize
         self.networkCanvas.minComponentEdgeWidth = self.minComponentEdgeWidth
         self.networkCanvas.maxComponentEdgeWidth = self.maxComponentEdgeWidth
-        self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)
+        #~ self.networkCanvas.set_labels_on_marked(self.labelsOnMarkedOnly)
 
-        self.compute_network_info()
         self._set_combos()
-
-        lastNameComponentAttributeFound = False
-        for i in range(self.nameComponentCombo.count()):
-            if self.lastNameComponentAttribute == self.nameComponentCombo.itemText(i):
-                lastNameComponentAttributeFound = True
-                self.nameComponentAttribute = i
-                self.nameComponents()
-                self.showComponentAttribute = self.showComponentCombo.count() - 1
-                self.showComponents()
-                break
-
-        if not lastNameComponentAttributeFound:
-            self.lastNameComponentAttribute = ''
-
-        self.showComponentAttribute = None
+        self.compute_network_info()
 
         t = 1.13850193174e-008 * (self.graph.number_of_nodes() ** 2 + self.graph.number_of_edges())
         self.frSteps = int(2.0 / t)
         if self.frSteps < 1: self.frSteps = 1
         if self.frSteps > 100: self.frSteps = 100
 
+        self.networkCanvas.set_antialias(self.graph.number_of_nodes() +
+                                         self.graph.number_of_edges() < 1000)
         # if graph is large, set random layout, min vertex size, min edge size
         if self.frSteps < 10:
-            self.networkCanvas.update_antialiasing(False)
-            self.networkCanvas.update_animations(False)
             self.minVertexSize = 5
-            self.maxVertexSize = 5
-            self.maxLinkSize = 1
-            self.optMethod = 0
+            self.maxNodeSize = 5
+            #~ self.optMethod = 0
             self.graph_layout_method()
 
         self.networkCanvas.labelsOnMarkedOnly = self.labelsOnMarkedOnly
         self.networkCanvas.showWeights = self.showWeights
 
+        self.networkCanvas.set_graph(self.graph)
         self.set_node_sizes()
         self.set_node_colors()
-        self.set_edge_sizes()
         self.set_edge_colors()
 
-        self._clicked_att_lstbox()
+        self._on_node_label_attrs_changed()
         self._clicked_tooltip_lstbox()
         self._clicked_edge_label_listbox()
 
-        self.optButton.setChecked(1)
-        self.graph_layout()
         self.set_mark_mode()
 
     def set_network_view(self, nxView):
@@ -962,49 +858,8 @@ class OWNxExplorer(OWWidget):
         self.set_node_sizes()
         self.networkCanvas.items = items
         self.networkCanvas.showWeights = self.showWeights
-        self.networkCanvas.showEdgeLabels = self.showEdgeLabels
         self._set_combos()
         #self.networkCanvas.updateData()
-
-    def mark_items(self, items):
-        self.markInputCombo.clear()
-        self.markInputRadioButton.setEnabled(False)
-        self.markInputItems = items
-
-        self.error()
-        self.warning()
-        self.information()
-
-        if items is None:
-            return
-
-        if self.graph is None or self.graph_base.items() is None or items is None:
-            self.warning('No graph found or no items attached to the graph.')
-            return
-
-        if len(items) > 0:
-            lstOrgDomain = [x.name for x in self.graph_base.items().domain] + [self.graph_base.items().domain[x].name for x in self.graph_base.items().domain.getmetas()]
-            lstNewDomain = [x.name for x in items.domain] + [items.domain[x].name for x in items.domain.getmetas()]
-            commonVars = set(lstNewDomain) & set(lstOrgDomain)
-
-            self.markInputCombo.addItem(self.icons[feature.Type.Discrete], unicode("ID"))
-
-            if len(commonVars) > 0:
-                for var in commonVars:
-                    orgVar = self.graph_base.items().domain[var]
-                    mrkVar = items.domain[var]
-
-                    if orgVar.varType == mrkVar.varType and orgVar.varType == feature.Type.String:
-                        self.markInputCombo.addItem(self.icons[orgVar.varType], unicode(orgVar.name))
-
-            self.markInputRadioButton.setEnabled(True)
-            self.set_mark_mode(9)
-
-    def set_explore_distances(self):
-        QObject.disconnect(self.networkCanvas, SIGNAL('selection_changed()'), self.explore_focused)
-
-        if self.explore_distances:
-            QObject.connect(self.networkCanvas, SIGNAL('selection_changed()'), self.explore_focused)
 
     def explore_focused(self):
         sel = self.networkCanvas.selected_nodes()
@@ -1025,95 +880,50 @@ class OWNxExplorer(OWWidget):
 
     def graph_layout(self):
         if self.graph is None or self.graph.number_of_nodes() <= 0:   #grafa se ni
-            self.optButton.setChecked(False)
             return
 
-        if not self.optButton.isChecked() and not self.optMethod in [2, 3, 8, 9, 10]:
-            self.optButton.setChecked(False)
-            return
+        # Cancel previous animation if running
+        self.networkCanvas.is_animating = False
 
-        qApp.processEvents()
-
-        if self.optMethod == 0:
-            items = self.graph.items()
-            if items is not None and 'x' in items.domain and 'y' in items.domain:
-                positions = dict((node, (items[node]['x'].value, items[node]['y'].value)) \
-                             for node in self.graph if items[node]['x'].value != '?' \
-                             and items[node]['y'].value != '?')
-
-                # ignore start position if all nodes are on the same coordinate
-                if len(set(positions.values())) > 1:
-                    self.networkCanvas.networkCurve.set_node_coordinates(positions)
-        elif self.optMethod == 1:
-            self.networkCanvas.networkCurve.random()
-        elif self.optMethod == 2:
-            self.graph_layout_fr(False)
-        elif self.optMethod == 3:
-            self.graph_layout_fr(True)
-        elif self.optMethod == 4:
-            self.graph_layout_fr_radial()
-        elif self.optMethod == 5:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_crossing)
-        elif self.optMethod == 6:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_original)
-        elif self.optMethod == 7:
-            self.networkCanvas.networkCurve.circular(\
-                                        NetworkCurve.circular_random)
-        elif self.optMethod == 8:
+        layout = Layout.all[self.optMethod]
+        if layout == Layout.NONE:
+            self.networkCanvas.layout_original()
+        elif layout == Layout.RANDOM:
+            self.networkCanvas.layout_random()
+        elif layout == Layout.FHR:
+            self.networkCanvas.layout_fhr(False)
+        elif layout == Layout.FHR_WEIGHTED:
+            self.networkCanvas.layout_fhr(True)
+        elif layout == Layout.CONCENTRIC:
+            self.networkCanvas.layout_concentric()
+        elif layout == Layout.CIRCULAR:
+            self.networkCanvas.layout_circular()
+        elif layout == Layout.SPECTRAL:
+            self.networkCanvas.layout_spectral()
+        elif layout == Layout.FRAGVIZ:
             self.graph_layout_fragviz()
-        elif self.optMethod == 9:
+        elif layout == Layout.MDS:
             self.graph_layout_mds()
-        elif self.optMethod == 10:
+        elif layout == Layout.PIVOT_MDS:
             self.graph_layout_pivot_mds()
+        else: raise Exception('wtf')
+        self.networkCanvas.replot()
 
-        self.optButton.setChecked(False)
-        self.networkCanvas.update_graph_layout()
-        qApp.processEvents()
-
-    def graph_layout_method(self, method=None):
+    def graph_layout_method(self):
         self.information()
-        self.stepsSpin.label.setText('Iterations: ')
-        self.optButton.setEnabled(True)
-        self.cb_opt_from_curr.setEnabled(False)
 
-        if method is not None:
-            self.optMethod = method
-
-        if self.optMethod == 0:
-            self.optButton.setEnabled(False)
-        else:
-            self.optButton.setEnabled(True)
-
-        if self.optMethod in [2, 3, 4]:
-            self.stepsSpin.setEnabled(True)
-
-        elif self.optMethod in [8, 9, 10]:
-            if self.optMethod == 10:
-                self.stepsSpin.label.setText('Pivots: ')
-
-            if self.optMethod in [8, 9]:
-                self.cb_opt_from_curr.setEnabled(True)
-
-            self.stepsSpin.setEnabled(True)
-
+        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is None:
                 self.information('Set distance matrix to input signal')
-                self.optButton.setEnabled(False)
                 return
             if self.graph is None:
                 self.information('No network found')
-                self.optButton.setEnabled(False)
                 return
             if self.items_matrix.dim != self.graph_base.number_of_nodes():
                 self.error('Distance matrix dimensionality must equal number of vertices')
-                self.optButton.setEnabled(False)
                 return
-        else:
-            self.stepsSpin.setEnabled(False)
-            self.optButton.setChecked(True)
-            self.graph_layout()
+
+        self.graph_layout()
 
     def mds_progress(self, avgStress, stepCount):
         #self.drawForce()
@@ -1126,26 +936,16 @@ class OWNxExplorer(OWWidget):
     def graph_layout_fragviz(self):
         if self.items_matrix is None:
             self.information('Set distance matrix to input signal')
-            self.optButton.setChecked(False)
             return
 
         if self.layout is None:
             self.information('No network found')
-            self.optButton.setChecked(False)
             return
 
         if self.items_matrix.dim != self.graph_base.number_of_nodes():
             self.error('Distance matrix dimensionality must equal number of vertices')
-            self.optButton.setChecked(False)
             return
 
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stopMDS = True
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
         self.progressBarInit()
         qApp.processEvents()
 
@@ -1156,33 +956,21 @@ class OWNxExplorer(OWWidget):
 
         self.networkCanvas.networkCurve.layout_fragviz(self.frSteps, matrix, self.graph, self.mds_progress, self.opt_from_curr)
 
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
         self.progressBarFinished()
 
     def graph_layout_mds(self):
         if self.items_matrix is None:
             self.information('Set distance matrix to input signal')
-            self.optButton.setChecked(False)
             return
 
         if self.layout is None:
             self.information('No network found')
-            self.optButton.setChecked(False)
             return
 
         if self.items_matrix.dim != self.graph_base.number_of_nodes():
             self.error('Distance matrix dimensionality must equal number of vertices')
-            self.optButton.setChecked(False)
             return
 
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stopMDS = True
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
         self.progressBarInit()
         qApp.processEvents()
 
@@ -1193,53 +981,7 @@ class OWNxExplorer(OWWidget):
 
         self.networkCanvas.networkCurve.layout_mds(self.frSteps, matrix, self.mds_progress, self.opt_from_curr)
 
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
         self.progressBarFinished()
-
-    def graph_layout_fr(self, weighted):
-        if self.graph is None:
-            return
-
-        if not self.optButton.isChecked():
-            self.networkCanvas.networkCurve.stop_optimization()
-            self.optButton.setChecked(False)
-            self.optButton.setText("Optimize layout")
-            return
-
-        self.optButton.setText("Stop")
-        qApp.processEvents()
-        self.networkCanvas.networkCurve.layout_fr(self.frSteps, False)
-        self.optButton.setChecked(False)
-        self.optButton.setText("Optimize layout")
-
-    def graph_layout_fr_radial(self):
-        if self.graph is None:   #grafa se ni
-            return
-
-#        #print "F-R Radial"
-#        k = 1.13850193174e-008
-#        nodes = self.graph.number_of_nodes()
-#        t = k * nodes * nodes
-#        refreshRate = int(5.0 / t)
-#        if refreshRate <    1: refreshRate = 1
-#        if refreshRate > 1500: refreshRate = 1500
-#        #print "refreshRate: " + str(refreshRate)
-#
-#        tolerance = 5
-#        initTemp = 100
-#        centerNdx = 0
-#
-#        selection = self.networkCanvas.getSelection()
-#        if len(selection) > 0:
-#            centerNdx = selection[0]
-#
-#        #print "center ndx: " + str(centerNdx)
-#        initTemp = self.layout.fr_radial(centerNdx, refreshRate, initTemp)
-#        self.networkCanvas.circles = [10000 / 12, 10000/12*2, 10000/12*3]#, 10000/12*4, 10000/12*5]
-#        #self.networkCanvas.circles = [100, 200, 300]
-#        self.networkCanvas.updateCanvas()
-#        self.networkCanvas.circles = []
 
     def graph_layout_pivot_mds(self):
         self.information()
@@ -1264,7 +1006,7 @@ class OWNxExplorer(OWWidget):
         else:
             matrix = self.items_matrix.get_items(sorted(self.graph.nodes()))
 
-        mds = orngMDS.PivotMDS(matrix, self.frSteps)
+        mds = MDS(matrix, self.frSteps)
         x, y = mds.optimize()
         xy = zip(list(x), list(y))
         coors = dict(zip(sorted(self.graph.nodes()), xy))
@@ -1275,112 +1017,36 @@ class OWNxExplorer(OWWidget):
     ### Network Visualization                                           ###
     #######################################################################
 
-    def _set_colors(self):
-        dlg = self._create_color_dialog(self.colorSettings, self.selectedSchemaIndex)
-        if dlg.exec_():
-            self.colorSettings = dlg.getColorSchemas()
-            self.selectedSchemaIndex = dlg.selectedSchemaIndex
-            self.networkCanvas.contPalette = dlg.getContinuousPalette("contPalette")
-            self.networkCanvas.discPalette = dlg.getDiscretePalette("discPalette")
-
-            self.set_node_colors()
-
-    def _set_edge_color_palette(self):
-        dlg = self._create_color_dialog(self.edgeColorSettings, self.selectedEdgeSchemaIndex)
-        if dlg.exec_():
-            self.edgeColorSettings = dlg.getColorSchemas()
-            self.selectedEdgeSchemaIndex = dlg.selectedSchemaIndex
-            self.networkCanvas.contEdgePalette = dlg.getContinuousPalette("contPalette")
-            self.networkCanvas.discEdgePalette = dlg.getDiscretePalette("discPalette")
-
-            self.set_edge_colors()
-
-    def _create_color_dialog(self, colorSettings, selectedSchemaIndex):
-        c = OWColorPalette.ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        c.createContinuousPalette("contPalette", "Continuous Palette")
-        c.setColorSchemas(colorSettings, selectedSchemaIndex)
-        return c
-
-    def _clicked_att_lstbox(self):
+    def _on_node_label_attrs_changed(self):
         if self.graph is None:
             return
-
-        self.lastLabelColumns = [self.attributes[i][0] for i in self.markerAttributes]
+        self.lastLabelColumns = [self.graph_attrs[i] for i in self.node_label_attrs]  # TODO
         self.networkCanvas.set_node_labels(self.lastLabelColumns)
-        self.networkCanvas.replot()
 
     def _clicked_tooltip_lstbox(self):
         if self.graph is None:
             return
-
-        self.lastTooltipColumns = [self.attributes[i][0] for i in self.tooltipAttributes]
+        self.lastTooltipColumns = [self.graph_attrs[i] for i in self.tooltipAttributes]
         self.networkCanvas.set_tooltip_attributes(self.lastTooltipColumns)
-        self.networkCanvas.replot()
 
     def _clicked_edge_label_listbox(self):
-        if self.graph is None:
-            return
-
-        self.lastEdgeLabelAttributes = set([self.edgeAttributes[i][0] for i in self.edgeLabelAttributes])
+        self.lastEdgeLabelAttributes = [self.edges_attrs[i] for i in self.edgeLabelAttributes]
         self.networkCanvas.set_edge_labels(self.lastEdgeLabelAttributes)
-        self.networkCanvas.replot()
 
     def set_node_colors(self):
-        if self.graph is None:
-            return
-
-        self.networkCanvas.set_node_colors(self.colorCombo.currentText())
-        self.lastColorColumn = self.colorCombo.currentText()
+        self.networkCanvas.set_node_colors(self.colorCombo.itemData(self.colorCombo.currentIndex()))
+        self.lastColorColumn = self.colorCombo.currentText()  # TODO
 
     def set_edge_colors(self):
-        if self.graph is None:
-            return
-
-        self.networkCanvas.set_edge_colors(self.edgeColorCombo.currentText())
+        self.networkCanvas.set_edge_colors(self.edgeColorCombo.itemData(self.edgeColorCombo.currentIndex()))
         self.lastEdgeColorColumn = self.edgeColorCombo.currentText()
 
-    def set_edge_sizes(self):
-        if self.graph is None:
-            return
-
-        self.networkCanvas.networkCurve.set_edge_sizes(self.maxLinkSize)
-        self.networkCanvas.replot()
-
     def set_node_sizes(self):
-        if self.graph is None or self.networkCanvas is None:
-            return
-
-        if self.minVertexSize > self.maxVertexSize:
-            self.maxVertexSize = self.minVertexSize
-
-        items = self.graph_base.items()
-
-        if items is None:
-            self.networkCanvas.networkCurve.set_node_sizes({}, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-            return
-
-        self.lastVertexSizeColumn = self.vertexSizeCombo.currentText()
-        column = str(self.vertexSizeCombo.currentText())
-
-        values = {}
-        if column in items.domain or (column.startswith("num of ") and column.replace("num of ", "") in items.domain):
-            if column in items.domain:
-                values = dict((x, items[x][column].value) for x in self.graph if not items[x][column].isSpecial())
-            else:
-                values = dict((x, len(items[x][column.replace("num of ", "")].value.split(','))) for x in self.graph)
-
-        if len(values) == 0:
-            values = dict((node, 1.) for node in self.graph)
-
-        if self.invertSize:
-            maxval = max(values.itervalues())
-            values.update((key, maxval - val) for key, val in values.iteritems())
-            self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-        else:
-            self.networkCanvas.networkCurve.set_node_sizes(values, min_size=self.minVertexSize, max_size=self.maxVertexSize)
-
-        self.networkCanvas.replot()
+        attr = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
+        depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
+        for w in depending_widgets:
+            w.setDisabled(not bool(attr))
+        self.networkCanvas.set_node_sizes(attr, self.maxNodeSize, self.invertNodeSize)
 
     def set_font(self):
         if self.networkCanvas is None:
@@ -1388,12 +1054,12 @@ class OWNxExplorer(OWWidget):
 
         weights = {0: 50, 1: 80}
 
-        font = self.networkCanvas.font()
-        font.setPointSize(self.fontSize)
-        font.setWeight(weights[self.fontWeight])
-        self.networkCanvas.setFont(font)
-        self.networkCanvas.fontSize = font
-        self.networkCanvas.set_node_labels()
+        #~ font = self.networkCanvas.font()
+        #~ font.setPointSize(self.fontSize)
+        #~ font.setWeight(weights[self.fontWeight])
+        #~ self.networkCanvas.setFont(font)
+        #~ self.networkCanvas.fontSize = font
+        #~ self.networkCanvas.set_node_labels()
 
     def sendReport(self):
         self.reportSettings("Graph data",
@@ -1402,11 +1068,11 @@ class OWNxExplorer(OWWidget):
                              ("Vertices per edge", "%.3f" % self.verticesPerEdge),
                              ("Edges per vertex", "%.3f" % self.edgesPerVertex),
                              ])
-        if self.color or self.vertexSize or self.markerAttributes or self.edgeColor:
+        if self.node_color_attr or self.node_size_attr or self.node_label_attrs or self.edgeColor:
             self.reportSettings("Visual settings",
-                                [self.color and ("Vertex color", self.colorCombo.currentText()),
-                                 self.vertexSize and ("Vertex size", str(self.vertexSizeCombo.currentText()) + " (inverted)" if self.invertSize else ""),
-                                 self.markerAttributes and ("Labels", ", ".join(self.attributes[i][0] for i in self.markerAttributes)),
+                                [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
+                                 self.node_size_attr and ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
+                                 self.node_label_attrs and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
                                  self.edgeColor and ("Edge colors", self.edgeColorCombo.currentText()),
                                 ])
         self.reportSettings("Optimization",
@@ -1415,202 +1081,9 @@ class OWNxExplorer(OWWidget):
         self.reportSection("Graph")
         self.reportImage(self.networkCanvas.saveToFileDirect)
 
-    #######################################################################
-    ### PROTOTYPE                                                       ###
-    #######################################################################
-
-    def set_component_edge_width(self, changedMin=True):
-        if self.networkCanvas is None:
-            return
-
-        canvas = self.networkCanvas
-        if changedMin:
-            if self.maxComponentEdgeWidth < self.minComponentEdgeWidth:
-                self.maxComponentEdgeWidth = self.minComponentEdgeWidth
-        else:
-            if self.minComponentEdgeWidth > self.maxComponentEdgeWidth:
-                self.minComponentEdgeWidth = self.maxComponentEdgeWidth
-
-        canvas.minComponentEdgeWidth = self.minComponentEdgeWidth
-        canvas.maxComponentEdgeWidth = self.maxComponentEdgeWidth
-        self.networkCanvas.updateCanvas()
-
-    def showComponents(self):
-        if self.graph is None or self.graph_base.items() is None:
-            return
-
-        vars = [x.name for x in self.graph_base.items_vars()]
-
-        if not self.showComponentCombo.currentText() in vars:
-            self.networkCanvas.showComponentAttribute = None
-            self.lastNameComponentAttribute = ''
-        else:
-            self.networkCanvas.showComponentAttribute = self.showComponentCombo.currentText()
-
-        self.networkCanvas.drawComponentKeywords()
-
-    def nameComponents(self):
-        """Names connected components of genes according to GO terms."""
-        self.progressBarFinished()
-        self.lastNameComponentAttribute = None
-
-        if self.graph is None or self.graph_base.items() is None:
-            return
-
-        vars = [x.name for x in self.graph_base.items_vars()]
-        if not self.nameComponentCombo.currentText() in vars:
-            return
-
-        self.progressBarInit()
-        components = [c for c in network.nx.algorithms.components.connected_components(self.graph) if len(c) > 1]
-        if 'component name' in self.graph_base.items().domain:
-            keyword_table = self.graph_base.items()
-        else:
-            keyword_table = data.Table(data.Domain(feature.String('component name')), [[''] for i in range(len(self.graph_base.items()))])
-
-        import obiGO
-        ontology = obiGO.Ontology.Load(progressCallback=self.progressBarSet)
-        annotations = obiGO.Annotations.Load(self.organism, ontology=ontology, progressCallback=self.progressBarSet)
-
-        allGenes = set([e[str(self.nameComponentCombo.currentText())].value for e in self.graph_base.items()])
-        foundGenesets = False
-        if len(annotations.geneNames & allGenes) < 1:
-            allGenes = set(reduce(operator.add, [e[str(self.nameComponentCombo.currentText())].value.split(', ') for e in self.graph_base.items()]))
-            if len(annotations.geneNames & allGenes) < 1:
-                self.warning('no genes found')
-                return
-            else:
-                foundGenesets = True
-
-        def rank(a, j, reverse=False):
-            if len(a) <= 0: return
-
-            if reverse:
-                a.sort(lambda x, y: 1 if x[j] > y[j] else -1 if x[j] < y[j] else 0)
-                top_value = a[0][j]
-                top_rank = len(a)
-                max_rank = float(len(a))
-                int_ndx = 0
-                for k in range(len(a)):
-                    if top_value < a[k][j]:
-                        top_value = a[k][j]
-                        if k - int_ndx > 1:
-                            avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                            for l in range(int_ndx, k):
-                                a[l][j] = avg_rank
-
-                        int_ndx = k
-
-                    a[k][j] = top_rank / max_rank
-                    top_rank -= 1
-
-                k += 1
-                if k - int_ndx > 1:
-                    avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                    for l in range(int_ndx, k):
-                        a[l][j] = avg_rank
-
-            else:
-                a.sort(lambda x, y: 1 if x[j] < y[j] else -1 if x[j] > y[j] else 0)
-                top_value = a[0][j]
-                top_rank = len(a)
-                max_rank = float(len(a))
-                int_ndx = 0
-                for k in range(len(a)):
-                    if top_value > a[k][j]:
-                        top_value = a[k][j]
-                        if k - int_ndx > 1:
-                            avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                            for l in range(int_ndx, k):
-                                a[l][j] = avg_rank
-
-                        int_ndx = k
-
-                    a[k][j] = top_rank / max_rank
-                    top_rank -= 1
-
-                k += 1
-                if k - int_ndx > 1:
-                    avg_rank = (a[int_ndx][j] + a[k - 1][j]) / 2
-                    for l in range(int_ndx, k):
-                        a[l][j] = avg_rank
-
-        for i in range(len(components)):
-            component = components[i]
-            if len(component) <= 1:
-                continue
-
-            if foundGenesets:
-                genes = reduce(operator.add, [self.graph_base.items()[v][str(self.nameComponentCombo.currentText())].value.split(', ') for v in component])
-            else:
-                genes = [self.graph_base.items()[v][str(self.nameComponentCombo.currentText())].value for v in component]
-
-            res1 = annotations.GetEnrichedTerms(genes, aspect="P")
-            res2 = annotations.GetEnrichedTerms(genes, aspect="F")
-            res = res1.items() + res2.items()
-            #namingScore = [[(1-p_value) * (float(len(g)) / len(genes)) / (float(ref) / len(annotations.geneNames)), ontology.terms[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res.items() if p_value < 0.1]
-            #namingScore = [[(1-p_value) * len(g) / ref, ontology.terms[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res.items() if p_value < 0.1]
-
-            namingScore = [[len(g), ref, p_value, ontology[GOId].name, len(g), ref, p_value] for GOId, (g, p_value, ref) in res if p_value < 0.1]
-            if len(namingScore) == 0:
-                continue
-
-            annotated_genes = max([a[0] for a in namingScore])
-
-            rank(namingScore, 1, reverse=True)
-            rank(namingScore, 2, reverse=True)
-            rank(namingScore, 0)
-
-            namingScore = [[10 * rank_genes + 0.5 * rank_ref + rank_p_value, name, g, ref, p_value] for rank_genes, rank_ref, rank_p_value, name, g, ref, p_value in namingScore]
-            namingScore.sort(reverse=True)
-
-            if len(namingScore) < 1:
-                print "warning. no annotations found for group of genes: " + ", ".join(genes)
-                continue
-            elif len(namingScore[0]) < 2:
-                print "warning. error computing score for group of genes: " + ", ".join(genes)
-                continue
-
-            for v in component:
-                name = str(namingScore[0][1])
-                attrs = "%d/%d, %d, %lf" % (namingScore[0][2], annotated_genes, namingScore[0][3], namingScore[0][4])
-                info = ''
-                if self.showTextMiningInfo:
-                    info = "\n" + attrs + "\n" + str(namingScore[0][0])
-                keyword_table[v]['component name'] = name + info
-
-            self.progressBarSet(i * 100.0 / len(components))
-
-        self.lastNameComponentAttribute = self.nameComponentCombo.currentText()
-        self.set_items(data.Table([self.graph_base.items(), keyword_table]))
-        self.progressBarFinished()
-
-
-    def setAutoSendAttributes(self):
-        print 'TODO setAutoSendAttributes'
-        #if self.autoSendAttributes:
-        #    self.networkCanvas.callbackSelectVertex = self.sendAttSelectionList
-        #else:
-        #    self.networkCanvas.callbackSelectVertex = None
-
-    def sendAttSelectionList(self):
-        if not self.graph is None:
-            vars = [x.name for x in self.graph_base.links_vars()]
-            if not self.comboAttSelection.currentText() in vars:
-                return
-            att = str(self.comboAttSelection.currentText())
-            vertices = self.networkCanvas.selected_nodes()
-
-            if len(vertices) != 1:
-                return
-
-            attributes = str(self.graph_base.items()[vertices[0]][att]).split(', ')
-        else:
-            attributes = None
-        self.send("Features", attributes)
-
 
 if __name__ == "__main__":
+    import sys
     a = QApplication(sys.argv)
     ow = OWNxExplorer()
     ow.show()
@@ -1622,10 +1095,12 @@ if __name__ == "__main__":
         #    ow.set_items(data)
 
     import OWNxFile
+    from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
-    owFile.show()
-    owFile.selectNetFile(0)
+    owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    #~ owFile.show()
+    #~ owFile.selectNetFile(0)
 
     a.exec_()
     ow.saveSettings()

@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 
-try:
-    import distribute_setup
-    distribute_setup.use_setuptools()
-except ImportError:
-    # For documentation we load setup.py to get version
-    # so it does not matter if importing fails
-    pass
-
 import os
 
 from setuptools import setup, find_packages
@@ -17,7 +9,7 @@ DOCUMENTATION_NAME = 'Orange Network'
 
 VERSION = '0.3.4'
 
-DESCRIPTION = 'Orange Network add-on for Orange data mining software package.'
+DESCRIPTION = 'Orange Network add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 AUTHOR = 'Miha Stajdohar, FRI UL'
 AUTHOR_EMAIL = 'miha.stajdohar@gmail.com'
@@ -66,8 +58,7 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
-    'networkx',
-    'Orange',
+    'networkx>=1.10',
     'pyparsing>=2.0.1'
 ),
 
@@ -94,6 +85,9 @@ ENTRY_POINTS = {
     'orange.data.io.search_paths': (
         'network = orangecontrib.network:networks',
     ),
+    'orange.widgets': (
+        'Networks = orangecontrib.network.widgets',
+    )
 }
 
 NAMESPACES = ["orangecontrib"]

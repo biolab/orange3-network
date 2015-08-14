@@ -15,7 +15,7 @@ import sys, os
 import numpydoc
 import imp
 
-#MOCK_MODULES = ['numpy', 'numpy.core', 'matplotlib', 'numpy.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'numpy.ma', 'linalg', 'numpy.linalg', 'scipy.linalg']
+#MOCK_MODULES = ['np', 'np.core', 'matplotlib', 'np.core.ma', 'scipy', 'scipy.sparse', 'scipy.optimize', 'scipy.stats', 'ma', 'np.ma', 'linalg', 'np.linalg', 'scipy.linalg']
 #for mod_name in MOCK_MODULES:
 #    sys.modules[mod_name] = mock.Mock()
 
@@ -198,8 +198,7 @@ htmlhelp_basename = 'referencedoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'reference.tex', u'Reference',
-   u't', 'manual'),
+  ('index', 'reference.tex', 'Reference', 't', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

@@ -25,7 +25,7 @@ Network class reads and writes Pajek (.net), GML, and gpickle file formats.
 
 .. literalinclude:: code/network-read.py
     :lines: 5-6
-    
+
 Visualize Networks in Net Explorer Widget
 -----------------------------------------
 
@@ -35,7 +35,7 @@ part of :download:`network-widget.py <code/network-widget.py>`
 
 .. literalinclude:: code/network-widget.py
     :lines: 10-16
-    
+
 .. image:: files/network-explorer.png
     :width: 100%
 
@@ -47,7 +47,7 @@ def networks():
 
 import networkx as nx
 
-from network import *
+from .network import *
 
-import community
-import snap
+from . import community
+from . import snap

@@ -1,33 +1,14 @@
-"""
-<name>Pubmed Network View</name>
-<description></description>
-<icon>icons/NetworkExplorer.svg</icon>
-<contact></contact>
-<priority>6470</priority>
-"""
 raise Exception("This widget is a Prototype.")
 
 import Orange
-import OWGUI
-
-from OWWidget import *
-
-
-NAME = "Pubmed Network View"
-ICON = "icons/NetworkExplorer.svg"
-PRIORITY = 6470
-
-OUTPUTS = [("Nx View", Orange.network.NxView)]
-
-REPLACES = ["_network.widgets.OWPubmedView.OWPubmedView"]
+from Orange.widgets import gui, widget, settings
+import orangecontrib.network as network
 
 
-class PubmedNetworkView(Orange.network.NxView):
-
-    """Network Inside View"""
+class PubmedNetworkView(network.NxView):
 
     def __init__(self, parent):
-        Orange.network.NxView.__init__(self)
+        network.NxView.__init__(self)
 
         self._nhops = 2
         self._edge_threshold = 0.5
@@ -55,7 +36,7 @@ class PubmedNetworkView(Orange.network.NxView):
         if self._center_nodes == []:
             return
 
-        subnet = Orange.network.Graph()
+        subnet = network.Graph()
         central_nodes, to_add = self._center_nodes[:], self._center_nodes[:]
         for l in range(self._nhops):
             for i in central_nodes:
@@ -151,7 +132,7 @@ class PubmedNetworkView(Orange.network.NxView):
                 return net
 
     def compute_k(self, id, centers, net):
-        import networkx as nx #VEDERE SE C'E' IN ORANGENET 
+        import networkx as nx #VEDERE SE C'E' IN ORANGENET
         if self._algorithm == 0: #no clustering
             return self._algorithm
         else:   #clustering
@@ -171,15 +152,18 @@ class PubmedNetworkView(Orange.network.NxView):
         return max(x)
 
 
-class OWPubmedView(OWWidget):
+class OWPubmedView(widget.OWWidget):
 
-    settingsList = ['_nhops']
+    name = "Pubmed Network View"
+    icon = "icons/NetworkExplorer.svg"
+    priority = 6470
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, 'Pubmed Network View', wantMainArea=0)
+    outputs = [("Nx View", network.NxView)]
 
-        self.inputs = []
-        self.outputs = [("Nx View", Orange.network.NxView)]
+    _nhops = settings.Setting(2)
+
+    def __init__(self):
+        super().__init__()
 
         self._nhops = 2
         self._edge_threshold = 0.5
@@ -192,22 +176,20 @@ class OWPubmedView(OWWidget):
         self._algorithm = 0
         self._k_algorithm = 0.3
 
-        self.loadSettings()
-
-        box = OWGUI.widgetBox(self.controlArea, "Paper Selection", orientation="vertical")
-        OWGUI.lineEdit(box, self, "filter", callback=self.filter_list, callbackOnType=True)
-        self.list_titles = OWGUI.listBox(box, self, "selected_titles", "titles", selectionMode=QListWidget.MultiSelection, callback=self.update_view)
-        OWGUI.separator(self.controlArea)
-        box_pref = OWGUI.widgetBox(self.controlArea, "Preferences", orientation="vertical")
-        OWGUI.spin(box_pref, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
-        OWGUI.spin(box_pref, self, "_n_max_neighbors", 1, 100, 1, label="Max number of neighbors: ", callback=self.update_view)
-        OWGUI.doubleSpin(box_pref, self, "_edge_threshold", 0, 1, step=0.01, label="Edge threshold: ", callback=self.update_view)
-        OWGUI.separator(self.controlArea)
-        box_alg = OWGUI.widgetBox(self.controlArea, "Interest Propagation Algorithm", orientation="vertical")
-        radio_box = OWGUI.radioButtonsInBox(box_alg, self, "_algorithm", [], callback=self.update_view)
-        OWGUI.appendRadioButton(radio_box, self, "_algorithm", "Without Clustering", callback=self.update_view)
-        OWGUI.doubleSpin(OWGUI.indentedBox(radio_box), self, "_k_algorithm", 0, 1, step=0.01, label="Parameter k: ", callback=self.update_view)
-        OWGUI.appendRadioButton(radio_box, self, "_algorithm", "With Clustering", callback=self.update_view)
+        box = gui.widgetBox(self.controlArea, "Paper Selection", orientation="vertical")
+        gui.lineEdit(box, self, "filter", callback=self.filter_list, callbackOnType=True)
+        self.list_titles = gui.listBox(box, self, "selected_titles", "titles", selectionMode=QListWidget.MultiSelection, callback=self.update_view)
+        gui.separator(self.controlArea)
+        box_pref = gui.widgetBox(self.controlArea, "Preferences", orientation="vertical")
+        gui.spin(box_pref, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
+        gui.spin(box_pref, self, "_n_max_neighbors", 1, 100, 1, label="Max number of neighbors: ", callback=self.update_view)
+        gui.doubleSpin(box_pref, self, "_edge_threshold", 0, 1, step=0.01, label="Edge threshold: ", callback=self.update_view)
+        gui.separator(self.controlArea)
+        box_alg = gui.widgetBox(self.controlArea, "Interest Propagation Algorithm", orientation="vertical")
+        radio_box = gui.radioButtonsInBox(box_alg, self, "_algorithm", [], callback=self.update_view)
+        gui.appendRadioButton(radio_box, self, "_algorithm", "Without Clustering", callback=self.update_view)
+        gui.doubleSpin(gui.indentedBox(radio_box), self, "_k_algorithm", 0, 1, step=0.01, label="Parameter k: ", callback=self.update_view)
+        gui.appendRadioButton(radio_box, self, "_algorithm", "With Clustering", callback=self.update_view)
 
         self.inside_view = PubmedNetworkView(self)
         self.send("Nx View", self.inside_view)
@@ -248,7 +230,7 @@ class OWPubmedView(OWWidget):
         menu = QMenu(self)
         menu.addAction('Expand Node')
         menu.addAction('Hide Node')
-        qstr = QString('Set Score')
+        qstr = 'Set Score'
         submenu = menu.addMenu(qstr)
         submenu.addAction('0')
         submenu.addAction('0.2')
@@ -259,7 +241,7 @@ class OWPubmedView(OWWidget):
         menu.popup(QCursor.pos())
 
     def node_menu_triggered(self, action, node):
-        # delete_node_and_neig --> ????        
+        # delete_node_and_neig --> ????
         if action.text() == 'Expand Node':
             self.inside_view.update_center_nodes(node.index())
 

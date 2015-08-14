@@ -1,34 +1,16 @@
-"""
-<name>Net Inside View</name>
-<description>Orange widget for community detection in networks</description>
-<icon>icons/NetworkInsideView.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact> 
-<priority>6460</priority>
-"""
 
 import Orange
-import OWGUI
-
-from OWWidget import *
-
-
-NAME = "Net Inside View"
-DESCRIPTION = "Orange widget for community detection in networks"
-ICON = "icons/NetworkInsideView.svg"
-PRIORITY = 6460
-
-OUTPUTS = [("Nx View", Orange.network.NxView)]
-
-REPLACES = ["_network.widgets.OWNxInsideView.OWNxInsideView"]
+from Orange.widgets import gui, widget, settings
+import orangecontrib.network as network
 
 
-class NxInsideView(Orange.network.NxView):
+class NxInsideView(network.NxView):
     """Network Inside View
-    
+
     """
 
     def __init__(self, nhops):
-        Orange.network.NxView.__init__(self)
+        network.NxView.__init__(self)
 
         self._nhops = nhops
         self._center_node = None
@@ -41,16 +23,16 @@ class NxInsideView(Orange.network.NxView):
 
         selected = self._nx_explorer.networkCanvas.selected_nodes()
         if selected is None or len(selected) <= 0:
-            self._center_node = graph.nodes_iter().next()
+            self._center_node = next(graph.nodes_iter())
         else:
             self._center_node = selected[0]
 
         nodes = self._get_neighbors()
-        return Orange.network.nx.Graph.subgraph(self._network, nodes)
+        return network.nx.Graph.subgraph(self._network, nodes)
 
     def update_network(self):
         nodes = self._get_neighbors()
-        subnet = Orange.network.nx.Graph.subgraph(self._network, nodes)
+        subnet = network.nx.Graph.subgraph(self._network, nodes)
 
         if self._nx_explorer is not None:
             self._nx_explorer.change_graph(subnet)
@@ -73,22 +55,23 @@ class NxInsideView(Orange.network.NxView):
             nodes.update(neighbors)
         return nodes
 
-class OWNxInsideView(OWWidget):
+class OWNxInsideView(widget.OWWidget):
+    name = "Network Inside View"
+    description = "Orange widget for community detection in networks"
+    icon = "icons/NetworkInsideView.svg"
+    priority = 6460
 
-    settingsList = ['_nhops']
+    outputs = [("Nx View", network.NxView)]
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, 'Net Inside View')
+    _nhops = settings.Setting(2)
 
-        self.inputs = []
-        self.outputs = [("Nx View", Orange.network.NxView)]
+    def __init__(self):
+        super().__init__()
 
         self._nhops = 2
 
-        self.loadSettings()
-
-        ib = OWGUI.widgetBox(self.controlArea, "Preferences", orientation="vertical")
-        OWGUI.spin(ib, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
+        ib = gui.widgetBox(self.controlArea, "Preferences", orientation="vertical")
+        gui.spin(ib, self, "_nhops", 1, 6, 1, label="Number of hops: ", callback=self.update_view)
 
         self.inside_view = NxInsideView(self._nhops)
         self.send("Nx View", self.inside_view)

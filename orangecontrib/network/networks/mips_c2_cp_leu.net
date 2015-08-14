@@ -5,7 +5,7 @@
 
 *Description "Protein-protein interaction network: theleukemia genes were connected into the network based on their protein interactions from the MIPS mammalian protein-protein interaction database. In addition, we used the biological function similarity score for placing the interacting protein components based on the similar biological functions of the proteins comprising them."
 
-*Vertices      132        1
+*Vertices    132
        1 "0" 	2902.0000    2873.0000    0.5000	
        2 "1" 	3626.0000    2368.0000    0.5000	
        3 "2" 	991.0000    1866.0000    0.5000	

@@ -1,77 +1,54 @@
-"""
-<name>Net from Distances</name>
-<description>Costructs Graph object by connecting nodes from ExampleTable where distance between them is between given threshold.</description>
-<icon>icons/NetworkFromDistances.svg</icon>
-<contact>Miha Stajdohar (miha.stajdohar(@at@)gmail.com)</contact>
-<priority>6440</priority>
-"""
-
-#
-# OWNetworkFromDistances.py
-#
-
 import copy
 import random
+import sys
 
 import Orange
-import OWGUI
+from Orange.widgets import gui, widget
+import orangecontrib.network as network
 
-from OWNxHist import *
-from OWWidget import *
-from OWGraph import *
-from OWHist import *
-
-
-NAME = "Net from Distances"
-DESCRIPTION = """
-Constructs Graph object by connecting nodes from data table where
-distance between them is between given threshold.
-"""
-ICON = "icons/NetworkFromDistances.svg"
-PRIORITY = 6440
-
-INPUTS = [("Distances", Orange.core.SymMatrix, "setMatrix")]
-OUTPUTS = [("Network", Orange.network.Graph),
-           ("Data", Orange.data.Table),
-           ("Distances", Orange.core.SymMatrix)]
-
-REPLACES = ["_network.widgets.OWNxFromDistances.OWNxFromDistances"]
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+from orangecontrib.network.widgets.OWNxHist import *
 
 
-class OWNxFromDistances(OWWidget, OWNxHist):
+class OWNxFromDistances(widget.OWWidget, OWNxHist):
+    name = "Network from Distances"
+    description = ('Constructs Graph object by connecting nodes from '
+                   'data table where distance between them is between '
+                   'given threshold.')
+    icon = "icons/NetworkFromDistances.svg"
+    priority = 6440
+
+    inputs = [("Distances", Orange.misc.DistMatrix, "setMatrix")]
+    outputs = [("Network", network.Graph),
+               ("Data", Orange.data.Table),
+               ("Distances", Orange.misc.DistMatrix)]
+
     settingsList=["spinLowerThreshold", "spinUpperThreshold", "netOption",
                   "dstWeight", "kNN", "percentil", "andor", "excludeLimit"]
+    # TODO: set settings
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, "Nx from Distances")
+    def __init__(self):
+        super().__init__()
         OWNxHist.__init__(self)
-
-        self.inputs = [("Distances", Orange.core.SymMatrix, self.setMatrix)]
-        self.outputs = [("Network", Orange.network.Graph),
-                        ("Data", Orange.data.Table),
-                        ("Distances", Orange.core.SymMatrix)]
-
-        self.addHistogramControls()
-
-        # get settings from the ini file, if they exist
-        self.loadSettings()
 
         # GUI
         # general settings
-        boxHistogram = OWGUI.widgetBox(self.mainArea, box = "Distance histogram")
-        self.histogram = OWHist(self, boxHistogram)
+        boxHistogram = gui.widgetBox(self.mainArea, box = "Distance histogram")
+        self.histogram = Histogram(self)
         boxHistogram.layout().addWidget(self.histogram)
+        self.addHistogramControls()
 
         boxHistogram.setMinimumWidth(500)
         boxHistogram.setMinimumHeight(300)
 
         # info
-        boxInfo = OWGUI.widgetBox(self.controlArea, box = "Info")
-        self.infoa = OWGUI.widgetLabel(boxInfo, "No data loaded.")
-        self.infob = OWGUI.widgetLabel(boxInfo, '')
-        self.infoc = OWGUI.widgetLabel(boxInfo, '')
+        boxInfo = gui.widgetBox(self.controlArea, box = "Info")
+        self.infoa = gui.widgetLabel(boxInfo, "No data loaded.")
+        self.infob = gui.widgetLabel(boxInfo, '')
+        self.infoc = gui.widgetLabel(boxInfo, '')
 
-        OWGUI.rubber(self.controlArea)
+        gui.rubber(self.controlArea)
 
         self.resize(700, 100)
 

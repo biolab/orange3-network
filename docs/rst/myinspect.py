@@ -49,4 +49,4 @@ getmembers = getmembers27
 
 if __name__ == "__main__":
     for a in [ "0", "0.", "-1.3", "1.30000000001" ]:
-        print a, "shorter:", delete_while_accurate(a)
+        print(a, "shorter:", delete_while_accurate(a))

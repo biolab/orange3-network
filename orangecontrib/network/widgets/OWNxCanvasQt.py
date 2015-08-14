@@ -1,41 +1,55 @@
-CIRCLE = 0
-SQUARE = 1
-ROUND_RECT = 2
 
-NOTHING = 0
-ZOOMING = 1
-SELECT_RECTANGLE = 2
-SELECT_POLYGON = 3
-MOVE_SELECTION = 100
+from functools import partial
+from itertools import zip_longest, chain
 
-import numpy
+import numpy as np
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
-from plot.owplot import *
-from plot.owpoint import *
-from plot.owtools import *
+from Orange import data
+from Orange.util import scale
+from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
+from Orange.projection.manifold import MDS
 
-from Orange import core, data, misc, network, orangeqt, projection
-from orngScaleScatterPlotData import *
+import networkx as nx
+import pyqtgraph as pg
 
-class NodeItem(orangeqt.NodeItem):
-    def __init__(self, index, x=None, y=None, parent=None):
-        orangeqt.NodeItem.__init__(self, index, OWPoint.Ellipse, Qt.blue, 5, parent)
-        if x is not None:
-            self.set_x(x)
-        if y is not None:
-            self.set_y(y)
+#~ class NodeItem(orangeqt.NodeItem):
+    #~ def __init__(self, index, x=None, y=None, parent=None):
+        #~ orangeqt.NodeItem.__init__(self, index, OWPoint.Ellipse, Qt.blue, 5, parent)
+        #~ if x is not None:
+            #~ self.set_x(x)
+        #~ if y is not None:
+            #~ self.set_y(y)
+#~
+#~ class EdgeItem(orangeqt.EdgeItem):
+    #~ def __init__(self, u=None, v=None, weight=1, links_index=0, arrows=None, label='', parent=None):
+        #~ orangeqt.EdgeItem.__init__(self, u, v, parent)
+        #~ self.set_weight(weight)
+        #~ self.set_links_index(links_index)
+        #~ if arrows is not None:
+            #~ self.set_arrows(arrows)
 
-class EdgeItem(orangeqt.EdgeItem):
-    def __init__(self, u=None, v=None, weight=1, links_index=0, arrows=None, label='', parent=None):
-        orangeqt.EdgeItem.__init__(self, u, v, parent)
-        self.set_weight(weight)
-        self.set_links_index(links_index)
-        if arrows is not None:
-            self.set_arrows(arrows)
+def pos_array(pos):
+    """Return ndarray of positions from node-to-position dict"""
+    return np.array([i[1][:2] for i in sorted(pos.items())])
 
-class NetworkCurve(orangeqt.NetworkCurve):
+
+CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
+
+class NodePenColor:
+    DEFAULT = .3
+    SELECTED = '#dd1100'
+    HIGHLIGHTED = '#dd7700'
+
+class NodePen:
+    DEFAULT = pg.mkPen(NodePenColor.DEFAULT, width=1)
+    SELECTED = pg.mkPen(NodePenColor.SELECTED, width=3)
+    HIGHLIGHTED = pg.mkPen(NodePenColor.HIGHLIGHTED, width=3)
+
+
+class NetworkCurve:
     def __init__(self, parent=None, pen=QPen(Qt.black), xData=None, yData=None):
-        orangeqt.NetworkCurve.__init__(self, parent)
         self.name = "Network Curve"
 
     def layout_fr(self, steps, weighted=False, smooth_cooling=False):
@@ -68,10 +82,10 @@ class NetworkCurve(orangeqt.NetworkCurve):
                     x_avg_mds = sum(x) / len(x)
                     y_avg_mds = sum(y) / len(y)
                     # compute rotation angle
-#                    c = [numpy.linalg.norm(numpy.cross(mds.points[u], \
+#                    c = [np.linalg.norm(np.cross(mds.points[u], \
 #                                [nodes[u].x(), nodes[u].y()])) for u in component]
-#                    
-#                    n = [numpy.vdot([nodes[u].x(), nodes[u].y()], \
+#
+#                    n = [np.vdot([nodes[u].x(), nodes[u].y()], \
 #                                    [nodes[u].x(), nodes[u].y()]) for u in component]
 #                    phi[i] = sum(c) / sum(n)
 
@@ -94,9 +108,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
 
     #            if phi[i]:  # rotate vertices
     #                #print "rotate", i, phi[i]
-    #                r = numpy.array([[numpy.cos(phi[i]), -numpy.sin(phi[i])], [numpy.sin(phi[i]), numpy.cos(phi[i])]])  #rotation matrix
+    #                r = np.array([[np.cos(phi[i]), -np.sin(phi[i])], [np.sin(phi[i]), np.cos(phi[i])]])  #rotation matrix
     #                c = [x_avg_graph, y_avg_graph]  # center of mass in FR coordinate system
-    #                v = [numpy.dot(numpy.array([self.graph.coors[0][u], self.graph.coors[1][u]]) - c, r) + c for u in component]
+    #                v = [np.dot(np.array([self.graph.coors[0][u], self.graph.coors[1][u]]) - c, r) + c for u in component]
     #                self.graph.coors[0][component] = [u[0] for u in v]
     #                self.graph.coors[1][component] = [u[1] for u in v]
 
@@ -123,9 +137,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
         return 0 if self.stopMDS else 1
 
     def layout_fragviz(self, steps, distances, graph, progress_callback=None, opt_from_curr=False):
-        """Position the network components according to similarities among 
+        """Position the network components according to similarities among
         them.
-        
+
         """
 
         if distances == None or graph == None or distances.dim != graph.number_of_nodes():
@@ -147,10 +161,10 @@ class NetworkCurve(orangeqt.NetworkCurve):
         nodes_inds = dict((n, i) for i, n in enumerate(sorted(graph.nodes_iter())))
         inds_nodes = dict((i, n) for i, n in enumerate(sorted(graph.nodes_iter())))
 
-        graph_components = network.nx.algorithms.connected_components(graph)
+        graph_components = nx.algorithms.connected_components(graph)
         matrix_components = [[nodes_inds[n] for n in c] for c in graph_components]
 
-        distances.matrixType = misc.SymMatrix.Symmetric
+        #~ distances.matrixType = core.SymMatrix.Symmetric
 
         # scale net coordinates
         if avgLinkage:
@@ -160,8 +174,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
         if distances.dim == 1:
             return 0
 
-        mds = projection.mds.MDS(distances)
-        mds.optimize(10, projection.mds.SgnRelStress, 0)
+        mds = MDS()(distances)
         rect = self.data_rect()
         w_fr = rect.width()
         h_fr = rect.height()
@@ -172,16 +185,13 @@ class NetworkCurve(orangeqt.NetworkCurve):
         h_mds = max(y_mds) - min(y_mds)
         d_mds = math.sqrt(w_mds ** 2 + h_mds ** 2)
 
-        animate_points = p.animate_points
-        p.animate_points = False
-
         # if only one component
         if d_mds == 0 or d_fr == 0:
             d_mds = 1
             d_fr = 1
 
-        self.set_node_coordinates(dict( (key,(node.x() * d_mds / d_fr, node.y() * d_mds / d_fr)) \
-                                   for key, node in nodes.iteritems()))
+        self.set_node_coordinates(dict((key, (node.x() * d_mds / d_fr, node.y() * d_mds / d_fr)) \
+                                       for key, node in nodes.items()))
 
         p.update_graph_layout()
         qApp.processEvents()
@@ -194,7 +204,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
                     mds.points[u][0] = x
                     mds.points[u][1] = y
             else:
-                for i, u in enumerate(sorted(nodes.iterkeys())):
+                for i, u in enumerate(sorted(nodes.keys())):
                     mds.points[i][0] = nodes[u].x()
                     mds.points[i][1] = nodes[u].y()
         else:
@@ -211,7 +221,6 @@ class NetworkCurve(orangeqt.NetworkCurve):
         if progress_callback is not None:
             progress_callback(mds.avgStress, self.mdsStep)
 
-        p.animate_points = animate_points
         return 0
 
     def mds_callback(self, a, b, mds, mdsRefresh, progress_callback):
@@ -231,9 +240,9 @@ class NetworkCurve(orangeqt.NetworkCurve):
         return 0 if self.stopMDS else 1
 
     def layout_mds(self, steps, distances, progress_callback=None, opt_from_curr=False):
-        """Position the network components according to similarities among 
+        """Position the network components according to similarities among
         them.
-        
+
         """
         nodes = self.nodes()
 
@@ -249,8 +258,8 @@ class NetworkCurve(orangeqt.NetworkCurve):
         self.mdsStep = 1
         self.stopMDS = False
 
-        distances.matrixType = core.SymMatrix.Symmetric
-        mds = projection.mds.MDS(distances)
+        #~ distances.matrixType = core.SymMatrix.Symmetric
+        mds = MDS()(distances)
         mds.optimize(10, projection.mds.SgnRelStress, 0)
         rect = self.data_rect()
         w_fr = rect.width()
@@ -262,9 +271,6 @@ class NetworkCurve(orangeqt.NetworkCurve):
         h_mds = max(y_mds) - min(y_mds)
         d_mds = math.sqrt(w_mds ** 2 + h_mds ** 2)
 
-        animate_points = p.animate_points
-        p.animate_points = False
-
         self.set_node_coordinates(dict(
            (n, (nodes[n].x() * d_mds / d_fr, nodes[n].y() * d_mds / d_fr)) for n in nodes))
 
@@ -272,7 +278,7 @@ class NetworkCurve(orangeqt.NetworkCurve):
         qApp.processEvents()
 
         if opt_from_curr:
-            for i, u in enumerate(sorted(nodes.iterkeys())):
+            for i, u in enumerate(sorted(nodes.keys())):
                 mds.points[i][0] = nodes[u].x()
                 mds.points[i][1] = nodes[u].y()
         else:
@@ -292,110 +298,83 @@ class NetworkCurve(orangeqt.NetworkCurve):
         if progress_callback is not None:
             progress_callback(mds.avgStress, self.mdsStep)
 
-        p.animate_points = animate_points
         return 0
 
 #    def move_selected_nodes(self, dx, dy):
 #        selected = self.get_selected_nodes()
-#        
+#
 #        self.coors[selected][0] = self.coors[0][selected] + dx
 #        self.coors[1][selected][1] = self.coors[1][selected] + dy
-#          
+#
 #        self.update_properties()
 #        return selected
-#        
+#
 #    def set_hidden_nodes(self, nodes):
 #        for vertex in self.nodes().itervalues():
 #            vertex.setVisible(vertex.index() in nodes)
-#      
+#
 #    def hide_selected_nodes(self):
 #        for vertex in self.nodes().itervalues():
 #          if vertex.selected:
 #            vertex.hide()
-#  
+#
 #    def hide_unselected_nodes(self):
 #        for vertex in self.nodes().itervalues():
 #          if not vertex.selected:
 #            vertex.hide()
-#    
+#
 #    def show_all_vertices(self):
 #        for vertex in self.nodes().itervalues():
 #          vertex.show()
 
 
+class OWNxCanvas(pg.GraphItem):
+    def __init__(self, parent=None, name="Net Explorer"):
+        super().__init__()
+        self.setParent(parent)
 
-class OWNxCanvas(OWPlot):
-    def __init__(self, master, parent=None, name="None"):
-        OWPlot.__init__(self, parent, name, axes=[])
-        self.master = master
-        self.parent = parent
-        self.NodeItem = NodeItem
+        self.kwargs = {}
+        self.textItems = []
+        self.edgeTextItems = []
         self.graph = None
-
-        self.circles = []
-        self.freezeNeighbours = False
-        self.labelsOnMarkedOnly = 0
-
-        self.show_indices = False
-        self.show_weights = False
-        self.trim_label_words = 0
-        self.show_component_distances = False
-
-        self.showComponentAttribute = None
-        self.forceVectors = None
-        #self.appendToSelection = 1
-        self.fontSize = 12
-
+        self._pos_dict = None
+        self.layout_fhr(False)
+        self.show_edge_weights = False
+        self.relative_edge_widths = False
+        self.edgeColors = []
+        self.selectedNodes = set()
+        self.highlightedNodes = set()
         self.networkCurve = NetworkCurve()
-        self.add_custom_curve(self.networkCurve)
-
-        self.minComponentEdgeWidth = 0
-        self.maxComponentEdgeWidth = 0
-        self.items_matrix = None
-
-        self.items = None
-        self.links = None
-        self.edge_to_row = None
-        self.label_distances = None
-
-        self.node_label_attributes = []
-        self.edge_label_attributes = []
-
-        self.axis_margin = 0
-        self.title_margin = 0
-        self.graph_margin = 1
-        self._legend_margin = QRectF(0, 0, 0, 0)
-
-        #self.setFocusPolicy(Qt.StrongFocus)
+        self.scatter.sigClicked.connect(self.pointClicked)
 
     def set_hidden_nodes(self, nodes):
         self.networkCurve.set_hidden_nodes(nodes)
 
     def hide_selected_nodes(self):
-      self.networkCurve.hide_selected_nodes()
-      self.drawPlotItems()
+        self.networkCurve.hide_selected_nodes()
+        self.drawPlotItems()
 
     def hide_unselected_nodes(self):
-      self.networkCurve.hide_unselected_nodes()
-      self.drawPlotItems()
+        self.networkCurve.hide_unselected_nodes()
+        self.drawPlotItems()
 
     def show_all_vertices(self):
-      self.networkCurve.show_all_vertices()
-      self.drawPlotItems()
+        self.networkCurve.show_all_vertices()
+        self.drawPlotItems()
 
     def selected_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if vertex.is_selected()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if vertex.is_selected()]
         #return [p.index() for p in self.selected_points()]
 
     def not_selected_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if not vertex.is_selected()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if not vertex.is_selected()]
 
     def marked_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if vertex.is_marked()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if vertex.is_marked()]
         #return [p.index() for p in self.marked_points()]
 
     def not_marked_nodes(self):
-        return [vertex.index() for vertex in self.networkCurve.nodes().itervalues() if not vertex.is_marked()]
+        return [vertex.index() for vertex in self.networkCurve.nodes().values() if not vertex.is_marked()]
 
     def get_neighbors_upto(self, ndx, dist):
         newNeighbours = neighbours = set([ndx])
@@ -407,21 +386,6 @@ class OWNxCanvas(OWPlot):
             neighbours |= newNeighbours
         return neighbours
 
-    def mark_on_selection_changed(self):
-        toMark = set()
-        for ndx in self.selected_nodes():
-            toMark |= self.get_neighbors_upto(ndx, self.mark_neighbors)
-
-        self.networkCurve.clear_node_marks()
-        self.networkCurve.set_node_marks(dict((i, True) for i in toMark))
-
-    def mark_on_focus_changed(self, node):
-        self.networkCurve.clear_node_marks()
-
-        if node is not None:
-            toMark = set(self.get_neighbors_upto(node.index(), self.mark_neighbors))
-            self.networkCurve.set_node_marks(dict((i, True) for i in toMark))
-
     def drawComponentKeywords(self):
         self.clear_markers()
         if not hasattr(self, "showComponentAttribute") or self.showComponentAttribute is None or self.graph is None or self.items is None:
@@ -431,7 +395,7 @@ class OWNxCanvas(OWPlot):
             self.showComponentAttribute = None
             return
 
-        components = network.nx.algorithms.components.connected_components(self.graph)
+        components = nx.algorithms.components.connected_components(self.graph)
         nodes = self.networkCurve.nodes()
 
         for c in components:
@@ -460,7 +424,7 @@ class OWNxCanvas(OWPlot):
 
                 i += 1
             metas = table.domain.getmetas()
-            for i, var in metas.iteritems():
+            for i, var in metas.items():
                 if var.name == attribute:
                     colorIndex = i
                     if var.varType == core.VarTypes.Discrete:
@@ -475,137 +439,122 @@ class OWNxCanvas(OWPlot):
 
         return colorIndices, colorIndex, minValue, maxValue
 
-    def set_node_colors(self, attribute, nodes=None):
-        if self.graph is None:
+    def set_node_colors(self, attribute=None):
+        assert not attribute or isinstance(attribute, data.Variable)
+
+        if not attribute:
+            self.kwargs.pop('brush', None)
+            self.replot()
             return
 
-        colorIndices, colorIndex, minValue, maxValue = self.getColorIndeces(self.items, attribute, self.discPalette)
-        colors = {}
-
-        if nodes is None:
-            nodes = self.graph.nodes()
-
-        if colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Continuous and minValue == maxValue:
-            colors.update((node, self.discPalette[0]) for node in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Continuous:
-            colors.update((v, self.contPalette[(float(self.items[v][colorIndex].value) - minValue) / (maxValue - minValue)])
-                          if str(self.items[v][colorIndex].value) != '?' else
-                          (v, self.discPalette[0]) for v in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.Discrete:
-            colors.update((v, self.discPalette[colorIndices[self.items[v][colorIndex].value]]) for v in nodes)
-
-        elif colorIndex is not None and self.items.domain[colorIndex].varType == core.VarTypes.String and self.items.domain[colorIndex].name == "label":
-            colorIndices = dict((v, i) for i, v in enumerate(set(inst[colorIndex].value for inst in self.items)))
-            colors.update((v, self.discPalette[colorIndices[self.items[v][colorIndex].value]]) for v in nodes)
-        else:
-            colors.update((node, self.discPalette[0]) for node in nodes)
-
-        self.networkCurve.set_node_colors(colors)
-        self.replot()
-
-    def set_node_labels(self, attributes=None):
-        if self.graph is None:
+        table = self.graph.items()
+        if not table:
             return
-
-        nodes = self.graph.nodes()
-
-        if attributes is not None:
-            self.node_label_attributes = attributes
-
-        label_attributes = []
-        if self.items is not None and isinstance(self.items, data.Table):
-            label_attributes = [self.items.domain[att] for att in \
-                self.node_label_attributes if att in self.items.domain]
-
-        indices = [[] for u in nodes]
-        if self.show_indices:
-            indices = [[str(u)] for u in nodes]
-
-        distances = [[] for u in nodes]
-        show_distances = False
-        if self.label_distances is not None and type(self.label_distances) == \
-                           type([]) and len(self.label_distances) == len(nodes):
-            distances = self.label_distances
-            show_distances = True
-
-        if len(label_attributes) == 0 and \
-                        not self.show_indices and not show_distances:
-            self.networkCurve.set_node_labels({})
-
-        elif self.trim_label_words > 0:
-            self.networkCurve.set_node_labels(dict((node,
-                ', '.join(distances[i] + indices[i] +
-                          [' '.join(str(self.items[node][att]).split(' ')[:min(self.trim_label_words, len(str(self.items[node][att]).split(' ')))])
-                for att in label_attributes])) for i, node in enumerate(nodes)))
-        else:
-            self.networkCurve.set_node_labels(dict((node, ', '.join(\
-                        distances[i] + indices[i] + \
-                           [str(self.items[node][att]) for att in \
-                           label_attributes])) for i, node in enumerate(nodes)))
-
+        values = table[:, attribute].X[:, 0]
+        if attribute.is_continuous:
+            colors = CONTINUOUS_PALETTE[scale(values)]
+        elif attribute.is_discrete:
+            DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
+            colors = (DISCRETE_PALETTE[i] for i in values)
+        brushes = [QBrush(qcolor) for qcolor in colors]
+        self.kwargs['brush'] = brushes
         self.replot()
 
+    def set_node_labels(self, attributes=[]):
+        assert isinstance(attributes, list)
+        if not self.graph:
+            for i in self.textItems: i.setText('')
+            return
+        if attributes:
+            table = self.graph.items()
+            for i, item in enumerate(self.textItems):
+                text = ', '.join(map(str, table[i, attributes][0].list))
+                item.setText(text, (30, 30, 30))
+        else:
+            for item in self.textItems:
+                item.setText('')
+        self.replot()
+
+    def set_node_sizes(self, attribute, max_size, invert):
+        MIN_SIZE = 8
+        try:
+            table = self.graph.items()
+            if attribute.is_string:
+                values = np.array([len(i.list[0].split(',')) for i in table[:, attribute]])
+            else:
+                values = np.array(table[:, attribute]).T[0]
+        except (AttributeError, TypeError, KeyError):
+            self.kwargs['size'] = MIN_SIZE
+        else:
+            if invert:
+                values = 1/values
+            k, n = np.polyfit([np.nanmin(values), np.nanmax(values)], [MIN_SIZE, max_size], 1)
+            sizes = values * k + n
+            sizes[np.isnan(sizes)] = np.nanmean(sizes)
+            self.kwargs['size'] = sizes
+        finally:
+            self.replot()
+
+    def set_edge_sizes(self):
+        self.kwargs['pen'] = pg.mkPen('#ccc')
+        G = self.graph
+        if self.relative_edge_widths or self.edgeColors:
+            if self.relative_edge_widths:
+                weights = [G.edge[u][v].get('weight', 1) for u, v in G.edges()]
+            else:
+                weights = [1] * G.number_of_edges()
+            if self.edgeColors:
+                colors = self.edgeColors
+            else:
+                colors = [(0xb4, 0xb4, 0xb4)] * G.number_of_edges()
+
+            self.kwargs['pen'] = np.array([c + (0xff, w) for c, w in zip(colors, weights)],
+                                          dtype=[('red',   int),
+                                                 ('green', int),
+                                                 ('blue',  int),
+                                                 ('alpha', int),
+                                                 ('width', float)])
+            self.kwargs['pen']['width'] = 5 * scale(self.kwargs['pen']['width'], .1, 1)
+        self.replot()
 
     def set_edge_colors(self, attribute):
-        if self.graph is None:
-            return
-
-        colorIndices, colorIndex, minValue, maxValue = self.getColorIndeces(self.links, attribute, self.discPalette)
         colors = []
+        if attribute:
+            assert self.graph.links()
+            values = self.graph.links()[:, attribute].X[:, 0]
+            if attribute.is_continuous:
+                colors = (tuple(i) for i in CONTINUOUS_PALETTE.getRGB(scale(values)))
+            elif attribute.is_discrete:
+                DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
+                colors = (DISCRETE_PALETTE[i] for i in values)
+                colors = (tuple(c.red(), c.green(), c.blue()) for c in colors)
+        self.edgeColors = colors
+        self.set_edge_sizes()
 
-        if colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Continuous and minValue == maxValue:
-            colors = [self.discEdgePalette[0] for edge in self.networkCurve.edge_indices()]
+    def set_edge_labels(self, attributes=[]):
+        G = self.graph
+        if not G: return
+        weights = ''
+        if self.show_edge_weights:
+            weights = ['{:.2f}'.format(G.edge[u][v].get('weight', 0))
+                       for u, v in G.edges()]
 
-        elif colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Continuous:
-            colors = [self.contPalette[(float(self.links[edge.links_index()][colorIndex].value) - minValue) / (maxValue - minValue)]
-                          if str(self.links[edge.links_index()][colorIndex].value) != '?' else
-                          self.discPalette[0] for edge in self.networkCurve.edges()]
-
-        elif colorIndex is not None and self.links.domain[colorIndex].varType == core.VarTypes.Discrete:
-            colors = [self.discEdgePalette[colorIndices[self.links[edge.links_index()][colorIndex].value]] for edge in self.networkCurve.edges()]
-
-        else:
-            colors = [self.discEdgePalette[0] for edge in self.networkCurve.edge_indices()]
-
-        self.networkCurve.set_edge_colors(colors)
+        for i in self.edgeTextItems:
+            i.scene().removeItem(i)
+        self.edgeTextItems = []
+        try: table = G.links()[:, attributes]
+        except TypeError: table = []
+        for weight, row in zip_longest(weights, table):
+            text = ','.join(chain([weight] if weight else [],
+                                  row[0].list if row else []))
+            item = pg.TextItem(text, (150, 150, 150))
+            item.setParentItem(self)
+            self.edgeTextItems.append(item)
         self.replot()
 
-    def set_edge_labels(self, attributes=None):
-        if self.graph is None:
-            return
-
-        edges = self.networkCurve.edge_indices()
-
-        if attributes is not None:
-            self.edge_label_attributes = attributes
-
-        label_attributes = []
-        if self.links is not None and isinstance(self.links, data.Table):
-            label_attributes = [self.links.domain[att] for att in \
-                self.edge_label_attributes if att in self.links.domain]
-
-        weights = [[] for ex in edges]
-        if self.show_weights:
-            weights = [["%.2f" % self.graph[u][v].get('weight', 1)] for u, v in edges]
-
-        self.networkCurve.set_edge_labels([', '.join(weights[i] + \
-                           [str(self.links[i][att]) for att in \
-                           label_attributes]) for i, edge in enumerate(edges)])
-
-        self.replot()
-
-    def set_tooltip_attributes(self, attributes):
-        if self.graph is None or self.items is None or \
-           not isinstance(self.items, data.Table):
-            return
-
-        tooltip_attributes = [self.items.domain[att] for att in \
-                                 attributes if att in self.items.domain]
-        self.networkCurve.set_node_tooltips(dict((node, ', '.join(str( \
-                   self.items[node][att]) for att in tooltip_attributes)) \
-                                                        for node in self.graph))
+    def set_tooltip_attributes(self, attributes=[]):
+        assert isinstance(attributes, list)
+        self.tooltip_attributes = attributes
 
     def change_graph(self, newgraph):
         old_nodes = set(self.graph.nodes_iter())
@@ -621,8 +570,8 @@ class OWNxCanvas(OWPlot):
 
         current_nodes = self.networkCurve.nodes()
 
-        center_x = numpy.average([node.x() for node in current_nodes.itervalues()]) if len(current_nodes) > 0 else 0
-        center_y = numpy.average([node.y() for node in current_nodes.itervalues()]) if len(current_nodes) > 0 else 0
+        center_x = np.average([node.x() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
+        center_y = np.average([node.y() for node in current_nodes.values()]) if len(current_nodes) > 0 else 0
 
         def closest_nodes_with_pos(nodes):
 
@@ -630,7 +579,7 @@ class OWNxCanvas(OWPlot):
             for n in nodes:
                 neighbors |= set(self.graph.neighbors(n))
 
-            # checked all, none found            
+            # checked all, none found
             if len(neighbors - nodes) == 0:
                 return []
 
@@ -640,7 +589,7 @@ class OWNxCanvas(OWPlot):
             else:
                 return closest_nodes_with_pos(neighbors | nodes)
 
-        pos = dict((n, [numpy.average(c) for c in zip(*[(current_nodes[u].x(), current_nodes[u].y()) for u in closest_nodes_with_pos(set([n]))])]) for n in add_nodes)
+        pos = dict((n, [np.average(c) for c in zip(*[(current_nodes[u].x(), current_nodes[u].y()) for u in closest_nodes_with_pos(set([n]))])]) for n in add_nodes)
 
         self.networkCurve.remove_nodes(remove_nodes)
 
@@ -679,90 +628,278 @@ class OWNxCanvas(OWPlot):
 
         return True
 
-    def set_graph(self, graph, curve=None, items=None, links=None):
-        self.clear()
+    def set_antialias(self, value):
+        self.kwargs['antialias'] = bool(value)
 
-        if graph is None:
-            self.graph = None
-            self.networkCurve = None
-            self.items = None
-            self.links = None
-            xMin = -1.0
-            xMax = 1.0
-            yMin = -1.0
-            yMax = 1.0
-            self.addMarker("no network", (xMax - xMin) / 2, (yMax - yMin) / 2, alignment=Qt.AlignCenter, size=self.fontSize)
-            self.replot()
-            return
-
+    def set_graph(self, graph):
         self.graph = graph
-        self.networkCurve = NetworkCurve() if curve is None else curve()
-        self.add_custom_curve(self.networkCurve)
-
-        self.items = items if items is not None else self.graph.items()
-        self.links = links if links is not None else self.graph.links()
-
-        #add nodes
-        #self.vertices_old = [(None, []) for v in self.graph]
-        nodes = dict((v, self.NodeItem(v, parent=self.networkCurve)) for v in self.graph.nodes_iter())
-        self.networkCurve.set_nodes(nodes)
-
-        #build edge to row index
-        self.edge_to_row = {}
-        if self.links is not None and len(self.links) > 0:
-            for i, r in enumerate(self.links):
-                u = int(r['u'].value)
-                v = int(r['v'].value)
-                if u - 1 in self.graph and v - 1 in self.graph:
-                    u_dict = self.edge_to_row.get(u, {})
-                    v_dict = self.edge_to_row.get(v, {})
-                    u_dict[v] = i
-                    v_dict[u] = i
-                    self.edge_to_row[u] = u_dict
-                    self.edge_to_row[v] = v_dict
-                else:
-                    print 'could not find edge', u, v
-
-        #add edges
-        if self.links is not None and len(self.links) > 0:
-            links = self.links
-            links_indices = (self.edge_to_row[i + 1][j + 1] \
-                             for (i, j) in self.graph.edges_iter())
-
-            arrow = EdgeItem.ArrowV if self.graph.is_directed() else None
-
-            edges = [EdgeItem(nodes[i], nodes[j],
-                    graph[i][j].get('weight', 1), links_index, arrows=arrow, \
-                    parent=self.networkCurve) for ((i, j), links_index) in \
-                         zip(self.graph.edges_iter(), links_indices)]
-        else:
-            arrow = EdgeItem.ArrowV if self.graph.is_directed() else None
-
-            edges = [EdgeItem(nodes[i], nodes[j], graph[i][j].get('weight', 1), \
-                              arrows=arrow, parent=self.networkCurve) \
-                                  for (i, j) in self.graph.edges_iter()]
-
-        self.networkCurve.set_edges(edges)
+        try:
+            for i in self.textItems:
+                i.scene().removeItem(i)
+        except AttributeError: pass  # No scene
+        if graph:
+            # Adjacency matrix
+            self.kwargs['adj'] = np.array(graph.edges())
+            # Custom node data (index used in mouseDragEvent)
+            self.kwargs['data'] = np.arange(graph.number_of_nodes())
+            # Construct empty node labels
+            self.textItems = []
+            for i in range(graph.number_of_nodes()):
+                item = pg.TextItem()
+                self.textItems.append(item)
+                item.setParentItem(self)
+            # Node pens
+            pens = [NodePen.DEFAULT] * graph.number_of_nodes()
+            for i in self.selectedNodes:
+                pens[i] = NodePen.SELECTED
+            self.kwargs['symbolPen'] = pens
+            # Position nodes according to selected layout optimization
+            self.layout_func()
+            # Set edge weights
+            self.set_edge_sizes()
         self.replot()
-
-    def update_animations(self, use_animations=None):
-        OWPlot.update_animations(self, use_animations)
-        self.networkCurve.set_use_animations(self.use_animations)
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
         self.networkCurve.set_labels_on_marked(labelsOnMarkedOnly)
         self.set_node_labels()
         self.replot()
 
-    def set_show_component_distances(self):
-        self.networkCurve.set_show_component_distances(self.show_component_distances)
-        self.replot()
-
     def update_graph_layout(self):
         self._bounds_cache = {}
         self._transform_cache = {}
-        OWPlot.update_layout(self)
+        ...
+
+    def layout_original(self):
+        def _f():
+            items = self.graph.items()
+            if not items or 'x' not in items.domain or 'y' not in items.domain:
+                return nx.spring_layout(self.graph,
+                                        iterations=2,
+                                        k=.5/np.sqrt(self.graph.number_of_nodes()))
+            positions = {node: (items[node]['x'].value if items[node]['x'].value != '?' else np.random.rand(),
+                                items[node]['y'].value if items[node]['y'].value != '?' else np.random.rand())
+                         for node in self.graph.node}
+            return positions
+        return self._simple_layout(lambda _: _f())
+
+    _is_animating = False
+
+    @property
+    def is_animating(self):
+        return self._is_animating
+
+    @is_animating.setter
+    def is_animating(self, value):
+        self._is_animating = value
+        if value:
+            self.parent().setCursor(QCursor(Qt.ForbiddenCursor))
+        else:
+            self.parent().unsetCursor()
+        qApp.processEvents()
+
+    def _animate(self, layout_func, dim=2):
+        if not self.graph: return
+        self.is_animating = True
+        prev_pos = self.kwargs.get('pos')
+        self._pos_dict = {k: list(p[:dim]) + [0]*(dim-len(p))
+                          for k, p in self._pos_dict.items()} if self._pos_dict else None
+        THRESHOLD, diff = .1, 10
+        max_iteration = 50
+        while self.is_animating and diff > THRESHOLD and max_iteration:
+            max_iteration -= 1
+            pos_dict = layout_func(pos=self._pos_dict)
+            pos = pos_array(pos_dict)
+            if prev_pos is not None:
+                try:
+                    diff = np.sqrt(np.sum((prev_pos - pos)**2)) / pos.shape[1]
+                except ValueError:
+                    diff = 10
+            self.kwargs['pos'] = prev_pos = pos
+            self._pos_dict = pos_dict
+            self.replot()
+            qApp.processEvents()
+        if self.is_animating:
+            self.kwargs['pos'] = pos[:, :2]
+        self.is_animating = False
+
+    def layout_fhr(self, weighted=False):
+        def _f(pos=None):
+            return nx.spring_layout(self.graph,
+                                    pos=pos,
+                                    iterations=2,
+                                    k=.8/np.sqrt(self.graph.number_of_nodes()),
+                                    weight='weight' if weighted else None)
+        self._animate(_f)
+        self.layout_func = lambda: self._animate(_f)
+
+    def _simple_layout(self, relayout):
+        def _f():
+            if not self.graph: return []
+            pos = self._pos_dict = relayout(self.graph)
+            return pos_array(pos)
+        self.layout_func = _f
+        self.kwargs['pos'] = _f()
+        self.replot()
+
+    def layout_circular(self):
+        self._simple_layout(nx.circular_layout)
+
+    def layout_spectral(self):
+        self._simple_layout(partial(nx.spectral_layout))
+
+    def layout_random(self):
+        self._simple_layout(nx.random_layout)
+
+    def layout_concentric(self):
+        def _generate_nlist():
+            G = self.graph
+            # TODO: imaginative, but shit. revise.
+            isolates = set(nx.isolates(G))
+            independent = set(nx.maximal_independent_set(G)) - isolates
+            dominating = set(nx.dominating_set(G)) - independent - isolates
+            rest = set(G.nodes()) - dominating - independent - isolates
+            nlist = list(map(sorted, filter(None, (isolates, independent, dominating, rest))))
+            return nlist
+        nlist = _generate_nlist()
+        self._simple_layout(partial(nx.shell_layout, nlist=nlist))
 
     def replot(self):
-        self.drawComponentKeywords()
-        OWPlot.replot(self)
+        if not self.graph:
+            self.adjacency = None  # bug in pyqtgraph.GraphItem
+            super().setData(pos=[[.5, .5]])
+            item = pg.TextItem('no network', 'k')
+            self.textItems.append(item)
+            item.setParentItem(self)
+            item.setPos(.5, .5)
+            return
+        # Update scatter plot (graph)
+        super().setData(**self.kwargs)
+        # Update text labels
+        for item, pos in zip(self.textItems, self.kwargs['pos']):
+            item.setPos(*pos[:2])
+        # Update text labels for edges
+        pos = self.kwargs['pos']
+        for item, adj in zip(self.edgeTextItems, self.kwargs['adj']):
+            item.setPos(*((pos[adj[0]] + pos[adj[1]]) / 2))
+
+    def hoverEvent(self, ev):
+        self.scatter.setToolTip('')
+        try: point = self.scatter.pointsAt(ev.pos())
+        except AttributeError: return  # HoverEvent() excepts if tooltip if hovered (pyqtgraph bug, methinks)
+        if not point: return
+        ind = point[0].data()
+        try: row = self.graph.items()[ind, self.tooltip_attributes][0].list
+        except (TypeError, AttributeError): return
+        self.scatter.setToolTip('<br>'.join('<b>{.name}:</b> {}'.format(i[0], str(i[1]).replace('<', '&lt;'))
+                                            for i in zip(self.tooltip_attributes, row)))
+
+    def updateNodeCounters(self):
+        self.parent().nSelected = len(self.selectedNodes)
+        self.parent().nHighlighted = len(self.highlightedNodes)
+        # Export selected nodes
+        self.parent().commit()
+
+    def selectHighlighted(self):
+        self.selectedNodes |= self.highlightedNodes
+        self._setNodesPen(select=self.highlightedNodes)
+        self.highlightedNodes = set()
+        self.updateNodeCounters()
+
+    def setHighlighted(self, nodes):
+        nodes = nodes if isinstance(nodes, set) else set(nodes)
+        nodes -= self.selectedNodes
+        self._setNodesPen(highlight=nodes, default=self.highlightedNodes)
+        self.highlightedNodes = nodes
+        self.updateNodeCounters()
+
+    def _setNodesPen(self, select=[], highlight=[], default=[]):
+        points = self.scatter.points()
+        def setPen(nodes, pen):
+            for i in nodes:
+                self.kwargs['symbolPen'][i] = pen
+                points[i]._data['pen'] = pen
+                points[i]._data['sourceRect'] = None
+            self.scatter.updateSpots()
+
+        if select:
+            setPen(select, NodePen.SELECTED)
+        if default: setPen(default, NodePen.DEFAULT)
+        if highlight: setPen(highlight, NodePen.HIGHLIGHTED)
+
+    def selectNodesInRect(self, qrect):
+        if not self.graph: return
+        top, bottom, left, right = qrect.top(), qrect.bottom(), qrect.left(), qrect.right()
+        assert top < bottom and left < right
+        data = self.scatter.data
+        AND_ = np.logical_and
+        selected = AND_(AND_(left <= data['x'], data['x'] <= right),
+                        AND_(top <= data['y'], data['y'] <= bottom)).nonzero()[0]
+        selected = set(selected)
+        selected -= self.selectedNodes
+        self._setNodesPen(select=selected)
+        self.selectedNodes |= selected
+        self.updateNodeCounters()
+
+    def pointClicked(self, plot, points):
+        if not self.graph: return
+        i = points[0].data()
+        is_selected = i not in self.selectedNodes
+        if is_selected:
+            self._setNodesPen(select=[i])
+            self.selectedNodes.add(i)
+            self.highlightedNodes.discard(i)
+        else:
+            self._setNodesPen(default=[i])
+            self.selectedNodes.remove(i)
+        self.updateNodeCounters()
+        self.parent().set_mark_mode()  # Re-evaluate highlighted nodes
+
+    def mouseClickEvent(self, ev):
+        """Mouse clicked on canvas => clear selection"""
+        self._setNodesPen(default=self.selectedNodes | self.highlightedNodes)
+        self.selectedNodes = set()
+        self.highlightedNodes = set()
+        self.updateNodeCounters()
+        self.parent().set_mark_mode()
+
+    def mouseDragEvent(self, ev):
+        if ev.button() != Qt.LeftButton:
+            ev.ignore()
+            return
+
+        if ev.isStart():
+            # We are already one step into the drag.
+            # Find the point(s) at the mouse cursor when the button was first
+            # pressed:
+            pos = ev.buttonDownPos()
+            pts = self.scatter.pointsAt(pos)
+            if len(pts) == 0:
+                ev.ignore()
+                return
+            ind = self.dragPoint = pts[0].data()
+            self.dragOffset = self.kwargs['pos'][ind][:2] - pos
+        elif ev.isFinish():
+            self.dragPoint = None
+            return
+        else:
+            if self.dragPoint is None:
+                ev.ignore()
+                return
+        ev.accept()
+        ind = self.dragPoint
+        change = ev.pos() - ev.lastPos()
+
+        self.scatter.prepareGeometryChange()
+        self.scatter.informViewBoundsChanged()
+        self.scatter.bounds = [None, None]
+
+        # If spot is part of the selection, also move the other selected spots
+        to_move = self.selectedNodes if ind in self.selectedNodes else [ind]
+        for i in to_move:
+            self.kwargs['pos'][i][:2] += change
+            item = self.scatter.data[i]['item']
+            item._data['x'] += change[0]
+            item._data['y'] += change[1]
+            item.updateItem()
+
+        self.generatePicture()
