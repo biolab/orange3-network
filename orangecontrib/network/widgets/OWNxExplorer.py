@@ -323,7 +323,7 @@ class OWNxExplorer(widget.OWWidget):
 
         gui.appendRadioButton(ribg, "... neighbours of selected, ≤ N hops away")
         ib = gui.indentedBox(ribg, orientation=0)
-        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 0, 100, 1, label="Distance:",
+        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 1, 100, 1, label="Distance:",
             callback=lambda: self.set_mark_mode(SelectionMode.NEIGHBORS))
         #self.ctrlMarkFreeze = gui.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
         gui.appendRadioButton(ribg, "... with at least N connections")

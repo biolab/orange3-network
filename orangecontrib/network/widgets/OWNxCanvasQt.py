@@ -43,6 +43,8 @@ class NodePen:
     SELECTED = pg.mkPen(NodePenColor.SELECTED, width=3)
     HIGHLIGHTED = pg.mkPen(NodePenColor.HIGHLIGHTED, width=3)
 
+DEFAULT_EDGE_PEN = pg.mkPen('#ccc')
+
 
 class NetworkCurve:
     def __init__(self, parent=None, pen=QPen(Qt.black), xData=None, yData=None):
@@ -329,7 +331,7 @@ class OWNxCanvas(pg.GraphItem):
         super().__init__()
         self.setParent(parent)
 
-        self.kwargs = {}
+        self.kwargs = {'pen': DEFAULT_EDGE_PEN}
         self.textItems = []
         self.edgeTextItems = []
         self.graph = None
@@ -492,7 +494,7 @@ class OWNxCanvas(pg.GraphItem):
             self.replot()
 
     def set_edge_sizes(self):
-        self.kwargs['pen'] = pg.mkPen('#ccc')
+        self.kwargs['pen'] = DEFAULT_EDGE_PEN
         G = self.graph
         if self.relative_edge_widths or self.edgeColors:
             if self.relative_edge_widths:
