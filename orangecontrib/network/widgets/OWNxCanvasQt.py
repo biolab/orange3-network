@@ -30,10 +30,6 @@ import pyqtgraph as pg
         #~ if arrows is not None:
             #~ self.set_arrows(arrows)
 
-def pos_array(pos):
-    """Return ndarray of positions from node-to-position dict"""
-    return np.array([i[1][:2] for i in sorted(pos.items())])
-
 
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#0000ff', '#ff0000')
 
@@ -680,7 +676,7 @@ class OWNxCanvas(pg.GraphItem):
                                 items[node]['y'].value if items[node]['y'].value != '?' else np.random.rand())
                          for node in self.graph.node}
             return positions
-        return self._simple_layout(lambda _: _f())
+        return self._layout(lambda _: _f())
 
     _is_animating = False
 
@@ -697,58 +693,52 @@ class OWNxCanvas(pg.GraphItem):
             self.parent().unsetCursor()
         qApp.processEvents()
 
-    def _animate(self, layout_func, dim=2):
+    def _animate(self, newpos):
         if not self.graph: return
         self.is_animating = True
-        prev_pos = self.kwargs.get('pos')
-        self._pos_dict = {k: list(p[:dim]) + [0]*(dim-len(p))
-                          for k, p in self._pos_dict.items()} if self._pos_dict else None
-        THRESHOLD, diff = .1, 10
-        max_iteration = 50
-        while self.is_animating and diff > THRESHOLD and max_iteration:
-            max_iteration -= 1
-            pos_dict = layout_func(pos=self._pos_dict)
-            pos = pos_array(pos_dict)
-            if prev_pos is not None:
-                try:
-                    diff = np.sqrt(np.sum((prev_pos - pos)**2)) / pos.shape[1]
-                except ValueError:
-                    diff = 10
-            self.kwargs['pos'] = prev_pos = pos
-            self._pos_dict = pos_dict
-            self.replot()
-            qApp.processEvents()
-        if self.is_animating:
-            self.kwargs['pos'] = pos[:, :2]
+        n_iteration = 50
+        pos = self.kwargs['pos']
+        delta = (newpos - pos) / n_iteration
+        if np.abs(delta).sum() > 1e-4:  # If not already there
+            while self.is_animating and n_iteration:
+                self.kwargs['pos'] += delta
+                self.replot()
+                n_iteration -= 1
         self.is_animating = False
 
     def layout_fhr(self, weighted=False):
-        def _f(pos=None):
-            return nx.spring_layout(self.graph,
-                                    pos=pos,
-                                    iterations=2,
-                                    k=.8/np.sqrt(self.graph.number_of_nodes()),
-                                    weight='weight' if weighted else None)
-        self._animate(_f)
-        self.layout_func = lambda: self._animate(_f)
+        def callback(pos):
+            self.kwargs['pos'] = pos
+            self.replot()
 
-    def _simple_layout(self, relayout):
-        def _f():
+        from .._fr_layout import fruchterman_reingold_layout
+        self._layout(lambda G:
+                        fruchterman_reingold_layout(
+                            G,
+                            iterations=50,
+                            pos=self.kwargs.get('pos'),
+                            weight='weight' if weighted else None,
+                            callback=callback))
+
+    def _layout(self, layout_func):
+        def pos_array(pos):
+            """Return ndarray of positions from node-to-position dict"""
+            return np.array([pos[n] for n in sorted(self.graph)])
+        def _relayout():
             if not self.graph: return []
-            pos = self._pos_dict = relayout(self.graph)
-            return pos_array(pos)
-        self.layout_func = _f
-        self.kwargs['pos'] = _f()
-        self.replot()
+            pos = pos_array(layout_func(self.graph))
+            return self._animate(pos)
+        self.layout_func = _relayout
+        _relayout()
 
     def layout_circular(self):
-        self._simple_layout(nx.circular_layout)
+        self._layout(nx.circular_layout)
 
     def layout_spectral(self):
-        self._simple_layout(partial(nx.spectral_layout))
+        self._layout(partial(nx.spectral_layout))
 
     def layout_random(self):
-        self._simple_layout(nx.random_layout)
+        self._layout(nx.random_layout)
 
     def layout_concentric(self):
         def _generate_nlist():
@@ -761,7 +751,7 @@ class OWNxCanvas(pg.GraphItem):
             nlist = list(map(sorted, filter(None, (isolates, independent, dominating, rest))))
             return nlist
         nlist = _generate_nlist()
-        self._simple_layout(partial(nx.shell_layout, nlist=nlist))
+        self._layout(partial(nx.shell_layout, nlist=nlist))
 
     def replot(self):
         if not self.graph:
@@ -781,6 +771,7 @@ class OWNxCanvas(pg.GraphItem):
         pos = self.kwargs['pos']
         for item, adj in zip(self.edgeTextItems, self.kwargs['adj']):
             item.setPos(*((pos[adj[0]] + pos[adj[1]]) / 2))
+        qApp.processEvents()
 
     def hoverEvent(self, ev):
         self.scatter.setToolTip('')

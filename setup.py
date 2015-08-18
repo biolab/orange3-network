@@ -2,7 +2,8 @@
 
 import os
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
+from numpy.distutils.core import setup
 
 NAME = 'Orange-Network'
 DOCUMENTATION_NAME = 'Orange Network'
@@ -92,8 +93,20 @@ ENTRY_POINTS = {
 
 NAMESPACES = ["orangecontrib"]
 
+def configuration(parent_package='', top_path=None):
+    from numpy.distutils.misc_util import Configuration
+    config = Configuration(None)
+    config.set_options(ignore_setup_xxx_py=True,
+                       assume_default_configuration=True,
+                       delegate_options_to_subpackages=True,
+                       quiet=True)
+    config.add_subpackage('orangecontrib.network')
+    return config
+
+
 if __name__ == '__main__':
     setup(
+        configuration=configuration,
         name = NAME,
         version = VERSION,
         description = DESCRIPTION,
