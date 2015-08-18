@@ -636,14 +636,15 @@ class OWNxExplorer(widget.OWWidget):
 
         for i in range(self.attListBox.count()):
             if str(self.attListBox.item(i).text()) in lastLabelColumns:
-                self.attListBox.item(i).setSelected(1)
-            self._on_node_label_attrs_changed()
+                self.attListBox.item(i).setSelected(True)
+        self._on_node_label_attrs_changed()
 
         for i in range(self.tooltipListBox.count()):
-            if str(self.tooltipListBox.item(i).text()) \
-                                                in lastTooltipColumns:
-                self.tooltipListBox.item(i).setSelected(1)
-            self._clicked_tooltip_lstbox()
+            if (self.tooltipListBox.item(i).text() in lastTooltipColumns or
+                not lastTooltipColumns):
+                self.tooltipListBox.item(i).setSelected(True)
+
+        self._clicked_tooltip_lstbox()
 
         self.lastLabelColumns = lastLabelColumns
         self.lastTooltipColumns = lastTooltipColumns
