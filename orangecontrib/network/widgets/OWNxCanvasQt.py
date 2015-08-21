@@ -493,7 +493,7 @@ class OWNxCanvas(pg.GraphItem):
         finally:
             self.replot()
 
-    def set_edge_sizes(self):
+    def set_edge_sizes(self, replot=True):
         self.kwargs['pen'] = DEFAULT_EDGE_PEN
         G = self.graph
         if self.relative_edge_widths or self.edgeColors:
@@ -513,7 +513,8 @@ class OWNxCanvas(pg.GraphItem):
                                                  ('alpha', int),
                                                  ('width', float)])
             self.kwargs['pen']['width'] = 5 * scale(self.kwargs['pen']['width'], .1, 1)
-        self.replot()
+        if replot:
+            self.replot()
 
     def set_edge_colors(self, attribute):
         colors = []
@@ -651,10 +652,10 @@ class OWNxCanvas(pg.GraphItem):
             for i in self.selectedNodes:
                 pens[i] = NodePen.SELECTED
             self.kwargs['symbolPen'] = pens
+            # Set edge weights
+            self.set_edge_sizes(False)
             # Position nodes according to selected layout optimization
             self.layout_func()
-            # Set edge weights
-            self.set_edge_sizes()
         self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
@@ -714,13 +715,17 @@ class OWNxCanvas(pg.GraphItem):
             self.replot()
 
         from .._fr_layout import fruchterman_reingold_layout
-        self._layout(lambda G:
-                        fruchterman_reingold_layout(
-                            G,
-                            iterations=50,
-                            pos=self.kwargs.get('pos'),
-                            weight='weight' if weighted else None,
-                            callback=callback))
+
+        def run_fr(G):
+            pos = self.kwargs.get('pos')
+            if pos is not None and pos.shape[0] != G.number_of_nodes():
+                pos = None
+            return fruchterman_reingold_layout(G,
+                                               iterations=50,
+                                               pos=pos,
+                                               weight='weight' if weighted else None,
+                                               callback=callback)
+        self._layout(run_fr)
 
     def _layout(self, layout_func):
         def pos_array(pos):

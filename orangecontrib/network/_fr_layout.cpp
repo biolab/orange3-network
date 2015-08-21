@@ -2259,7 +2259,7 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
  *             if n in pos:
  *                 pos_arr[i] = np.asarray(pos[n])             # <<<<<<<<<<<<<<
  *     elif isinstance(pos, np.ndarray):
- *         pos_arr[...] = pos
+ *         pos_arr = pos
  */
         __pyx_t_8 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 55; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
         __Pyx_GOTREF(__pyx_t_8);
@@ -2317,7 +2317,7 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
  *             if n in pos:
  *                 pos_arr[i] = np.asarray(pos[n])
  *     elif isinstance(pos, np.ndarray):             # <<<<<<<<<<<<<<
- *         pos_arr[...] = pos
+ *         pos_arr = pos
  *     fixed = np.array(fixed or [], dtype=np.int32)
  */
   __pyx_t_1 = __Pyx_TypeCheck(__pyx_v_pos, ((PyObject*)__pyx_ptype_5numpy_ndarray)); 
@@ -2327,18 +2327,19 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
     /* "orangecontrib/network/_fr_layout.pyx":57
  *                 pos_arr[i] = np.asarray(pos[n])
  *     elif isinstance(pos, np.ndarray):
- *         pos_arr[...] = pos             # <<<<<<<<<<<<<<
+ *         pos_arr = pos             # <<<<<<<<<<<<<<
  *     fixed = np.array(fixed or [], dtype=np.int32)
  * 
  */
-    if (unlikely(PyObject_SetItem(__pyx_v_pos_arr, Py_Ellipsis, __pyx_v_pos) < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_INCREF(__pyx_v_pos);
+    __Pyx_DECREF_SET(__pyx_v_pos_arr, __pyx_v_pos);
     goto __pyx_L7;
   }
   __pyx_L7:;
 
   /* "orangecontrib/network/_fr_layout.pyx":58
  *     elif isinstance(pos, np.ndarray):
- *         pos_arr[...] = pos
+ *         pos_arr = pos
  *     fixed = np.array(fixed or [], dtype=np.int32)             # <<<<<<<<<<<<<<
  * 
  *     # Prepare edges info as sparse COO matrix parts

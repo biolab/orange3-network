@@ -54,7 +54,7 @@ def fruchterman_reingold_layout(G,
             if n in pos:
                 pos_arr[i] = np.asarray(pos[n])
     elif isinstance(pos, np.ndarray):
-        pos_arr[...] = pos
+        pos_arr = pos
     fixed = np.array(fixed or [], dtype=np.int32)
 
     # Prepare edges info as sparse COO matrix parts
