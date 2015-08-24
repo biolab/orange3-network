@@ -8,6 +8,7 @@ from PyQt4.QtCore import *
 
 from Orange import data
 from Orange.util import scale
+from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 from Orange.projection.manifold import MDS
 
@@ -44,6 +45,8 @@ class NodePen:
     HIGHLIGHTED = pg.mkPen(NodePenColor.HIGHLIGHTED, width=3)
 
 DEFAULT_EDGE_PEN = pg.mkPen('#ccc')
+
+ANIMATION_ITERATIONS = 50
 
 
 class NetworkCurve:
@@ -330,6 +333,7 @@ class OWNxCanvas(pg.GraphItem):
     def __init__(self, parent=None, name="Net Explorer"):
         super().__init__()
         self.setParent(parent)
+        self.widget = parent
 
         self.kwargs = {'pen': DEFAULT_EDGE_PEN}
         self.textItems = []
@@ -704,13 +708,14 @@ class OWNxCanvas(pg.GraphItem):
     def _animate(self, newpos):
         if not self.graph: return
         self.is_animating = True
-        n_iteration = 50
+        n_iteration = ANIMATION_ITERATIONS
         pos = self.kwargs['pos']
         delta = (newpos - pos) / n_iteration
         if np.abs(delta).sum() > 1e-4:  # If not already there
             while self.is_animating and n_iteration:
                 self.kwargs['pos'] += delta
                 self.replot()
+                self.animation_progress.advance()
                 n_iteration -= 1
         self.is_animating = False
 
@@ -718,6 +723,7 @@ class OWNxCanvas(pg.GraphItem):
         def callback(pos):
             self.kwargs['pos'] = pos
             self.replot()
+            self.animation_progress.advance()
             return self.is_animating
 
         from .._fr_layout import fruchterman_reingold_layout
@@ -728,7 +734,7 @@ class OWNxCanvas(pg.GraphItem):
             if pos is not None and pos.shape[0] != G.number_of_nodes():
                 pos = None
             return fruchterman_reingold_layout(G,
-                                               iterations=50,
+                                               iterations=ANIMATION_ITERATIONS,
                                                pos=pos,
                                                weight='weight' if weighted else None,
                                                callback=callback)
@@ -740,8 +746,10 @@ class OWNxCanvas(pg.GraphItem):
             return np.array([pos[n] for n in sorted(self.graph)])
         def _relayout():
             if not self.graph: return []
+            self.animation_progress = gui.ProgressBar(self.widget, ANIMATION_ITERATIONS)
             pos = pos_array(layout_func(self.graph))
-            return self._animate(pos)
+            self._animate(pos)
+            self.animation_progress.finish()
         self.layout_func = _relayout
         _relayout()
 
