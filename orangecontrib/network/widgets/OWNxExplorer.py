@@ -274,7 +274,7 @@ class OWNxExplorer(widget.OWWidget):
         self.nodeSizeCombo = gui.comboBox(
             hb, self, "node_size_attr", callback=self.set_node_sizes)
         self.maxNodeSizeSpin = gui.spin(
-            hb, self, "maxNodeSize", 20, 200, step=10, label="Max:",
+            hb, self, "maxNodeSize", 5, 200, step=10, label="Max:",
             callback=self.set_node_sizes)
         self.maxNodeSizeSpin.setValue(50)
         self.invertNodeSizeCheck = gui.checkBox(

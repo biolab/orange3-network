@@ -477,7 +477,7 @@ class OWNxCanvas(pg.GraphItem):
         self.replot()
 
     def set_node_sizes(self, attribute, max_size, invert):
-        MIN_SIZE = 8
+        MIN_SIZE = 5
         try:
             table = self.graph.items()
             if attribute.is_string:
