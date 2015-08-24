@@ -481,13 +481,15 @@ class OWNxCanvas(pg.GraphItem):
         try:
             table = self.graph.items()
             if attribute.is_string:
-                values = np.array([len(i.list[0].split(',')) for i in table[:, attribute]])
+                values = np.array([i.list[0].count(',') + 1
+                                   for i in table[:, attribute]])
             else:
                 values = np.array(table[:, attribute]).T[0]
         except (AttributeError, TypeError, KeyError):
             self.kwargs['size'] = MIN_SIZE
         else:
             if invert:
+                values += np.nanmin(values) + 1
                 values = 1/values
             k, n = np.polyfit([np.nanmin(values), np.nanmax(values)], [MIN_SIZE, max_size], 1)
             sizes = values * k + n
