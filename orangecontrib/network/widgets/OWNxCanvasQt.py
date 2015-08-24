@@ -448,12 +448,15 @@ class OWNxCanvas(pg.GraphItem):
         table = self.graph.items()
         if not table:
             return
-        values = table[:, attribute].X[:, 0]
+        if table.domain.class_var == attribute:
+            values = table[:, attribute].Y
+        else:
+            values = table[:, attribute].X[:, 0]
         if attribute.is_continuous:
             colors = CONTINUOUS_PALETTE[scale(values)]
         elif attribute.is_discrete:
             DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
-            colors = (DISCRETE_PALETTE[i] for i in values)
+            colors = DISCRETE_PALETTE[values]
         brushes = [QBrush(qcolor) for qcolor in colors]
         self.kwargs['brush'] = brushes
         self.replot()
