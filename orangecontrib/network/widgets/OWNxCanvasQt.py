@@ -713,10 +713,12 @@ class OWNxCanvas(pg.GraphItem):
         def callback(pos):
             self.kwargs['pos'] = pos
             self.replot()
+            return self.is_animating
 
         from .._fr_layout import fruchterman_reingold_layout
 
         def run_fr(G):
+            self.is_animating = True
             pos = self.kwargs.get('pos')
             if pos is not None and pos.shape[0] != G.number_of_nodes():
                 pos = None

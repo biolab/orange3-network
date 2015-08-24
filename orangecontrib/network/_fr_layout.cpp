@@ -3381,6 +3381,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
   double __pyx_t_48;
   Py_ssize_t __pyx_t_49;
   Py_ssize_t __pyx_t_50;
+  int __pyx_t_51;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -4061,8 +4062,8 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
  *                                                         temperature[iteration])
  *             # Optionally call back with the new positions
  *             if have_callback:             # <<<<<<<<<<<<<<
- *                 with gil: callback(np.asarray(pos))
- *             # If temperature too cool, finish early
+ *                 with gil:
+ *                     if not callback(np.asarray(pos)):
  */
           __pyx_t_9 = (__pyx_v_have_callback != 0);
           if (__pyx_t_9) {
@@ -4070,21 +4071,29 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
             /* "orangecontrib/network/_fr_layout.pyx":174
  *             # Optionally call back with the new positions
  *             if have_callback:
- *                 with gil: callback(np.asarray(pos))             # <<<<<<<<<<<<<<
- *             # If temperature too cool, finish early
- *             if temperature[iteration] < .005:
+ *                 with gil:             # <<<<<<<<<<<<<<
+ *                     if not callback(np.asarray(pos)):
+ *                         break
  */
             {
                 #ifdef WITH_THREAD
                 PyGILState_STATE __pyx_gilstate_save = PyGILState_Ensure();
                 #endif
                 /*try:*/ {
-                  __pyx_t_6 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+
+                  /* "orangecontrib/network/_fr_layout.pyx":175
+ *             if have_callback:
+ *                 with gil:
+ *                     if not callback(np.asarray(pos)):             # <<<<<<<<<<<<<<
+ *                         break
+ *             # If temperature too cool, finish early
+ */
+                  __pyx_t_6 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_6);
-                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_1);
                   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-                  __pyx_t_6 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_6 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_6);
                   __pyx_t_3 = NULL;
                   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_1))) {
@@ -4097,17 +4106,17 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
                     }
                   }
                   if (!__pyx_t_3) {
-                    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                     __Pyx_GOTREF(__pyx_t_4);
                   } else {
-                    __pyx_t_5 = PyTuple_New(1+1); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_5 = PyTuple_New(1+1); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_5);
                     PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_3); __Pyx_GIVEREF(__pyx_t_3); __pyx_t_3 = NULL;
                     PyTuple_SET_ITEM(__pyx_t_5, 0+1, __pyx_t_6);
                     __Pyx_GIVEREF(__pyx_t_6);
                     __pyx_t_6 = 0;
-                    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_4);
                     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                   }
@@ -4124,29 +4133,56 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
                     }
                   }
                   if (!__pyx_t_5) {
-                    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
                     __Pyx_GOTREF(__pyx_t_2);
                   } else {
-                    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_6);
                     PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_5); __Pyx_GIVEREF(__pyx_t_5); __pyx_t_5 = NULL;
                     PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_4);
                     __Pyx_GIVEREF(__pyx_t_4);
                     __pyx_t_4 = 0;
-                    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_2);
                     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                   }
                   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+                  __pyx_t_9 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_9 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                  __pyx_t_51 = ((!__pyx_t_9) != 0);
+                  if (__pyx_t_51) {
+
+                    /* "orangecontrib/network/_fr_layout.pyx":176
+ *                 with gil:
+ *                     if not callback(np.asarray(pos)):
+ *                         break             # <<<<<<<<<<<<<<
+ *             # If temperature too cool, finish early
+ *             if temperature[iteration] < .005:
+ */
+                    goto __pyx_L35_break;
+                  }
                 }
+
+                /* "orangecontrib/network/_fr_layout.pyx":174
+ *             # Optionally call back with the new positions
+ *             if have_callback:
+ *                 with gil:             # <<<<<<<<<<<<<<
+ *                     if not callback(np.asarray(pos)):
+ *                         break
+ */
                 /*finally:*/ {
                   /*normal exit:*/{
                     #ifdef WITH_THREAD
                     PyGILState_Release(__pyx_gilstate_save);
                     #endif
                     goto __pyx_L38;
+                  }
+                  __pyx_L35_break: {
+                    #ifdef WITH_THREAD
+                    PyGILState_Release(__pyx_gilstate_save);
+                    #endif
+                    goto __pyx_L7_break;
                   }
                   __pyx_L37_error: {
                     #ifdef WITH_THREAD
@@ -4161,18 +4197,18 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
           }
           __pyx_L33:;
 
-          /* "orangecontrib/network/_fr_layout.pyx":176
- *                 with gil: callback(np.asarray(pos))
+          /* "orangecontrib/network/_fr_layout.pyx":178
+ *                         break
  *             # If temperature too cool, finish early
  *             if temperature[iteration] < .005:             # <<<<<<<<<<<<<<
  *                 break
  *     return pos
  */
           __pyx_t_17 = __pyx_v_iteration;
-          __pyx_t_9 = (((*((double *) ( /* dim=0 */ (__pyx_v_temperature.data + __pyx_t_17 * __pyx_v_temperature.strides[0]) ))) < .005) != 0);
-          if (__pyx_t_9) {
+          __pyx_t_51 = (((*((double *) ( /* dim=0 */ (__pyx_v_temperature.data + __pyx_t_17 * __pyx_v_temperature.strides[0]) ))) < .005) != 0);
+          if (__pyx_t_51) {
 
-            /* "orangecontrib/network/_fr_layout.pyx":177
+            /* "orangecontrib/network/_fr_layout.pyx":179
  *             # If temperature too cool, finish early
  *             if temperature[iteration] < .005:
  *                 break             # <<<<<<<<<<<<<<
@@ -4208,7 +4244,7 @@ __pyx_t_15.strides[1] = __pyx_v_disp.strides[1];
       }
   }
 
-  /* "orangecontrib/network/_fr_layout.pyx":178
+  /* "orangecontrib/network/_fr_layout.pyx":180
  *             if temperature[iteration] < .005:
  *                 break
  *     return pos             # <<<<<<<<<<<<<<

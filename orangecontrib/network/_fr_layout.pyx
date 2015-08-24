@@ -171,7 +171,9 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                                         temperature[iteration])
             # Optionally call back with the new positions
             if have_callback:
-                with gil: callback(np.asarray(pos))
+                with gil:
+                    if not callback(np.asarray(pos)):
+                        break
             # If temperature too cool, finish early
             if temperature[iteration] < .005:
                 break
