@@ -176,10 +176,11 @@ class BaseGraph():
                 if i.name not in ('u', 'v')]
 
     def subgraph(self, nbunch):
-        G = self.__class__.__bases__[1].subgraph(self, nbunch)
-        items = self.items()[sorted(G.nodes()), :]
+        G = super().subgraph(nbunch)
         G = G.to_orange_network()
-        G.set_items(items)
+        if self.items():
+            items = self.items()[sorted(G.nodes()), :]
+            G.set_items(items)
         return G
 
 class Graph(BaseGraph, nx.Graph):

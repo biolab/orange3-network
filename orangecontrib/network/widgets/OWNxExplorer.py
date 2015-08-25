@@ -45,6 +45,14 @@ class SelectionMode:
     = range(8)  # FML
 
 
+class Output:
+    SUBGRAPH = 'Selected sub-network'
+    DISTANCE = 'Distance matrix'
+    SELECTED = 'Selected items'
+    HIGHLIGHTED = 'Highlighted items'
+    REMAINING = 'Remaining items'
+
+
 class OWNxExplorer(widget.OWWidget):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
@@ -56,11 +64,11 @@ class OWNxExplorer(widget.OWWidget):
               ("Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
               ("Net View", network.NxView, "set_network_view")]
 
-    outputs = [("Selected Network", network.Graph),
-               ("Distance Matrix", Orange.misc.DistMatrix),
-               ("Marked Items", Table),
-               ("Selected Items", Table),
-               ("Other Items", Table)]
+    outputs = [(Output.SUBGRAPH, network.Graph),
+               (Output.DISTANCE, Orange.misc.DistMatrix),
+               (Output.SELECTED, Table),
+               (Output.HIGHLIGHTED, Table),
+               (Output.REMAINING, Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
     "maxNodeSize", "invertNodeSize", "optMethod",
@@ -337,7 +345,7 @@ class OWNxExplorer(widget.OWWidget):
         #~ self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=(lambda h=7: self.set_mark_mode(h)))
         self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
 
-        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output selected nodes')
+        gui.auto_commit(ribg, self, 'do_auto_commit', 'Output changes')
 
         #ib = gui.widgetBox(self.markTab, "General", orientation="vertical")
         #self.checkSendMarkedNodes = True
@@ -371,10 +379,8 @@ class OWNxExplorer(widget.OWWidget):
 
         self.setMinimumWidth(900)
 
-        self.connect(self.networkCanvas, SIGNAL("selection_changed()"), self.send_data)
-
     def commit(self):
-        self.send_marked_nodes()
+        self.send_data()
 
     def hide_selection(self):
         nodes = set(self.graph.nodes()).difference(self.networkCanvas.selected_nodes())
@@ -546,49 +552,24 @@ class OWNxExplorer(widget.OWWidget):
             network.readwrite.write(self.graph, fn)
 
     def send_data(self):
-        selected_nodes = set(self.networkCanvas.selectedNodes)
-        self.nSelected = len(selected_nodes)
+        selected = self.networkCanvas.selectedNodes
+        highlighted = self.networkCanvas.highlightedNodes
 
-        if len(self.signalManager.getLinks(self, None, \
-            "Selected Items", None)) > 0 or \
-                len(self.signalManager.getLinks(self, None, \
-                    "Unselected Items", None)) > 0 or \
-                        len(self.signalManager.getLinks(self, None, \
-                            "Selected Network", None)) > 0:
+        self.send(Output.SUBGRAPH,
+                  self.graph.subgraph(selected) if selected else None)
+        self.send(Output.DISTANCE,
+                  self.items_matrix.submatrix(sorted(selected)) if self.items_matrix is not None and selected else None)
 
-            # signal connected
-            graph = self.graph_base.subgraph(selected_nodes)
-
-            if graph is not None:
-                self.send("Selected Items", graph.items())
-
-                if len(self.signalManager.getLinks(self, None, \
-                                            "Unselected Items", None)) > 0:
-                    nodes = self.networkCanvas.not_selected_nodes()
-                    if len(nodes) > 0 and self.graph_base.items() is not None:
-                        self.send("Other Items", self.graph_base.items().getitems(nodes))
-                    else:
-                        self.send("Other Items", None)
-
-                self.send("Selected Network", graph)
-            else:
-                self.send("Selected Items", None)
-                self.send("Other Items", None)
-                self.send("Selected Network", None)
-
-        if len(self.signalManager.getLinks(self, None, \
-                            "Selected Items Distance Matrix", None)) > 0:
-            # signal connected
-            matrix = None if self.items_matrix is None else self.items_matrix.getitems(selected_nodes)
-            self.send("Distance Matrix", matrix)
-
-    def send_marked_nodes(self):
-        if (len(self.networkCanvas.selectedNodes) and
-            self.graph and self.graph.items()):
-            items = self.graph.items()[sorted(self.networkCanvas.selectedNodes), :]
-            self.send("Marked Items", items)
+        items = self.graph.items()
+        if not items:
+            self.send(Output.SELECTED, None)
+            self.send(Output.HIGHLIGHTED, None)
+            self.send(Output.REMAINING, None)
         else:
-            self.send("Marked Items", None)
+            self.send(Output.SELECTED, items[sorted(selected), :] if selected else None)
+            self.send(Output.HIGHLIGHTED, items[sorted(highlighted), :] if highlighted else None)
+            remaining = sorted(set(self.graph) - selected - highlighted)
+            self.send(Output.REMAINING, items[remaining, :] if remaining else None)
 
     def _set_combos(self):
         self._clear_combos()
