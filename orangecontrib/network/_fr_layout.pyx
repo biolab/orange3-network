@@ -60,8 +60,11 @@ def fruchterman_reingold_layout(G,
     # Prepare edges info as sparse COO matrix parts
     nodelist = sorted(G)
     index = dict(zip(nodelist, range(len(nodelist))))
-    Erow, Ecol, Edata = zip(*[(index[u], index[v], d.get(weight, 1.))
-                              for u, v, d in G.edges_iter(nodelist, data=True)])
+    try:
+        Erow, Ecol, Edata = zip(*[(index[u], index[v], d.get(weight, 1.))
+                                  for u, v, d in G.edges_iter(nodelist, data=True)])
+    except ValueError:  # No edges
+        Erow, Ecol, Edata = [], [], []
     Erow = np.asarray(Erow, dtype=np.int32)
     Ecol = np.asarray(Ecol, dtype=np.int32)
     Edata = np.asarray(Edata, dtype=np.float64)
