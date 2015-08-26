@@ -107,7 +107,7 @@ class OWNxHist():
         self.generateGraph()
 
     def setMatrix(self, data):
-        if data == None:
+        if data is None:
             self.matrix = None
             self.histogram.setValues([])
             self.generateGraph()
@@ -181,7 +181,7 @@ class OWNxHist():
         if N_changed:
             self.netOption = 1
 
-        if self.matrix == None:
+        if self.matrix is None:
             if hasattr(self, "infoa"):
                 self.infoa.setText("No data loaded.")
             if hasattr(self, "infob"):

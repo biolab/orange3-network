@@ -441,12 +441,13 @@ class OWNxCanvas(pg.GraphItem):
 
         return colorIndices, colorIndex, minValue, maxValue
 
-    def set_node_colors(self, attribute=None):
+    def set_node_colors(self, attribute=None, replot=True):
         assert not attribute or isinstance(attribute, data.Variable)
 
         if not attribute:
             self.kwargs.pop('brush', None)
-            self.replot()
+            if replot:
+                self.replot()
             return
 
         table = self.graph.items()
@@ -463,7 +464,8 @@ class OWNxCanvas(pg.GraphItem):
             colors = DISCRETE_PALETTE[values]
         brushes = [QBrush(qcolor) for qcolor in colors]
         self.kwargs['brush'] = brushes
-        self.replot()
+        if replot:
+            self.replot()
 
     def set_node_labels(self, attributes=[]):
         assert isinstance(attributes, list)
@@ -480,7 +482,7 @@ class OWNxCanvas(pg.GraphItem):
                 item.setText('')
         self.replot()
 
-    def set_node_sizes(self, attribute, max_size, invert):
+    def set_node_sizes(self, attribute=None, max_size=None, invert=False, replot=True):
         MIN_SIZE = 5
         try:
             table = self.graph.items()
@@ -500,7 +502,8 @@ class OWNxCanvas(pg.GraphItem):
             sizes[np.isnan(sizes)] = np.nanmean(sizes)
             self.kwargs['size'] = sizes
         finally:
-            self.replot()
+            if replot:
+                self.replot()
 
     def set_edge_sizes(self, replot=True):
         self.kwargs['pen'] = DEFAULT_EDGE_PEN
@@ -662,7 +665,9 @@ class OWNxCanvas(pg.GraphItem):
                 pens[i] = NodePen.SELECTED
             self.kwargs['symbolPen'] = pens
             # Set edge weights
-            self.set_edge_sizes(False)
+            self.set_edge_sizes(replot=False)
+            self.set_node_colors(replot=False)
+            self.set_node_sizes(replot=False)
             # Position nodes according to selected layout optimization
             self.layout_func()
         self.replot()

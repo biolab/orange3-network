@@ -301,10 +301,12 @@ class OWNxExplorer(widget.OWWidget):
             callback=self._clicked_tooltip_lstbox)
 
         eb = gui.widgetBox(self.displayTab, "Edges", orientation="vertical")
-        gui.checkBox(eb, self, 'networkCanvas.relative_edge_widths', 'Relative edge widths',
-                     callback=self.networkCanvas.set_edge_sizes)
-        gui.checkBox(eb, self, 'networkCanvas.show_edge_weights', 'Show edge weights',
-                     callback=self.networkCanvas.set_edge_labels)
+        self.checkbox_relative_edges = gui.checkBox(
+            eb, self, 'networkCanvas.relative_edge_widths', 'Relative edge widths',
+            callback=self.networkCanvas.set_edge_sizes)
+        self.checkbox_show_weights = gui.checkBox(
+            eb, self, 'networkCanvas.show_edge_weights', 'Show edge weights',
+            callback=self.networkCanvas.set_edge_labels)
         self.edgeColorCombo = gui.comboBox(
             eb, self, "edgeColor", label='Color by:', orientation='horizontal',
             callback=self.set_edge_colors)
@@ -408,15 +410,15 @@ class OWNxExplorer(widget.OWWidget):
                 items[v][att] = str(self.editValue)
 
     def set_items_distance_matrix(self, matrix):
+        assert matrix is None or isinstance(matrix, Orange.misc.DistMatrix)
         self.error()
         self.warning()
         self.information()
 
-        if matrix is None:
-            self.items_matrix = None
-            return
+        self.items_matrix = matrix
 
-        assert isinstance(matrix, Orange.misc.DistMatrix)
+        if matrix is None:
+            return
 
         if self.graph_base is None:
             self.networkCanvas.items_matrix = None
@@ -429,7 +431,6 @@ class OWNxExplorer(widget.OWWidget):
             self.networkCanvas.items_matrix = None
             return
 
-        self.items_matrix = matrix
         self.networkCanvas.items_matrix = matrix
 
         if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
@@ -730,6 +731,9 @@ class OWNxExplorer(widget.OWWidget):
             self.set_graph_none()
             return
 
+        all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges_iter(data='weight'))))
+        self.checkbox_show_weights.setEnabled(not all_edges_equal)
+        self.checkbox_relative_edges.setEnabled(not all_edges_equal)
         self.optCombo.model().item(0).setEnabled(bool(graph.items()))
 
         if graph.number_of_nodes() < 2:
