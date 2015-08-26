@@ -6,6 +6,7 @@ import networkx as nx
 import sys
 
 import Orange
+from Orange.data import Table, Domain
 from Orange.widgets import gui, widget
 import orangecontrib.network as network
 
@@ -395,9 +396,11 @@ class OWNxAnalysis(widget.OWWidget):
                     analdata.append(self.analdata[name])
                     vars.append(var)
 
-                analitems  = Orange.data.Table(Orange.data.Domain(vars),
-                                               [list(t) for t in zip(*analdata)])
-                self.graph.set_items(Orange.data.Table.concatenate((analitems, self.items_analysis)))
+                table  = Table(Domain(vars),
+                                      [list(t) for t in zip(*analdata)])
+                if self.items_analysis:
+                    table = Table.concatenate((table, self.items_analysis))
+                self.graph.set_items(table)
 
             self.send("Network", self.graph)
             self.send("Items", self.graph.items())
