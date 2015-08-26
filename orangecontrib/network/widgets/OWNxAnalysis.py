@@ -200,9 +200,7 @@ class OWNxAnalysis(widget.OWWidget):
 
         hb = gui.widgetBox(self.controlArea, None, orientation='horizontal')
         self.btnCommit = gui.button(hb, self, "Commit", callback=self.analyze, toggleButton=1)
-        self.btnStopC = gui.button(hb, self, "Stop current", callback=lambda current=True: self.stop_job(current))
-        self.btnStopA = gui.button(hb, self, "Stop all", callback=lambda current=False: self.stop_job(current))
-        self.btnStopC.setEnabled(False)
+        self.btnStopA = gui.button(hb, self, "Cancel", callback=lambda: self.stop_job(current=False))
         self.btnStopA.setEnabled(False)
 
         #~ self.reportButton = gui.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
@@ -255,7 +253,6 @@ class OWNxAnalysis(widget.OWWidget):
         if len(self.job_queue) > 0 or len(self.job_working) > 0:
             return
 
-        self.btnStopC.setEnabled(True)
         self.btnStopA.setEnabled(True)
         self.clear_labels()
         qApp.processEvents()
@@ -286,7 +283,7 @@ class OWNxAnalysis(widget.OWWidget):
         setattr(self, "lbl_" + job.name, "   waiting")
 
     def start_job(self):
-        max_jobs = max(1, QThread.idealThreadCount() - 1)
+        max_jobs = max(1, QThread.idealThreadCount())
 
         self.mutex.lock()
         if len(self.job_queue) > 0 and len(self.job_working) < max_jobs:
@@ -363,10 +360,11 @@ class OWNxAnalysis(widget.OWWidget):
                     self.job_queue.remove(job)
                     setattr(self, "lbl_" + name, "terminated")
 
-            for job in self.job_working:
-                if name == job.name:
-                    job.is_terminated = True
-                    job.terminate()
+            #~ # This was commented out because it might have hanged
+            #~ for job in self.job_working:
+                #~ if name == job.name:
+                    #~ job.is_terminated = True
+                    #~ job.terminate()
         else:
             if not current:
                 while len(self.job_queue) > 0:
@@ -376,16 +374,16 @@ class OWNxAnalysis(widget.OWWidget):
                     job.wait()
                     setattr(self, "lbl_" + job.name, "terminated")
 
-            for job in self.job_working:
-                job.is_terminated = True
-                job.terminate()
+            #~ # This was commented out because it hanged
+            #~ for job in self.job_working:
+                #~ job.is_terminated = True
+                #~ job.terminate()
 
         self.mutex.unlock()
 
     def send_data(self):
         if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
             self.btnCommit.setChecked(False)
-            self.btnStopC.setEnabled(False)
             self.btnStopA.setEnabled(False)
 
             if self.analdata is not None and len(self.analdata) > 0 and \
