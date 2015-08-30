@@ -5,17 +5,16 @@ import os
 from setuptools import find_packages
 from numpy.distutils.core import setup
 
-NAME = 'Orange-Network'
+NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '0.3.4'
+VERSION = '1.0.0'
 
-DESCRIPTION = 'Orange Network add-on for Orange 3 data mining software package.'
+DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
-AUTHOR = 'Miha Stajdohar, FRI UL'
+AUTHOR = 'Laboratory of Bioinformatics, FRI UL'
 AUTHOR_EMAIL = 'miha.stajdohar@gmail.com'
-URL = 'http://orange.biolab.si/addons/'
-DOWNLOAD_URL = 'https://bitbucket.org/mstajdohar/orange-network/downloads'
+URL = 'https://github.com/biolab/orange3-network'
 LICENSE = 'GPLv3'
 
 KEYWORDS = (
@@ -60,7 +59,6 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'networkx>=1.10',
-    'pyparsing>=2.0.1'
 ),
 
 EXTRAS_REQUIRE = {
@@ -114,7 +112,6 @@ if __name__ == '__main__':
         author = AUTHOR,
         author_email = AUTHOR_EMAIL,
         url = URL,
-        download_url = DOWNLOAD_URL,
         license = LICENSE,
         keywords = KEYWORDS,
         classifiers = CLASSIFIERS,
