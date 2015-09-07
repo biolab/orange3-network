@@ -34,7 +34,6 @@ CLASSIFIERS = (
     'Environment :: X11 Applications :: Qt',
     'Environment :: Console',
     'Environment :: Plugins',
-    'Framework :: Orange',
     'Programming Language :: Python',
     'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: OS Independent',
