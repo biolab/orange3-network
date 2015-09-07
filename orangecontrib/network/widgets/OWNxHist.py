@@ -123,7 +123,8 @@ class OWNxHist():
         self.histogram.setValues(values)
 
         # Magnitude of the spinbox's step is data-dependent
-        step = round((values.std() / 5), -1)
+        std_frac = values.std() / 5
+        step = round(std_frac, 2 - len(str(int(std_frac))))
         self.spin_low.setSingleStep(step)
         self.spin_high.setSingleStep(step)
 
