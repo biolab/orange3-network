@@ -71,8 +71,9 @@ class OWNxHist():
         gui.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
         ribg.layout().addStretch(1)
         # Options
-        self.attrColor = ""
-        ribg = gui.radioButtonsInBox(parent, self, "netOption", [], "Node selection", callback=self.generateGraph)
+        ribg = gui.radioButtonsInBox(parent, self, "netOption",
+                                     box="Node selection",
+                                     callback=self.generateGraph)
         gui.appendRadioButton(ribg, "Keep all nodes")
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Components with at least nodes", insertInto=hb)
@@ -90,7 +91,8 @@ class OWNxHist():
         #if str(self.netOption) != '3':
         #    self.attributeCombo.box.setEnabled(False)
 
-        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", [], "Edge weights", callback=self.generateGraph)
+        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", box="Edge weights",
+                                     callback=self.generateGraph)
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
         gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
