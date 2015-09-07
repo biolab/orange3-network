@@ -175,6 +175,7 @@ class OWNxHist():
 
     def spinboxFromHistogramRegion(self):
         self.spinLowerThreshold, self.spinUpperThreshold = self.histogram.getRegion()
+        self.generateGraph()
 
     def generateGraph(self, N_changed=False):
         self.error()
@@ -354,7 +355,7 @@ class Histogram(pg.PlotWidget):
             self.curve.setData([0, 1], [0])
             self.setBoundary(0, 0)
             return
-        nbins = min(np.sqrt(len(values)), len(values))
+        nbins = int(min(np.sqrt(len(values)), 50))
         freq, edges = np.histogram(values, bins=nbins)
         self.curve.setData(edges, freq)
         self.setBoundary(edges[0], edges[-1])
