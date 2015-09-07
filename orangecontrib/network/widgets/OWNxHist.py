@@ -109,18 +109,17 @@ class OWNxHist():
         self.generateGraph()
 
     def setMatrix(self, data):
+        self.matrix = data
         if data is None:
-            self.matrix = None
             self.histogram.setValues([])
             self.generateGraph()
             return
 
-        if not hasattr(data, "items") or data.items is None:
-            setattr(data, "items", [i for i in range(data.shape[0])])
+        if self.matrix.row_items is None:
+            self.matrix.row_items = list(range(self.matrix.shape[0]))
 
-        self.matrix = data
         # draw histogram
-        values = data.flat
+        values = self.matrix.flat
         # print("values:", values)
         self.histogram.setValues(values)
 
@@ -134,27 +133,6 @@ class OWNxHist():
         upp = max(values)
 
         self.spinLowerThreshold = self.spinUpperThreshold = low - (0.03 * (upp - low))
-
-        # self.attributeCombo.clear()
-        vars = []
-
-        if hasattr(self.matrix, "items"):
-
-            if isinstance(self.matrix.items, Orange.data.Table):
-                vars = list(self.matrix.items.domain.variables)
-
-                metas = self.matrix.items.domain.getmetas(0)
-                for i, var in metas.items():
-                    vars.append(var)
-
-        self.icons = gui.attributeIconDict
-
-        # for var in vars:
-        #     try:
-        #         if var.varType != 7: # if not Orange.feature.Python
-        #             self.attributeCombo.addItem(self.icons[var.varType], unicode(var.name))
-        #     except:
-        #         print "Error adding", var, "to the attribute combo."
 
         self.setPercentil()
         self.generateGraph()
@@ -212,7 +190,7 @@ class OWNxHist():
             graph.add_nodes_from(range(self.matrix.shape[0]))
             matrix = self.matrix
 
-            if hasattr(self.matrix, "row_items") and self.matrix.row_items is not None:
+            if matrix is not None and matrix.row_items is not None:
                 if isinstance(self.matrix.row_items, Orange.data.Table):
                     graph.set_items(self.matrix.row_items)
                 else:
