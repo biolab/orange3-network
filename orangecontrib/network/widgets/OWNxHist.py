@@ -200,23 +200,20 @@ class OWNxHist():
             self.warning(0)
             if self.kNN >= self.matrix.shape[0]:
                 self.warning(0, "kNN larger then supplied distance matrix dimension. Using k = %i" % (self.matrix.shape[0] - 1))
-            #nedges = graph.fromDistanceMatrix(self.matrix, self.spinLowerThreshold, self.spinUpperThreshold, min(self.kNN, self.matrix.shape[0] - 1), self.andor)
 
             def edges_from_distance_matrix(matrix, lower, upper, knn):
                 rows, cols = matrix.shape
-                if knn:
-                    for i in range(rows):
-                        for j in np.argsort(matrix[i])[:knn]:
+                for i in range(rows):
+                    for j in range(i + 1, cols):
+                        if lower <= matrix[i, j] <= upper:
                             yield i, j, matrix[i, j]
-                else:
-                    for i in range(rows):
-                        for j in range(i + 1, cols):
-                            if lower <= matrix[i, j] <= upper:
-                                yield i, j, matrix[i, j]
+                    if not knn: continue
+                    for j in np.argsort(matrix[i])[:knn]:
+                        yield i, j, matrix[i, j]
 
             edge_list = edges_from_distance_matrix(
                 self.matrix, self.spinLowerThreshold, self.spinUpperThreshold,
-                min(self.kNN, self.matrix.shape[0] - 1))
+                min(self.kNN, self.matrix.shape[0] - 1) if self.include_knn else 0)
             if self.dstWeight == 1:
                 graph.add_edges_from(((u, v, {'weight':1 - d}) for u, v, d in edge_list))
             else:
