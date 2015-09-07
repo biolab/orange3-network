@@ -208,11 +208,11 @@ class OWNxHist():
             graph.add_nodes_from(range(self.matrix.shape[0]))
             matrix = self.matrix
 
-            if hasattr(self.matrix, "items") and self.matrix.items is not None:
-                if isinstance(self.matrix.items, Orange.data.Table):
-                    graph.set_items(self.matrix.items)
+            if hasattr(self.matrix, "row_items") and self.matrix.row_items is not None:
+                if isinstance(self.matrix.row_items, Orange.data.Table):
+                    graph.set_items(self.matrix.row_items)
                 else:
-                    data = [[str(x)] for x in self.matrix.items]
+                    data = [[str(x)] for x in self.matrix.row_items]
                     items = Orange.data.Table(Orange.data.Domain([], metas=[Orange.data.StringVariable('label')]), data)
                     graph.set_items(items)
 
