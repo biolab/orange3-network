@@ -317,6 +317,26 @@ class OWNxHist():
         self.histogram.setRegion(self.spinLowerThreshold, self.spinUpperThreshold)
 
 
+pg_InfiniteLine = pg.InfiniteLine
+
+class InfiniteLine(pg_InfiniteLine):
+    def paint(self, p, *args):
+        # From orange3-bioinformatics:OWFeatureSelection.py, thanks to @ales-erjavec
+        brect = self.boundingRect()
+        c = brect.center()
+        line = QLineF(brect.left(), c.y(), brect.right(), c.y())
+        t = p.transform()
+        line = t.map(line)
+        p.save()
+        p.resetTransform()
+        p.setPen(self.currentPen)
+        p.drawLine(line)
+        p.restore()
+
+pg.InfiniteLine = InfiniteLine
+pg.graphicsItems.LinearRegionItem.InfiniteLine = InfiniteLine
+
+
 class Histogram(pg.PlotWidget):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, setAspectLocked=True, **kwargs)
