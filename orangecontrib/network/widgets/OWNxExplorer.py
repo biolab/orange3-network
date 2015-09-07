@@ -11,7 +11,7 @@ from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.unsupervised.owmds import torgerson as MDS
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, StringVariable
 import orangecontrib.network as network
 from orangecontrib.network.widgets.OWNxCanvasQt import *
 
@@ -42,7 +42,8 @@ class SelectionMode:
     ANY_NEIGH,  \
     AVG_NEIGH,  \
     MOST_CONN,  \
-    = range(8)  # FML
+    FROM_INPUT  \
+    = range(9)  # FML
 
 
 class Output:
@@ -62,6 +63,7 @@ class OWNxExplorer(widget.OWWidget):
     inputs = [("Network", network.Graph, "set_graph", widget.Default),
               ("Items", Table, "set_items"),
               ("Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
+              ("Item Subset", Table, 'mark_items'),
               ("Net View", network.NxView, "set_network_view")]
 
     outputs = [(Output.SUBGRAPH, network.Graph),
@@ -344,8 +346,15 @@ class OWNxExplorer(widget.OWWidget):
         gui.appendRadioButton(ribg, "... with more connections than average neighbor")
         gui.appendRadioButton(ribg, "... with most connections")
         ib = gui.indentedBox(ribg)
-        #~ self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=(lambda h=7: self.set_mark_mode(h)))
-        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1, label="Number of nodes:", callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
+        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1,
+                                       label="Number of nodes:",
+                                       callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
+        self.markInputRadioButton = gui.appendRadioButton(ribg, "... given in the ItemSubset input signal")
+        self.markInput = 0
+        ib = gui.indentedBox(ribg)
+        self.markInputCombo = gui.comboBox(ib, self, 'markInput',
+                                           callback=lambda: self.set_mark_mode(SelectionMode.FROM_INPUT))
+        self.markInputRadioButton.setEnabled(False)
 
         gui.auto_commit(ribg, self, 'do_auto_commit', 'Output changes')
 
@@ -509,6 +518,20 @@ class OWNxExplorer(widget.OWWidget):
             cut_degree = degrees[cut_ind - 1, 1]
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
             self.networkCanvas.setHighlighted(toMark)
+        elif hubs == SelectionMode.FROM_INPUT:
+            var = self.markInputCombo.currentText()
+            tomark = {}
+            if self.markInputItems is not None:
+                if var == 'ID':
+                    values = {x.id for x in self.markInputItems}
+                    tomark = {x for x in self.graph.nodes()
+                              if self.graph.items()[x].id in values}
+                else:
+                    clean = lambda s: str(s).strip().upper()
+                    values = {clean(x[var]) for x in self.markInputItems}
+                    tomark = {x for x in self.graph.nodes()
+                              if clean(self.graph.items()[x][var]) in values}
+            self.networkCanvas.setHighlighted(tomark)
 
     def keyReleaseEvent(self, ev):
         """On Enter, expand the selected set with the highlighted"""
@@ -846,6 +869,39 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.showWeights = self.showWeights
         self._set_combos()
         #self.networkCanvas.updateData()
+
+    def mark_items(self, items):
+        self.markInputCombo.clear()
+        self.markInputRadioButton.setEnabled(False)
+        self.markInputItems = items
+
+        self.warning()
+
+        if items is None:
+            return
+
+        if self.graph is None or self.graph.items() is None:
+            self.warning('No graph provided or no items attached to the graph.')
+            return
+
+        graph_items = self.graph.items()
+        domain = graph_items.domain
+
+        if len(items) > 0:
+            commonVars = (set(x.name for x in chain(items.domain.variables,
+                                                   items.domain.metas))
+                          & set(x.name for x in chain(domain.variables,
+                                                      domain.metas)))
+
+            self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(DiscreteVariable())], "ID")
+
+            for var in commonVars:
+                orgVar, mrkVar = domain[var], items.domain[var]
+
+                if type(orgVar) == type(mrkVar) == StringVariable:
+                    self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(orgVar)], orgVar.name)
+
+            self.markInputRadioButton.setEnabled(True)
 
     def explore_focused(self):
         sel = self.networkCanvas.selected_nodes()

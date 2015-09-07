@@ -71,8 +71,9 @@ class OWNxHist():
         gui.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
         ribg.layout().addStretch(1)
         # Options
-        self.attrColor = ""
-        ribg = gui.radioButtonsInBox(parent, self, "netOption", [], "Node selection", callback=self.generateGraph)
+        ribg = gui.radioButtonsInBox(parent, self, "netOption",
+                                     box="Node selection",
+                                     callback=self.generateGraph)
         gui.appendRadioButton(ribg, "Keep all nodes")
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Components with at least nodes", insertInto=hb)
@@ -90,7 +91,8 @@ class OWNxHist():
         #if str(self.netOption) != '3':
         #    self.attributeCombo.box.setEnabled(False)
 
-        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", [], "Edge weights", callback=self.generateGraph)
+        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", box="Edge weights",
+                                     callback=self.generateGraph)
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
         gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
@@ -107,23 +109,23 @@ class OWNxHist():
         self.generateGraph()
 
     def setMatrix(self, data):
+        self.matrix = data
         if data is None:
-            self.matrix = None
             self.histogram.setValues([])
             self.generateGraph()
             return
 
-        if not hasattr(data, "items") or data.items is None:
-            setattr(data, "items", [i for i in range(data.shape[0])])
+        if self.matrix.row_items is None:
+            self.matrix.row_items = list(range(self.matrix.shape[0]))
 
-        self.matrix = data
         # draw histogram
-        values = data.flat
+        values = self.matrix.flat
         # print("values:", values)
         self.histogram.setValues(values)
 
         # Magnitude of the spinbox's step is data-dependent
-        step = round((values.std() / 5), -1)
+        std_frac = values.std() / 5
+        step = round(std_frac, 2 - len(str(int(std_frac))))
         self.spin_low.setSingleStep(step)
         self.spin_high.setSingleStep(step)
 
@@ -131,27 +133,6 @@ class OWNxHist():
         upp = max(values)
 
         self.spinLowerThreshold = self.spinUpperThreshold = low - (0.03 * (upp - low))
-
-        # self.attributeCombo.clear()
-        vars = []
-
-        if hasattr(self.matrix, "items"):
-
-            if isinstance(self.matrix.items, Orange.data.Table):
-                vars = list(self.matrix.items.domain.variables)
-
-                metas = self.matrix.items.domain.getmetas(0)
-                for i, var in metas.items():
-                    vars.append(var)
-
-        self.icons = gui.attributeIconDict
-
-        # for var in vars:
-        #     try:
-        #         if var.varType != 7: # if not Orange.feature.Python
-        #             self.attributeCombo.addItem(self.icons[var.varType], unicode(var.name))
-        #     except:
-        #         print "Error adding", var, "to the attribute combo."
 
         self.setPercentil()
         self.generateGraph()
@@ -172,6 +153,7 @@ class OWNxHist():
 
     def spinboxFromHistogramRegion(self):
         self.spinLowerThreshold, self.spinUpperThreshold = self.histogram.getRegion()
+        self.generateGraph()
 
     def generateGraph(self, N_changed=False):
         self.error()
@@ -208,11 +190,11 @@ class OWNxHist():
             graph.add_nodes_from(range(self.matrix.shape[0]))
             matrix = self.matrix
 
-            if hasattr(self.matrix, "items") and self.matrix.items is not None:
-                if isinstance(self.matrix.items, Orange.data.Table):
-                    graph.set_items(self.matrix.items)
+            if matrix is not None and matrix.row_items is not None:
+                if isinstance(self.matrix.row_items, Orange.data.Table):
+                    graph.set_items(self.matrix.row_items)
                 else:
-                    data = [[str(x)] for x in self.matrix.items]
+                    data = [[str(x)] for x in self.matrix.row_items]
                     items = Orange.data.Table(Orange.data.Domain([], metas=[Orange.data.StringVariable('label')]), data)
                     graph.set_items(items)
 
@@ -313,6 +295,26 @@ class OWNxHist():
         self.histogram.setRegion(self.spinLowerThreshold, self.spinUpperThreshold)
 
 
+pg_InfiniteLine = pg.InfiniteLine
+
+class InfiniteLine(pg_InfiniteLine):
+    def paint(self, p, *args):
+        # From orange3-bioinformatics:OWFeatureSelection.py, thanks to @ales-erjavec
+        brect = self.boundingRect()
+        c = brect.center()
+        line = QLineF(brect.left(), c.y(), brect.right(), c.y())
+        t = p.transform()
+        line = t.map(line)
+        p.save()
+        p.resetTransform()
+        p.setPen(self.currentPen)
+        p.drawLine(line)
+        p.restore()
+
+pg.InfiniteLine = InfiniteLine
+pg.graphicsItems.LinearRegionItem.InfiniteLine = InfiniteLine
+
+
 class Histogram(pg.PlotWidget):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, setAspectLocked=True, **kwargs)
@@ -351,7 +353,7 @@ class Histogram(pg.PlotWidget):
             self.curve.setData([0, 1], [0])
             self.setBoundary(0, 0)
             return
-        nbins = min(np.sqrt(len(values)), len(values))
+        nbins = int(min(np.sqrt(len(values)), 50))
         freq, edges = np.histogram(values, bins=nbins)
         self.curve.setData(edges, freq)
         self.setBoundary(edges[0], edges[-1])

@@ -8,7 +8,7 @@ from numpy.distutils.core import setup
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
@@ -34,6 +34,7 @@ CLASSIFIERS = (
     'Environment :: X11 Applications :: Qt',
     'Environment :: Console',
     'Environment :: Plugins',
+    'Framework :: Orange',
     'Programming Language :: Python',
     'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: OS Independent',
@@ -59,6 +60,7 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'networkx>=1.10',
+    'pyqtgraph>=0.9.10',
 ),
 
 EXTRAS_REQUIRE = {
