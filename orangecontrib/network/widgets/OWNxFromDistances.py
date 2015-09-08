@@ -51,7 +51,6 @@ class OWNxFromDistances(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.spinLowerThreshold = 0
         self.spinUpperThreshold = 0
 
         self.matrix = None
@@ -77,17 +76,12 @@ class OWNxFromDistances(widget.OWWidget):
     def addHistogramControls(self):
         boxGeneral = gui.widgetBox(self.controlArea, box="Edges")
         ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
-        ribg.layout().addWidget(QLabel("Distance threshold", self),
-                                4, Qt.AlignVCenter | Qt.AlignLeft)
-        self.spin_low = gui.doubleSpin(ribg, self, "spinLowerThreshold",
-                         0.0, float("inf"), 0.001, decimals=3,
-                         callback=self.changeLowerSpin,
-                         keyboardTracking=False)
-        ribg.layout().addWidget(QLabel("to", self), 1, Qt.AlignCenter)
-        self.spin_high = gui.doubleSpin(ribg, self, "spinUpperThreshold",
-                         0.0, float("inf"), 0.001, decimals=3,
-                         callback=self.changeUpperSpin,
-                         keyboardTracking=False)
+        self.spin_high = gui.doubleSpin(boxGeneral, self, 'spinUpperThreshold',
+                                        0, float('inf'), 0.001, decimals=3,
+                                        label='Distance threshold',
+                                        callback=self.changeUpperSpin,
+                                        keyboardTracking=False,
+                                        controlWidth=60)
         self.histogram.region.sigRegionChangeFinished.connect(self.spinboxFromHistogramRegion)
 
         ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
@@ -130,12 +124,9 @@ class OWNxFromDistances(widget.OWWidget):
     def setPercentil(self):
         if self.matrix is None or self.percentil <= 0:
             return
-
-        self.spinLowerThreshold = self.histogram.boundary()[0]
         # flatten matrix, sort values and remove identities (self.matrix[i][i])
-        vals = sorted(self.matrix.flat)
-        ind = int(len(vals) * self.percentil / 100)
-        self.spinUpperThreshold = vals[ind]
+        ind = int(len(self.matrix_values) * self.percentil / 100)
+        self.spinUpperThreshold = self.matrix_values[ind]
         self.generateGraph()
 
     def setMatrix(self, data):
@@ -149,38 +140,27 @@ class OWNxFromDistances(widget.OWWidget):
             self.matrix.row_items = list(range(self.matrix.shape[0]))
 
         # draw histogram
-        values = self.matrix.flat
-        # print("values:", values)
+        self.matrix_values = values = sorted(self.matrix.flat)
         self.histogram.setValues(values)
 
         # Magnitude of the spinbox's step is data-dependent
-        low, upp = min(values), max(values)
+        low, upp = values[0], values[-1]
         step = (upp - low) / 20
-        self.spin_low.setSingleStep(step)
         self.spin_high.setSingleStep(step)
 
-        self.spinLowerThreshold = self.spinUpperThreshold = low - (0.03 * (upp - low))
+        self.spinUpperThreshold = low - (0.03 * (upp - low))
 
         self.setPercentil()
         self.generateGraph()
 
     def changeUpperSpin(self):
-        if self.spinLowerThreshold > self.spinUpperThreshold:
-            self.spinLowerThreshold = self.spinUpperThreshold
-        self.changeLowerSpin()
-
-    def changeLowerSpin(self):
-        self.percentil = 0
-        self.spinLowerThreshold, self.spinUpperThreshold = np.clip(
-            [self.spinLowerThreshold, self.spinUpperThreshold],
-            *self.histogram.boundary())
-        if self.spinLowerThreshold > self.spinUpperThreshold:
-            self.spinUpperThreshold = self.spinLowerThreshold
+        self.spinUpperThreshold = np.clip(self.spinUpperThreshold, *self.histogram.boundary())
+        self.percentil = 100 * np.searchsorted(self.matrix_values, self.spinUpperThreshold) / len(self.matrix_values)
         self.generateGraph()
 
     def spinboxFromHistogramRegion(self):
-        self.spinLowerThreshold, self.spinUpperThreshold = self.histogram.getRegion()
-        self.generateGraph()
+        _, self.spinUpperThreshold = self.histogram.getRegion()
+        self.changeUpperSpin()
 
     def generateGraph(self, N_changed=False):
         self.error()
@@ -204,7 +184,7 @@ class OWNxFromDistances(widget.OWWidget):
             return
 
         nEdgesEstimate = 2 * sum(y for x, y in zip(self.histogram.xData, self.histogram.yData)
-                                 if self.spinLowerThreshold <= x <= self.spinUpperThreshold)
+                                 if x <= self.spinUpperThreshold)
 
         if nEdgesEstimate > 200000:
             self.graph = None
@@ -230,18 +210,18 @@ class OWNxFromDistances(widget.OWWidget):
             if self.kNN >= self.matrix.shape[0]:
                 self.warning(0, "kNN larger then supplied distance matrix dimension. Using k = %i" % (self.matrix.shape[0] - 1))
 
-            def edges_from_distance_matrix(matrix, lower, upper, knn):
+            def edges_from_distance_matrix(matrix, upper, knn):
                 rows, cols = matrix.shape
                 for i in range(rows):
                     for j in range(i + 1, cols):
-                        if lower <= matrix[i, j] <= upper:
+                        if matrix[i, j] <= upper:
                             yield i, j, matrix[i, j]
                     if not knn: continue
                     for j in np.argsort(matrix[i])[:knn]:
                         yield i, j, matrix[i, j]
 
             edge_list = edges_from_distance_matrix(
-                self.matrix, self.spinLowerThreshold, self.spinUpperThreshold,
+                self.matrix, self.spinUpperThreshold,
                 min(self.kNN, self.matrix.shape[0] - 1) if self.include_knn else 0)
             if self.edge_weights == EdgeWeights.INVERSE:
                 edge_list = list(edge_list)
@@ -293,12 +273,12 @@ class OWNxFromDistances(widget.OWWidget):
 
         self.sendSignals()
 
-        self.histogram.setRegion(self.spinLowerThreshold, self.spinUpperThreshold)
+        self.histogram.setRegion(0, self.spinUpperThreshold)
 
     def sendReport(self):
         self.reportSettings("Settings",
                             [("Edge thresholds", "%.5f - %.5f" % \
-                              (self.spinLowerThreshold, \
+                              (0, \
                                self.spinUpperThreshold)),
                              ("Selected vertices", ["All", \
                                 "Without isolated vertices",
@@ -350,6 +330,9 @@ class Histogram(pg.PlotWidget):
         self.curve = self.plot([0, 1], [0], pen=pg.mkPen('b', width=2), stepMode=True)
         self.region = pg.LinearRegionItem([0, 0], brush=pg.mkBrush('#02f1'), movable=True)
         self.region.sigRegionChanged.connect(self._update_region)
+        # Selected region is only open-ended on the the upper side
+        self.region.hoverEvent = self.region.mouseDragEvent = lambda *args: None
+        self.region.lines[0].setVisible(False)
         self.addItem(self.region)
         self.fillCurve = self.plotItem.plot([0, 1], [0],
             fillLevel=0, pen=pg.mkPen('b', width=2), brush='#02f3', stepMode=True)
@@ -372,6 +355,7 @@ class Histogram(pg.PlotWidget):
         return self.xData[[0, -1]]
 
     def setRegion(self, low, high):
+        low, high = np.clip([low, high], *self.boundary())
         self.region.setRegion((low, high))
 
     def getRegion(self):
