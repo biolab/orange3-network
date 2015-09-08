@@ -444,7 +444,7 @@ class OWNxCanvas(pg.GraphItem):
     def set_node_colors(self, attribute=None, replot=True):
         assert not attribute or isinstance(attribute, data.Variable)
 
-        if not attribute:
+        if not attribute or not self.graph:
             self.kwargs.pop('brush', None)
             if replot:
                 self.replot()
