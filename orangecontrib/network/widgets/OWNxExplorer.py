@@ -73,7 +73,7 @@ class OWNxExplorer(widget.OWWidget):
                (Output.REMAINING, Table)]
 
     settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "maxNodeSize", "invertNodeSize", "optMethod",
+    "invertNodeSize",
     "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
     "lastLabelColumns", "lastTooltipColumns",
     "showWeights", "colorSettings",
@@ -88,6 +88,8 @@ class OWNxExplorer(widget.OWWidget):
     "markNConnections", "markNumber", "markSearchString"]
     # TODO: set settings
     do_auto_commit = settings.Setting(True)
+    layout_method = settings.Setting(Layout.all.index(Layout.FHR))
+    maxNodeSize = settings.Setting(50)
 
     def __init__(self):
         super().__init__()
@@ -115,10 +117,8 @@ class OWNxExplorer(widget.OWWidget):
         self.node_size_attr = 0
         self.nShown = self.nHidden = self.nHighlighted = self.nSelected = self.verticesPerEdge = self.edgesPerVertex = 0
         self.optimizeWhat = 1
-        self.maxNodeSize = 50
         self.labelsOnMarkedOnly = 0
         self.invertNodeSize = 0
-        self.optMethod = 0
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
         self.lastLabelColumns = set()
@@ -269,11 +269,11 @@ class OWNxExplorer(widget.OWWidget):
 
         box = gui.widgetBox(self.displayTab, "Nodes")
         self.optCombo = gui.comboBox(
-            box, self, "optMethod", label='Layout:',
+            box, self, "layout_method", label='Layout:',
             orientation='horizontal', callback=self.graph_layout_method)
         for layout in Layout.all: self.optCombo.addItem(layout)
-        self.optMethod = Layout.all.index(Layout.FHR)
-        self.optCombo.setCurrentIndex(self.optMethod)
+        self.layout_method = Layout.all.index(Layout.FHR)
+        self.optCombo.setCurrentIndex(self.layout_method)
 
         self.colorCombo = gui.comboBox(
             box, self, "node_color_attr", label='Color by:',
@@ -442,14 +442,14 @@ class OWNxExplorer(widget.OWWidget):
 
         self.networkCanvas.items_matrix = matrix
 
-        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
+        if Layout.all[self.layout_method] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is not None and self.graph_base is not None and \
                                 self.items_matrix.dim == self.graph_base.number_of_nodes():
 
-                if self.optMethod == Layout.FRAGVIZ: # if FragViz, run FR first
-                    self.optMethod = Layout.all.index(Layout.FHR)
+                if self.layout_method == Layout.FRAGVIZ: # if FragViz, run FR first
+                    self.layout_method = Layout.all.index(Layout.FHR)
                     self.graph_layout()
-                    self.optMethod = Layout.all.index(Layout.FRAGVIZ)
+                    self.layout_method = Layout.all.index(Layout.FRAGVIZ)
 
             self.graph_layout()
 
@@ -710,7 +710,7 @@ class OWNxExplorer(widget.OWWidget):
 #            self.minVertexSize = 5
 #            self.maxNodeSize = 5
 #            self.maxLinkSize = 1
-#            self.optMethod = 0
+#            self.layout_method = 0
 #            self.graph_layout_method()
 
         animation_enabled = self.networkCanvas.animate_points;
@@ -805,7 +805,7 @@ class OWNxExplorer(widget.OWWidget):
         if self.frSteps < 10:
             self.minVertexSize = 5
             self.maxNodeSize = 5
-            #~ self.optMethod = 0
+            #~ self.layout_method = 0
             self.graph_layout_method()
 
         self.networkCanvas.labelsOnMarkedOnly = self.labelsOnMarkedOnly
@@ -927,7 +927,7 @@ class OWNxExplorer(widget.OWWidget):
         # Cancel previous animation if running
         self.networkCanvas.is_animating = False
 
-        layout = Layout.all[self.optMethod]
+        layout = Layout.all[self.layout_method]
         if layout == Layout.NONE:
             self.networkCanvas.layout_original()
         elif layout == Layout.RANDOM:
@@ -954,7 +954,7 @@ class OWNxExplorer(widget.OWWidget):
     def graph_layout_method(self):
         self.information()
 
-        if Layout.all[self.optMethod] in Layout.REQUIRES_DISTANCE_MATRIX:
+        if Layout.all[self.layout_method] in Layout.REQUIRES_DISTANCE_MATRIX:
             if self.items_matrix is None:
                 self.information('Set distance matrix to input signal')
                 return
