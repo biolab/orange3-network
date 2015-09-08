@@ -11,38 +11,71 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 import Orange
-from Orange.widgets import gui, widget
+from Orange.widgets import gui, widget, settings
 import orangecontrib.network as network
 
 import pyqtgraph as pg
 
 
-class OWNxHist():
+class NodeSelection:
+    ALL_NODES,   \
+    COMPONENTS,  \
+    LARGEST_COMP = range(3)
 
-    def __init__(self, parent=None, type=0):
-        self.parent = parent
+class EdgeWeights:
+    PROPORTIONAL, \
+    INVERSE = range(2)
 
-        # set default settings
+
+class OWNxFromDistances(widget.OWWidget):
+    name = "Network from Distances"
+    description = ('Constructs Graph object by connecting nodes from '
+                   'data table where distance between them is between '
+                   'given threshold.')
+    icon = "icons/NetworkFromDistances.svg"
+    priority = 6440
+
+    inputs = [("Distances", Orange.misc.DistMatrix, "setMatrix")]
+    outputs = [("Network", network.Graph),
+               ("Data", Orange.data.Table),
+               ("Distances", Orange.misc.DistMatrix)]
+
+    # TODO: make settings input-dependent
+    percentil = settings.Setting(1)
+    include_knn = settings.Setting(False)
+    kNN = settings.Setting(2)
+    node_selection = settings.Setting(0)
+    edge_weights = settings.Setting(0)
+    excludeLimit = settings.Setting(2)
+
+    def __init__(self):
+        super().__init__()
+
         self.spinLowerThreshold = 0
-        self.spinLowerChecked = False
         self.spinUpperThreshold = 0
-        self.spinUpperChecked = False
-        self.netOption = 0
-        self.dstWeight = 0
-        self.kNN = 0
-        self.andor = 0
-        self.matrix = None
-        self.excludeLimit = 2
-        self.percentil = 0
 
+        self.matrix = None
         self.graph = None
         self.graph_matrix = None
 
-    def addHistogramControls(self, parent=None):
-        if parent is None:
-            parent = self.controlArea
+        self.histogram = Histogram(self)
+        self.mainArea.layout().addWidget(self.histogram)
+        self.mainArea.setMinimumWidth(500)
+        self.mainArea.setMinimumHeight(300)
+        self.addHistogramControls()
 
-        boxGeneral = gui.widgetBox(parent, box="Edges")
+        # info
+        boxInfo = gui.widgetBox(self.controlArea, box="Info")
+        self.infoa = gui.widgetLabel(boxInfo, "No data loaded.")
+        self.infob = gui.widgetLabel(boxInfo, '')
+        self.infoc = gui.widgetLabel(boxInfo, '')
+
+        gui.rubber(self.controlArea)
+
+        self.resize(700, 100)
+
+    def addHistogramControls(self):
+        boxGeneral = gui.widgetBox(self.controlArea, box="Edges")
         ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
         ribg.layout().addWidget(QLabel("Distance threshold", self),
                                 4, Qt.AlignVCenter | Qt.AlignLeft)
@@ -56,42 +89,39 @@ class OWNxHist():
                          callback=self.changeUpperSpin,
                          keyboardTracking=False)
         self.histogram.region.sigRegionChangeFinished.connect(self.spinboxFromHistogramRegion)
-#         gui.lineEdit(ribg, self, "spinLowerThreshold", "Distance threshold   ", orientation='horizontal', callback=self.changeLowerSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
-#         gui.lineEdit(ribg, self, "spinUpperThreshold", "", orientation='horizontal', callback=self.changeUpperSpin, valueType=float, validator=self.validator, enterPlaceholder=True, controlWidth=60)
-#         ribg.layout().addStretch(1)
-        #ribg = gui.radioButtonsInBox(boxGeneral, self, "andor", [], orientation='horizontal', callback = self.generateGraph)
-        #gui.appendRadioButton(ribg, self, "andor", "OR", callback = self.generateGraph)
-        #b = gui.appendRadioButton(ribg, self, "andor", "AND", callback = self.generateGraph)
-        #b.setEnabled(False)
-        #ribg.hide(False)
 
         ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
 
-        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1, label="Percentile", orientation='horizontal', callback=self.setPercentil, callbackOnReturn=1, controlWidth=60)
-        gui.spin(boxGeneral, self, "kNN", 0, 1000, 1, label="Include closest neighbors", orientation='horizontal', callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
+        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1,
+                      label="Percentile", orientation='horizontal',
+                      callback=self.setPercentil,
+                      callbackOnReturn=1, controlWidth=60)
+
+        hbox = gui.widgetBox(boxGeneral, orientation='horizontal')
+        knn_cb = gui.checkBox(hbox, self, 'include_knn',
+                              label='Include also closest neighbors',
+                              callback=self.generateGraph)
+        knn = gui.spin(hbox, self, "kNN", 1, 1000, 1,
+                       orientation='horizontal',
+                       callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
+        knn_cb.disables = [knn]
+        knn_cb.makeConsistent()
+
         ribg.layout().addStretch(1)
         # Options
-        ribg = gui.radioButtonsInBox(parent, self, "netOption",
+        ribg = gui.radioButtonsInBox(self.controlArea, self, "node_selection",
                                      box="Node selection",
                                      callback=self.generateGraph)
         gui.appendRadioButton(ribg, "Keep all nodes")
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Components with at least nodes", insertInto=hb)
-        gui.spin(hb, self, "excludeLimit", 2, 100, 1, callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
+        gui.spin(hb, self, "excludeLimit", 2, 100, 1,
+                 callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
         gui.appendRadioButton(ribg, "Largest connected component")
-        #gui.appendRadioButton(ribg, self, "netOption", "Connected component with vertex")
         self.attribute = None
 
-        ### FILTER NETWORK BY ATTRIBUTE IS OBSOLETE - USE SELECT DATA WIDGET ###
-        #self.attributeCombo = gui.comboBox(parent, self, "attribute", box="Filter attribute", orientation='horizontal')#, callback=self.setVertexColor)
-        #self.label = ''
-        #self.searchString = gui.lineEdit(self.attributeCombo.box, self, "label", callback=self.setSearchStringTimer, callbackOnType=True)
-        #self.searchStringTimer = QTimer(self)
-        #self.connect(self.searchStringTimer, SIGNAL("timeout()"), self.generateGraph)
-        #if str(self.netOption) != '3':
-        #    self.attributeCombo.box.setEnabled(False)
-
-        ribg = gui.radioButtonsInBox(parent, self, "dstWeight", box="Edge weights",
+        ribg = gui.radioButtonsInBox(self.controlArea, self, "edge_weights",
+                                     box="Edge weights",
                                      callback=self.generateGraph)
         hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
         gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
@@ -125,7 +155,7 @@ class OWNxHist():
 
         # Magnitude of the spinbox's step is data-dependent
         low, upp = min(values), max(values)
-        step = (upp - low) / 10
+        step = (upp - low) / 20
         self.spin_low.setSingleStep(step)
         self.spin_high.setSingleStep(step)
 
@@ -158,7 +188,7 @@ class OWNxHist():
         self.warning('')
 
         if N_changed:
-            self.netOption = 1
+            self.node_selection = NodeSelection.COMPONENTS
 
         if self.matrix is None:
             if hasattr(self, "infoa"):
@@ -170,8 +200,7 @@ class OWNxHist():
             self.pconnected = 0
             self.nedges = 0
             self.graph = None
-            if hasattr(self, "sendSignals"):
-                self.sendSignals()
+            self.sendSignals()
             return
 
         nEdgesEstimate = 2 * sum(y for x, y in zip(self.histogram.xData, self.histogram.yData)
@@ -214,57 +243,36 @@ class OWNxHist():
             edge_list = edges_from_distance_matrix(
                 self.matrix, self.spinLowerThreshold, self.spinUpperThreshold,
                 min(self.kNN, self.matrix.shape[0] - 1) if self.include_knn else 0)
-            if self.dstWeight == 1:
-                graph.add_edges_from(((u, v, {'weight':1 - d}) for u, v, d in edge_list))
+            if self.edge_weights == EdgeWeights.INVERSE:
+                edge_list = list(edge_list)
+                max_weight = max(d for u, v, d in edge_list)
+                graph.add_edges_from((u, v, {'weight': max_weight - d})
+                                     for u, v, d in edge_list)
             else:
-                graph.add_edges_from(((u, v, {'weight':d}) for u, v, d in edge_list))
-
+                graph.add_edges_from((u, v, {'weight': d})
+                                     for u, v, d in edge_list)
             matrix = None
             self.graph = None
+            component = []
             # exclude unconnected
-            if str(self.netOption) == '1':
-                components = [x for x in network.nx.algorithms.components.connected_components(graph) if len(x) >= self.excludeLimit]
-                if len(components) > 0:
-                    include = list(chain.from_iterable(components))
-                    if len(include) > 1:
-                        self.graph = graph.subgraph(include)
-                        matrix = self.matrix.submatrix(include)
+            if self.node_selection == NodeSelection.COMPONENTS:
+                component = list(chain.from_iterable(x for x in network.nx.connected_components(graph)
+                                                     if len(x) >= self.excludeLimit))
             # largest connected component only
-            elif str(self.netOption) == '2':
-                component = next(network.nx.algorithms.components.connected_components(graph))
-                if len(component) > 1:
-                    self.graph = graph.subgraph(component)
-                    matrix = self.matrix.submatrix(component)
-            # connected component with vertex by label
-            # elif str(self.netOption) == '3':
-            #     self.attributeCombo.box.setEnabled(True)
-            #     self.graph = None
-            #     matrix = None
-            #     if self.attributeCombo.currentText() != '' and self.label != '':
-            #         components = network.nx.algorithms.components.connected_components(graph)
-
-            #         txt = self.label.lower()
-            #         #print 'txt:',txt
-            #         nodes = [i for i, values in enumerate(self.matrix.items) if txt in str(values[str(self.attributeCombo.currentText())]).lower()]
-            #         #print "nodes:",nodes
-            #         if len(nodes) > 0:
-            #             vertices = []
-            #             for component in components:
-            #                 for node in nodes:
-            #                     if node in component:
-            #                         if len(component) > 0:
-            #                             vertices.extend(component)
-
-            #             if len(vertices) > 0:
-            #                 #print "n vertices:", len(vertices), "n set vertices:", len(set(vertices))
-            #                 vertices = list(set(vertices))
-            #                 self.graph = graph.subgraph(include)
-            #                 matrix = self.matrix.getitems(vertices)
+            elif self.node_selection == NodeSelection.LARGEST_COMP:
+                component = max(network.nx.connected_components(graph), key=len)
             else:
                 self.graph = graph
+            if len(component) > 1:
+                if len(component) == graph.number_of_nodes():
+                    self.graph = graph
+                    matrix = self.matrix
+                else:
+                    self.graph = graph.subgraph(component)
+                    matrix = self.matrix.submatrix(sorted(component))
 
-        if matrix != None:
-            setattr(matrix, "items", self.graph.items())
+        if matrix is not None:
+            matrix.row_items = self.graph.items()
         self.graph_matrix = matrix
 
         if self.graph is None:
@@ -283,10 +291,36 @@ class OWNxHist():
                 self.nedges, self.nedges / float(self.pconnected)
                 if self.pconnected else 0))
 
-        if hasattr(self, "sendSignals"):
-            self.sendSignals()
+        self.sendSignals()
 
         self.histogram.setRegion(self.spinLowerThreshold, self.spinUpperThreshold)
+
+    def sendReport(self):
+        self.reportSettings("Settings",
+                            [("Edge thresholds", "%.5f - %.5f" % \
+                              (self.spinLowerThreshold, \
+                               self.spinUpperThreshold)),
+                             ("Selected vertices", ["All", \
+                                "Without isolated vertices",
+                                "Largest component",
+                                "Connected with vertex"][self.node_selection]),
+                             ("Weight", ["Distance", "1 - Distance"][self.edge_weights])])
+        self.reportSection("Histogram")
+        self.reportImage(self.histogram.saveToFileDirect, QSize(400,300))
+        self.reportSettings("Output graph",
+                            [("Vertices", self.matrix.dim),
+                             ("Edges", self.nedges),
+                             ("Connected vertices", "%i (%.1f%%)" % \
+                              (self.pconnected, self.pconnected / \
+                               max(1, float(self.matrix.dim))*100))])
+
+    def sendSignals(self):
+        self.send("Network", self.graph)
+        self.send("Distances", self.graph_matrix)
+        if self.graph == None:
+            self.send("Data", None)
+        else:
+            self.send("Data", self.graph.items())
 
 
 pg_InfiniteLine = pg.InfiniteLine
@@ -305,6 +339,7 @@ class InfiniteLine(pg_InfiniteLine):
         p.drawLine(line)
         p.restore()
 
+# Patched so that the Histogram's LinearRegionItem works on MacOS
 pg.InfiniteLine = InfiniteLine
 pg.graphicsItems.LinearRegionItem.InfiniteLine = InfiniteLine
 
@@ -347,7 +382,7 @@ class Histogram(pg.PlotWidget):
             self.curve.setData([0, 1], [0])
             self.setBoundary(0, 0)
             return
-        nbins = int(min(np.sqrt(len(values)), 50))
+        nbins = int(min(np.sqrt(len(values)), 100))
         freq, edges = np.histogram(values, bins=nbins)
         self.curve.setData(edges, freq)
         self.setBoundary(edges[0], edges[-1])
@@ -359,3 +394,10 @@ class Histogram(pg.PlotWidget):
     @property
     def yData(self):
         return self.curve.yData
+
+
+if __name__ == "__main__":
+    appl = QApplication([])
+    ow = OWNxFromDistances()
+    ow.show()
+    appl.exec_()
