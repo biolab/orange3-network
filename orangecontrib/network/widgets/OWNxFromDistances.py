@@ -272,7 +272,6 @@ class OWNxFromDistances(widget.OWWidget):
                 if self.pconnected else 0))
 
         self.sendSignals()
-
         self.histogram.setRegion(0, self.spinUpperThreshold)
 
     def sendReport(self):
@@ -362,6 +361,7 @@ class Histogram(pg.PlotWidget):
         return self.region.getRegion()
 
     def setValues(self, values):
+        self.fillCurve.setData([0,1], [0])
         if not len(values):
             self.curve.setData([0, 1], [0])
             self.setBoundary(0, 0)
@@ -370,6 +370,7 @@ class Histogram(pg.PlotWidget):
         freq, edges = np.histogram(values, bins=nbins)
         self.curve.setData(edges, freq)
         self.setBoundary(edges[0], edges[-1])
+        self.autoRange()
 
     @property
     def xData(self):
