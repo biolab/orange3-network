@@ -289,7 +289,7 @@ class OWNxExplorer(widget.OWWidget):
         hb = gui.widgetBox(box, orientation="horizontal")
         hb.layout().addStretch(1)
         self.minNodeSizeSpin = gui.spin(
-            hb, self, "minNodeSize", 5, 50, step=5, label="Min:",
+            hb, self, "minNodeSize", 1, 50, step=3, label="Min:",
             callback=self.set_node_sizes)
         self.minNodeSizeSpin.setValue(8)
         gui.separator(hb)
