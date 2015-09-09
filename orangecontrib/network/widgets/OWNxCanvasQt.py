@@ -455,8 +455,9 @@ class OWNxCanvas(pg.GraphItem):
             return
         if table.domain.class_var == attribute:
             values = table[:, attribute].Y
-        else:
+        elif attribute in table.domain:
             values = table[:, attribute].X[:, 0]
+        else: return
         if attribute.is_continuous:
             colors = CONTINUOUS_PALETTE[scale(values)]
         elif attribute.is_discrete:
