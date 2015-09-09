@@ -50,7 +50,8 @@ PACKAGES = find_packages(
 )
 
 PACKAGE_DATA = {
-    'orangecontrib.network': ['networks/*']
+    'orangecontrib.network': ['networks/*'],
+    'orangecontrib.network.widgets': ['icons/*']
 }
 
 SETUP_REQUIRES = (
