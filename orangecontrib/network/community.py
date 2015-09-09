@@ -18,8 +18,7 @@ import networkx as nx
 from Orange.data import Domain, Table, DiscreteVariable
 
 
-CLUSTERING_LABEL = 'cluster id'
-CLUSTERING_ITER_LABEL = 'clust_iter_'
+CLUSTERING_LABEL = 'Cluster'
 
 
 def add_results_to_items(G, lblhistory):
@@ -42,32 +41,6 @@ def add_results_to_items(G, lblhistory):
         G.set_items(Table.concatenate((items, data)))
 
 
-_is_history_attr = re.compile(r'^{}\d+$'.format(CLUSTERING_ITER_LABEL)).match
-
-
-def add_history_to_items(G, lblhistory):
-    items = G.items()
-    if items is not None:
-        domain = Domain([a for a in items.domain.attributes
-                         if not _is_history_attr(a.name)],
-                        items.domain.class_vars,
-                        items.domain.metas)
-        items = Table.from_table(domain, items)
-
-    attrs = [DiscreteVariable(CLUSTERING_ITER_LABEL + str(i),
-                              values=list(set(lblhistory[0])))
-             for i in range(len(lblhistory))]
-
-    domain = Domain(attrs)
-    # transpose history
-    data = [list(i) for i in zip(*lblhistory)]
-    data = Table(domain, data)
-    if items is None:
-        G.set_items(data)
-    else:
-        G.set_items(Table.concatenate((items, data)))
-
-
 class CommunityDetection(object):
 
     def __init__(self, algorithm, **kwargs):
@@ -77,8 +50,7 @@ class CommunityDetection(object):
     def __call__(self, G):
         return self.algorithm(G, **self.kwargs)
 
-def label_propagation_hop_attenuation(G, results2items=0, \
-                                      resultHistory2items=0, iterations=1000, \
+def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
                                       delta=0.1, node_degree_preference=0):
     """Label propagation for community detection, Leung et al., 2009
 
@@ -88,10 +60,6 @@ def label_propagation_hop_attenuation(G, results2items=0, \
     :param results2items: Append a new feature result to items
         (Orange.data.Table).
     :type results2items: bool
-
-    :param resultHistory2items: Append new features result to items
-        (Orange.data.Table) after each iteration of the algorithm.
-    :type resultHistory2items: bool
 
     :param iterations: The max. number of iterations if no convergence.
     :type iterations: int
@@ -144,18 +112,13 @@ def label_propagation_hop_attenuation(G, results2items=0, \
         if stop:
             break
 
-    if results2items and not resultHistory2items:
+    if results2items:
         add_results_to_items(G, lblhistory)
 
-    if resultHistory2items:
-        add_history_to_items(G, lblhistory)
-
-    #print "iterations:", i
     return labels
 
 
-def label_propagation(G, results2items=0, \
-                      resultHistory2items=0, iterations=1000, seed=None):
+def label_propagation(G, results2items=0, iterations=1000, seed=None):
     """Label propagation for community detection, Raghavan et al., 2007
 
     :param G: A Orange graph.
@@ -164,10 +127,6 @@ def label_propagation(G, results2items=0, \
     :param results2items: Append a new feature result to items
         (Orange.data.Table).
     :type results2items: bool
-
-    :param resultHistory2items: Append new features result to items
-        (Orange.data.Table) after each iteration of the algorithm.
-    :type resultHistory2items: bool
 
     :param iterations: The maximum number of iterations if there is no convergence.
     :type iterations: int
@@ -222,11 +181,7 @@ def label_propagation(G, results2items=0, \
             if stop:
                 break
 
-    if results2items and not resultHistory2items:
+    if results2items:
         add_results_to_items(G, lblhistory)
 
-    if resultHistory2items:
-        add_history_to_items(G, lblhistory)
-
-    #print "iterations:", i
     return labels

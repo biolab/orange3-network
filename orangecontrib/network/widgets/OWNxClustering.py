@@ -15,7 +15,6 @@ class OWNxClustering(widget.OWWidget):
     method = settings.Setting(0)
     iterations = settings.Setting(1000)
     hop_attenuation = settings.Setting(0.1)
-    iterationHistory = settings.Setting(False)
     autoApply = settings.Setting(False)
 
     def __init__(self):
@@ -37,9 +36,6 @@ class OWNxClustering(widget.OWWidget):
                          0, 1, 0.01, label="Hop attenuation (delta): ")
 
         self.info = gui.widgetLabel(self.controlArea, ' ')
-        gui.checkBox(self.controlArea, self, "iterationHistory",
-                       "Append clustering data on each iteration",
-                       callback=commit)
 
         gui.auto_commit(self.controlArea, self, "autoApply", 'Commit',
                         checkbox_label='Auto-commit')
@@ -55,13 +51,11 @@ class OWNxClustering(widget.OWWidget):
         if self.method == 0:
             alg = cd.label_propagation
             kwargs = {'results2items': 1,
-                      'resultHistory2items': self.iterationHistory,
                       'iterations': self.iterations}
 
         elif self.method == 1:
             alg = cd.label_propagation_hop_attenuation
             kwargs = {'results2items': 1,
-                      'resultHistory2items': self.iterationHistory,
                       'iterations': self.iterations,
                       'delta': self.hop_attenuation}
 
