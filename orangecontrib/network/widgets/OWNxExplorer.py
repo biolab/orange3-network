@@ -278,7 +278,7 @@ class OWNxExplorer(widget.OWWidget):
         self.optCombo.setCurrentIndex(self.layout_method)
 
         self.colorCombo = gui.comboBox(
-            box, self, "node_color_attr", label='Color by:',
+            box, self, "node_color_attr", label='Color:',
             orientation='horizontal', callback=self.set_node_colors)
 
         self.nodeSizeCombo = gui.comboBox(
@@ -307,10 +307,12 @@ class OWNxExplorer(widget.OWWidget):
         self.attListBox = gui.listBox(
             hb, self, "node_label_attrs", "graph_attrs",
             selectionMode=QListWidget.MultiSelection,
+            sizeHint=QSize(100, 100),
             callback=self._on_node_label_attrs_changed)
         self.tooltipListBox = gui.listBox(
             hb, self, "tooltipAttributes", "graph_attrs",
             selectionMode=QListWidget.MultiSelection,
+            sizeHint=QSize(100, 100),
             callback=self._clicked_tooltip_lstbox)
 
         eb = gui.widgetBox(self.displayTab, "Edges", orientation="vertical")
@@ -321,7 +323,7 @@ class OWNxExplorer(widget.OWWidget):
             eb, self, 'networkCanvas.show_edge_weights', 'Show edge weights',
             callback=self.networkCanvas.set_edge_labels)
         self.edgeColorCombo = gui.comboBox(
-            eb, self, "edgeColor", label='Color by:', orientation='horizontal',
+            eb, self, "edgeColor", label='Color:', orientation='horizontal',
             callback=self.set_edge_colors)
         elb = gui.widgetBox(eb, "Edge labels", addSpace=False)
         self.edgeLabelListBox = gui.listBox(
@@ -346,20 +348,24 @@ class OWNxExplorer(widget.OWWidget):
 
         gui.appendRadioButton(ribg, "... neighbours of selected, ≤ N hops away")
         ib = gui.indentedBox(ribg, orientation=0)
-        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 1, 100, 1, label="Distance:",
+        self.ctrlMarkDistance = gui.spin(ib, self, "markDistance", 1, 100, 1, label="Hops:",
             callback=lambda: self.set_mark_mode(SelectionMode.NEIGHBORS))
+        ib.layout().addStretch(1)
         #self.ctrlMarkFreeze = gui.button(ib, self, "&Freeze", value="graph.freezeNeighbours", toggleButton = True)
         gui.appendRadioButton(ribg, "... with at least N connections")
         gui.appendRadioButton(ribg, "... with at most N connections")
-        self.ctrlMarkNConnections = gui.spin(gui.indentedBox(ribg), self, "markNConnections", 0, 1000000, 1, label="N:",
+        ib = gui.indentedBox(ribg, orientation=0)
+        self.ctrlMarkNConnections = gui.spin(ib, self, "markNConnections", 0, 1000000, 1, label="Connections:",
             callback=lambda: self.set_mark_mode(SelectionMode.AT_MOST_N if self.hubs == SelectionMode.AT_MOST_N else SelectionMode.AT_LEAST_N))
+        ib.layout().addStretch(1)
         gui.appendRadioButton(ribg, "... with more connections than any neighbor")
         gui.appendRadioButton(ribg, "... with more connections than average neighbor")
         gui.appendRadioButton(ribg, "... with most connections")
-        ib = gui.indentedBox(ribg)
+        ib = gui.indentedBox(ribg, orientation=0)
         self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1,
                                        label="Number of nodes:",
                                        callback=lambda: self.set_mark_mode(SelectionMode.MOST_CONN))
+        ib.layout().addStretch(1)
         self.markInputRadioButton = gui.appendRadioButton(ribg, "... given in the ItemSubset input signal")
         self.markInput = 0
         ib = gui.indentedBox(ribg)
