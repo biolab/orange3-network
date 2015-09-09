@@ -90,6 +90,7 @@ class OWNxExplorer(widget.OWWidget):
     do_auto_commit = settings.Setting(True)
     layout_method = settings.Setting(Layout.all.index(Layout.FHR))
     maxNodeSize = settings.Setting(50)
+    minNodeSize = settings.Setting(8)
 
     def __init__(self):
         super().__init__()
@@ -279,14 +280,23 @@ class OWNxExplorer(widget.OWWidget):
             box, self, "node_color_attr", label='Color by:',
             orientation='horizontal', callback=self.set_node_colors)
 
-        hb = gui.widgetBox(box, orientation="horizontal", addSpace=False)
-        hb.layout().addWidget(QLabel('Size by:', hb))
         self.nodeSizeCombo = gui.comboBox(
-            hb, self, "node_size_attr", callback=self.set_node_sizes)
+            box, self, "node_size_attr",
+            label='Size:',
+            orientation='horizontal',
+            callback=self.set_node_sizes)
+        hb = gui.widgetBox(box, orientation="horizontal")
+        hb.layout().addStretch(1)
+        self.minNodeSizeSpin = gui.spin(
+            hb, self, "minNodeSize", 5, 50, step=5, label="Min:",
+            callback=self.set_node_sizes)
+        self.minNodeSizeSpin.setValue(8)
+        gui.separator(hb)
         self.maxNodeSizeSpin = gui.spin(
-            hb, self, "maxNodeSize", 5, 200, step=10, label="Max:",
+            hb, self, "maxNodeSize", 10, 200, step=10, label="Max:",
             callback=self.set_node_sizes)
         self.maxNodeSizeSpin.setValue(50)
+        gui.separator(hb)
         self.invertNodeSizeCheck = gui.checkBox(
             hb, self, "invertNodeSize", "Invert",
             callback=self.set_node_sizes)
@@ -1088,7 +1098,10 @@ class OWNxExplorer(widget.OWWidget):
         depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
         for w in depending_widgets:
             w.setDisabled(not bool(attr))
-        self.networkCanvas.set_node_sizes(attr, self.maxNodeSize, self.invertNodeSize)
+        self.networkCanvas.set_node_sizes(attr,
+                                          self.minNodeSize,
+                                          self.maxNodeSize,
+                                          self.invertNodeSize)
 
     def set_font(self):
         if self.networkCanvas is None:
