@@ -52,6 +52,7 @@ class Output:
     SELECTED = 'Selected items'
     HIGHLIGHTED = 'Highlighted items'
     REMAINING = 'Remaining items'
+    all = (SUBGRAPH, DISTANCE, SELECTED, HIGHLIGHTED, REMAINING)
 
 
 class OWNxExplorer(widget.OWWidget):
@@ -586,6 +587,10 @@ class OWNxExplorer(widget.OWWidget):
             network.readwrite.write(self.graph, fn)
 
     def send_data(self):
+        if not self.graph:
+            for output in Output.all:
+                self.send(output, None)
+            return
         selected = self.networkCanvas.selectedNodes
         highlighted = self.networkCanvas.highlightedNodes
 
