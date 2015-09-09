@@ -18,7 +18,8 @@ import networkx as nx
 from Orange.data import Domain, Table, DiscreteVariable
 
 
-CLUSTERING_LABEL = 'clustering label propagation'
+CLUSTERING_LABEL = 'cluster id'
+CLUSTERING_ITER_LABEL = 'clust_iter_'
 
 
 def add_results_to_items(G, lblhistory):
@@ -41,7 +42,7 @@ def add_results_to_items(G, lblhistory):
         G.set_items(Table.concatenate((items, data)))
 
 
-_is_history_attr = re.compile('^c\d+$').match
+_is_history_attr = re.compile(r'^{}\d+$'.format(CLUSTERING_ITER_LABEL)).match
 
 
 def add_history_to_items(G, lblhistory):
@@ -53,7 +54,7 @@ def add_history_to_items(G, lblhistory):
                         items.domain.metas)
         items = Table.from_table(domain, items)
 
-    attrs = [DiscreteVariable('c' + str(i),
+    attrs = [DiscreteVariable(CLUSTERING_ITER_LABEL + str(i),
                               values=list(set(lblhistory[0])))
              for i in range(len(lblhistory))]
 

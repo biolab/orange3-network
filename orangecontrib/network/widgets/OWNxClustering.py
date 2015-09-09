@@ -25,13 +25,13 @@ class OWNxClustering(widget.OWWidget):
 
         commit = lambda: self.commit()
         gui.spin(self.controlArea, self, "iterations", 1,
-                   100000, 1, label="Iterations: ",
+                   100000, 1, label="Max. iterations:",
                    callback=commit)
         ribg = gui.radioButtonsInBox(
             self.controlArea, self, "method",
             btnLabels=["Label propagation clustering (Raghavan et al., 2007)",
                     "Label propagation clustering (Leung et al., 2009)"],
-            label="Method", callback=commit)
+            box="Clustering method", callback=commit)
 
         gui.doubleSpin(gui.indentedBox(ribg), self, "hop_attenuation",
                          0, 1, 0.01, label="Hop attenuation (delta): ")
