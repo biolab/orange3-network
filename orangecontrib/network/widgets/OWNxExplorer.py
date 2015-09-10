@@ -302,8 +302,8 @@ class OWNxExplorer(widget.OWWidget):
             hb, self, "invertNodeSize", "Invert",
             callback=self.set_node_sizes)
 
-        lb = gui.widgetBox(box, "Node labels | tooltips", orientation="vertical", addSpace=False)
-        hb = gui.widgetBox(lb, orientation="horizontal", addSpace=False)
+        hb = gui.widgetBox(self.displayTab, box="Node labels | tooltips",
+                           orientation="horizontal", addSpace=False)
         self.attListBox = gui.listBox(
             hb, self, "node_label_attrs", "graph_attrs",
             selectionMode=QListWidget.MultiSelection,
@@ -399,7 +399,6 @@ class OWNxExplorer(widget.OWWidget):
 
         self.set_mark_mode()
 
-        self.displayTab.layout().addStretch(1)
         self.markTab.layout().addStretch(1)
 
         self.graph_layout_method()
