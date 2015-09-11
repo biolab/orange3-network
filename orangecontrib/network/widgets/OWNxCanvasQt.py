@@ -453,9 +453,13 @@ class OWNxCanvas(pg.GraphItem):
         table = self.graph.items()
         if not table:
             return
-        if table.domain.class_var == attribute:
+        if attribute in table.domain.class_vars:
             values = table[:, attribute].Y
-        elif attribute in table.domain:
+            if values.ndim > 1:
+                values = values.T
+        elif attribute in table.domain.metas:
+            values = table[:, attribute].metas[:, 0]
+        elif attribute in table.domain.attributes:
             values = table[:, attribute].X[:, 0]
         else: return
         if attribute.is_continuous:
@@ -799,7 +803,6 @@ class OWNxCanvas(pg.GraphItem):
         pos = self.kwargs['pos']
         for item, adj in zip(self.edgeTextItems, self.kwargs['adj']):
             item.setPos(*((pos[adj[0]] + pos[adj[1]]) / 2))
-        qApp.processEvents()
 
     def hoverEvent(self, ev):
         self.scatter.setToolTip('')
