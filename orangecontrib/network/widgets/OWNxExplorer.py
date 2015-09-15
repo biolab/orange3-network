@@ -820,7 +820,7 @@ class OWNxExplorer(widget.OWWidget):
         if self.frSteps > 100: self.frSteps = 100
 
         self.networkCanvas.set_antialias(self.graph.number_of_nodes() +
-                                         self.graph.number_of_edges() < 1000)
+                                         self.graph.number_of_edges() < 5000)
         # if graph is large, set random layout, min vertex size, min edge size
         if self.frSteps < 10:
             self.minVertexSize = 5
