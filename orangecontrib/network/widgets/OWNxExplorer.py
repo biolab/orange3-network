@@ -831,10 +831,14 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.labelsOnMarkedOnly = self.labelsOnMarkedOnly
         self.networkCanvas.showWeights = self.showWeights
 
-        self.networkCanvas.set_graph(self.graph)
-        self.set_node_sizes()
-        self.set_node_colors()
-        self.set_edge_colors()
+        self.networkCanvas.set_graph(self.graph, replot=False)
+        self.set_node_sizes(replot=False)
+        self.set_node_colors(replot=False)
+        # Position nodes according to selected layout optimization
+        if self.graph:
+            self.networkCanvas.layout_func()
+        else:
+            self.networkCanvas.replot()
 
         self._on_node_label_attrs_changed()
         self._clicked_tooltip_lstbox()
@@ -1095,15 +1099,15 @@ class OWNxExplorer(widget.OWWidget):
         self.lastEdgeLabelAttributes = [self.edges_attrs[i] for i in self.edgeLabelAttributes]
         self.networkCanvas.set_edge_labels(self.lastEdgeLabelAttributes)
 
-    def set_node_colors(self):
-        self.networkCanvas.set_node_colors(self.colorCombo.itemData(self.colorCombo.currentIndex()))
+    def set_node_colors(self, replot=True):
+        self.networkCanvas.set_node_colors(self.colorCombo.itemData(self.colorCombo.currentIndex()), replot=replot)
         self.lastColorColumn = self.colorCombo.currentText()  # TODO
 
-    def set_edge_colors(self):
-        self.networkCanvas.set_edge_colors(self.edgeColorCombo.itemData(self.edgeColorCombo.currentIndex()))
+    def set_edge_colors(self, replot=True):
+        self.networkCanvas.set_edge_colors(self.edgeColorCombo.itemData(self.edgeColorCombo.currentIndex()), replot=replot)
         self.lastEdgeColorColumn = self.edgeColorCombo.currentText()
 
-    def set_node_sizes(self):
+    def set_node_sizes(self, replot=True):
         attr = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
         depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
         for w in depending_widgets:
@@ -1111,7 +1115,8 @@ class OWNxExplorer(widget.OWWidget):
         self.networkCanvas.set_node_sizes(attr,
                                           self.minNodeSize,
                                           self.maxNodeSize,
-                                          self.invertNodeSize)
+                                          self.invertNodeSize,
+                                          replot=replot)
 
     def set_font(self):
         if self.networkCanvas is None:

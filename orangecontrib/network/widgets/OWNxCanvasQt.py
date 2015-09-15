@@ -647,7 +647,7 @@ class OWNxCanvas(pg.GraphItem):
     def set_antialias(self, value):
         self.kwargs['antialias'] = bool(value)
 
-    def set_graph(self, graph):
+    def set_graph(self, graph, replot=False):
         self.graph = graph
         try:
             for i in self.textItems:
@@ -655,7 +655,7 @@ class OWNxCanvas(pg.GraphItem):
         except AttributeError: pass  # No scene
         if graph:
             # Adjacency matrix
-            self.kwargs['adj'] = np.array(graph.edges())
+            self.kwargs['adj'] = np.array(graph.edges(), dtype=int)
             # Custom node data (index used in mouseDragEvent)
             self.kwargs['data'] = np.arange(graph.number_of_nodes())
             # Construct empty node labels
@@ -673,9 +673,8 @@ class OWNxCanvas(pg.GraphItem):
             self.set_edge_sizes(replot=False)
             self.set_node_colors(replot=False)
             self.set_node_sizes(replot=False)
-            # Position nodes according to selected layout optimization
-            self.layout_func()
-        self.replot()
+        if replot:
+            self.replot()
 
     def set_labels_on_marked(self, labelsOnMarkedOnly):
         self.networkCurve.set_labels_on_marked(labelsOnMarkedOnly)
