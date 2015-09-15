@@ -793,6 +793,10 @@ class OWNxCanvas(pg.GraphItem):
             item.setParentItem(self)
             item.setPos(.5, .5)
             return
+        # FIXME: all the pyqtgraph's complex invariants suck so badly. just kill me please.
+        #        https://github.com/pyqtgraph/pyqtgraph/issues/228
+        if not np.any(self.kwargs['adj']):
+            self.kwargs['pen'] = np.array([])
         # Update scatter plot (graph)
         super().setData(**self.kwargs)
         # Update text labels
