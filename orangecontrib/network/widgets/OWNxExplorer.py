@@ -623,9 +623,7 @@ class OWNxExplorer(widget.OWWidget):
         lastTooltipColumns = self.lastTooltipColumns
 
         for var in self.graph_attrs:
-            if (var.is_discrete or
-                var.is_continuous or
-                var.is_string and var.name == 'label'):  # FIXME: whatis label?
+            if var.is_discrete or var.is_continuous:
                 self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
             if var.is_continuous:
