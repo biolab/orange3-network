@@ -348,6 +348,8 @@ class OWNxCanvas(pg.GraphItem):
         self.highlightedNodes = set()
         self.networkCurve = NetworkCurve()
         self.scatter.sigClicked.connect(self.pointClicked)
+        # FIXME: Prevents offset node ellipses on Mac
+        self.scatter.opts['useCache'] = False
 
     def set_hidden_nodes(self, nodes):
         self.networkCurve.set_hidden_nodes(nodes)
