@@ -354,7 +354,7 @@ class OWNxFile(widget.OWWidget):
         if inDemos:
             import os
             from pkg_resources import load_entry_point
-            startfile = next(load_entry_point("Orange-Network", "orange.data.io.search_paths", "network")())[1]
+            startfile = next(load_entry_point("Orange3-Network", "orange.data.io.search_paths", "network")())[1]
 
 #            if not startfile or not os.path.exists(startfile):
 #                try:
