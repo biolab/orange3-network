@@ -37,12 +37,18 @@ def fruchterman_reingold_layout(G,
     """
     Position nodes using Fruchterman-Reingold force-directed algorithm.
 
+    The parameters are equal to those of networkx.spring_layout(), with the
+    following exceptions:
+
     Parameters
     ----------
+    weight: str or np.ndarray
+        The string attribute of the graph's edges that represents edge weights,
+        or a 2D distance matrix.
     callaback: callable
         A function accepting `pos` ndarray to call after each iteration.
+        The algorithm is stopped if the return value is ``False``-ish.
 
-    Other parameters equal to those of networkx.spring_layout().
     """
     if G is None or len(G) == 0: return {}
     if len(G) == 1: return {G.nodes()[0]: [.5, .5]}
@@ -61,8 +67,13 @@ def fruchterman_reingold_layout(G,
     nodelist = sorted(G)
     index = dict(zip(nodelist, range(len(nodelist))))
     try:
-        Erow, Ecol, Edata = zip(*[(index[u], index[v], d.get(weight, 1.))
-                                  for u, v, d in G.edges_iter(nodelist, data=True)])
+        if isinstance(weight, str):
+            Erow, Ecol, Edata = zip(*[(index[u], index[v], w if w is not None else 1.)
+                                      for u, v, w in G.edges_iter(nodelist, data=weight)])
+        elif isinstance(weight, np.ndarray):
+            Erow, Ecol, Edata = zip(*[(index[u], index[v], weight[u, v])
+                                      for u, v in G.edges_iter(nodelist)])
+        else: raise TypeError('weight must be str or ndarray')
     except ValueError:  # No edges
         Erow, Ecol, Edata = [], [], []
     Erow = np.asarray(Erow, dtype=np.int32)
