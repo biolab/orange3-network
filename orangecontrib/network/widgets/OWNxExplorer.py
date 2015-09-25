@@ -74,25 +74,21 @@ class OWNxExplorer(widget.OWWidget):
                (Output.HIGHLIGHTED, Table),
                (Output.REMAINING, Table)]
 
-    settingsList = ["autoSendSelection", "spinExplicit", "spinPercentage",
-    "invertNodeSize",
-    "lastVertexSizeColumn", "lastColorColumn", "networkCanvas.show_indices", "networkCanvas.show_weights",
-    "lastLabelColumns", "lastTooltipColumns",
-    "showWeights", "colorSettings",
-    "selectedSchemaIndex", "selectedEdgeSchemaIndex",
-    "mdsTorgerson", "mdsAvgLinkage",
-    "mdsSteps", "mdsRefresh", "mdsStressDelta", "showTextMiningInfo",
-    "mdsFromCurrentPos", "labelsOnMarkedOnly",
-    "opt_from_curr",
-    "networkCanvas.state",
-    "networkCanvas.selection_behavior", "markDistance",
-    "markNConnections", "markNumber", "markSearchString"]
+    settingsList = ["lastVertexSizeColumn", "lastColorColumn",
+                    "lastLabelColumns", "lastTooltipColumns",]
     # TODO: set settings
     do_auto_commit = settings.Setting(True)
     maxNodeSize = settings.Setting(50)
     minNodeSize = settings.Setting(8)
     selectionMode = settings.Setting(0)
     tabIndex = settings.Setting(0)
+    showEdgeWeights = settings.Setting(False)
+    relativeEdgeWidths = settings.Setting(False)
+    invertNodeSize = settings.Setting(False)
+    markDistance = settings.Setting(1)
+    markSearchString = settings.Setting("")
+    markNBest = settings.Setting(1)
+    markNConnections = settings.Setting(2)
 
     def __init__(self):
         super().__init__()
@@ -103,23 +99,12 @@ class OWNxExplorer(widget.OWWidget):
 
         self.graph_attrs = []
 
-        self.relative_edge_widths = False
-        self.show_edge_weights = False
-
         self.acceptingEnterKeypress = False
 
         self.node_label_attrs = []
         self.tooltipAttributes = []
-        self.autoSendSelection = False
-        self.graphShowGrid = 1  # show gridlines in the graph
-        self.markNConnections = 2
-        self.markNumber = 0
-        self.markProportion = 0
-        self.markSearchString = ""
         self.searchStringTimer = QTimer(self)
         self.markInputItems = None
-        self.markDistance = 2
-        self.frSteps = 1
         self.node_color_attr = 0
         self.node_size_attr = 0
 
@@ -128,38 +113,18 @@ class OWNxExplorer(widget.OWWidget):
         self.verticesPerEdge = 0
         self.edgesPerVertex = 0
 
-        self.optimizeWhat = 1
-        self.labelsOnMarkedOnly = 0
-        self.invertNodeSize = 0
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
         self.lastLabelColumns = set()
         self.lastTooltipColumns = set()
-        self.showWeights = 0
 
-        self.selectedEdgeSchemaIndex = 0
         self.items_matrix = None
-        self.showDistances = 0
-        self.fontSize = 12
-        self.fontWeight = 1
-        self.mdsTorgerson = 0
-        self.mdsAvgLinkage = 1
-        self.mdsSteps = 10000
-        self.mdsRefresh = 50
-        self.mdsStressDelta = 0.0000001
-        self.showTextMiningInfo = 0
-        self.mdsFromCurrentPos = 0
         self.number_of_nodes_label = 0
         self.number_of_edges_label = 0
-        self.opt_from_curr = False
-
-        self.checkSendMarkedNodes = True
-        self.checkSendSelectedNodes = True
-        self.marked_nodes = []
 
         self.graph = None
 
-        self.setMinimumWidth(900)
+        self.setMinimumWidth(600)
 
         self.tabs = gui.tabWidget(self.controlArea)
         self.displayTab = gui.createTabPage(self.tabs, "Display")
@@ -225,10 +190,10 @@ class OWNxExplorer(widget.OWWidget):
 
         eb = gui.widgetBox(self.displayTab, "Edges", orientation="vertical")
         self.checkbox_relative_edges = gui.checkBox(
-            eb, self, 'relative_edge_widths', 'Relative edge widths',
+            eb, self, 'relativeEdgeWidths', 'Relative edge widths',
             callback=self.set_edge_sizes)
         self.checkbox_show_weights = gui.checkBox(
-            eb, self, 'show_edge_weights', 'Show edge weights',
+            eb, self, 'showEdgeWeights', 'Show edge weights',
             callback=self.set_edge_labels)
 
         ib = gui.widgetBox(self.markTab, "Info", orientation="vertical")
@@ -264,7 +229,7 @@ class OWNxExplorer(widget.OWWidget):
         gui.appendRadioButton(ribg, "... with more connections than average neighbor")
         gui.appendRadioButton(ribg, "... with most connections")
         ib = gui.indentedBox(ribg, orientation=0)
-        self.ctrlMarkNumber = gui.spin(ib, self, "markNumber", 1, 1000000, 1,
+        self.ctrlMarkNumber = gui.spin(ib, self, "markNBest", 1, 1000000, 1,
                                        label="Number of nodes:",
                                        callback=lambda: self.set_selection_mode(SelectionMode.MOST_CONN))
         ib.layout().addStretch(1)
@@ -354,7 +319,7 @@ class OWNxExplorer(widget.OWWidget):
                     if degree > np.nan_to_num(np.mean(list(self.graph.degree(self.graph[node]).values())))))
         elif selectionMode == SelectionMode.MOST_CONN:
             degrees = np.array(sorted(self.graph.degree().items(), key=lambda i: i[1], reverse=True))
-            cut_ind = max(1, min(self.markNumber, self.graph.number_of_nodes()))
+            cut_ind = max(1, min(self.markNBest, self.graph.number_of_nodes()))
             cut_degree = degrees[cut_ind - 1, 1]
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
             self.view.setHighlighted(toMark)
@@ -633,7 +598,7 @@ class OWNxExplorer(widget.OWWidget):
                 node.setTooltip(None)
 
     def set_edge_labels(self):
-        if self.show_edge_weights:
+        if self.showEdgeWeights:
             weights = (str(w or '') for u, v, w in self.graph.edges_iter(data='weight'))
         else:
             weights = ('' for i in range(self.graph.number_of_edges()))
@@ -703,7 +668,7 @@ class OWNxExplorer(widget.OWWidget):
 
     def set_edge_sizes(self):
         if not self.graph: return
-        if self.relative_edge_widths:
+        if self.relativeEdgeWidths:
             widths = [self.graph.edge[u][v].get('weight', 1)
                       for u, v in self.graph.edges()]
             widths = scale(widths, .7, 8)
