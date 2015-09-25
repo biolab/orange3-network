@@ -138,11 +138,11 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                     callback):
     cdef:
         double GRAVITY = 20
-        arr_f1_t temperature = (.2 *
+        arr_f1_t temperature = (.15 *
                                 exp(log(10./1000) / iterations)**np.arange(iterations))
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
-        double mag, adj, weight
+        double mag, adj, weight, temp
         Py_ssize_t row, col, i, j, d, iteration
         Py_ssize_t n_nodes = pos.shape[0]
         Py_ssize_t n_edges = Edata.shape[0]
@@ -151,6 +151,7 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
     with nogil:
         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
         for iteration in range(iterations):
+            temp = temperature[iteration]
             disp[:, :] = 0
             # Repulsive forces
             for i in range(n_nodes):
@@ -185,14 +186,13 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                 mag = magnitude2(disp, i)
                 if mag == 0: continue
                 for d in range(n_dim):
-                    pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]),
-                                                        temperature[iteration])
+                    pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
             # Optionally call back with the new positions
             if have_callback:
                 with gil:
                     if not callback(np.asarray(pos)):
                         break
             # If temperature too cool, finish early
-            if temperature[iteration] < .005:
+            if temp < .0005:
                 break
     return pos
