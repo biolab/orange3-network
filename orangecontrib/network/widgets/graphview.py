@@ -359,15 +359,25 @@ class GraphView(QtGui.QGraphicsView):
                                for node in self.nodes)]
 
         class AnimationThread(Thread):
+            def __init__(self, iterations, callback):
+                super().__init__()
+                self.iterations = iterations
+                self.callback = callback
             def run(self):
-                fruchterman_reingold_layout(graphview.graph,
-                                            pos=pos,
-                                            weight=weight,
-                                            iterations=FR_ITERATIONS,
-                                            callback=graphview.update_positions)
+                newpos = fruchterman_reingold_layout(graphview.graph,
+                                                     pos=pos,
+                                                     weight=weight,
+                                                     iterations=self.iterations,
+                                                     callback=self.callback)
+                if not self.callback:  # update once at the end
+                    graphview.update_positions(newpos)
                 graphview.animationFinished.emit()
 
-        AnimationThread().start()
+        iterations, callback = FR_ITERATIONS, self.update_positions
+        if IS_VERY_LARGE_GRAPH(self.graph):
+            # Don't animate very large graphs
+            iterations, callback = 5, None
+        AnimationThread(iterations, callback).start()
 
     def update_positions(self, positions):
         self.positionsChanged.emit(positions)

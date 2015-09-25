@@ -3531,7 +3531,7 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
  *     pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
  *                                            k, pos_arr, fixed,             # <<<<<<<<<<<<<<
  *                                            iterations, callback))
- *     return dict(zip(sorted(G), pos))
+ *     return pos
  */
   __pyx_t_23 = __pyx_PyFloat_AsDouble(__pyx_v_k); if (unlikely((__pyx_t_23 == (double)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 90; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_t_27 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_v_pos_arr);
@@ -3543,7 +3543,7 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
  *     pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
  *                                            k, pos_arr, fixed,
  *                                            iterations, callback))             # <<<<<<<<<<<<<<
- *     return dict(zip(sorted(G), pos))
+ *     return pos
  * 
  */
   __pyx_t_21 = __Pyx_PyInt_As_int(__pyx_v_iterations); if (unlikely((__pyx_t_21 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -3596,37 +3596,13 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
   /* "orangecontrib/network/_fr_layout.pyx":92
  *                                            k, pos_arr, fixed,
  *                                            iterations, callback))
- *     return dict(zip(sorted(G), pos))             # <<<<<<<<<<<<<<
+ *     return pos             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_8 = PySequence_List(__pyx_v_G); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_12 = ((PyObject*)__pyx_t_8);
-  __pyx_t_8 = 0;
-  __pyx_t_13 = PyList_Sort(__pyx_t_12); if (unlikely(__pyx_t_13 == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GIVEREF(__pyx_t_12);
-  PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_12);
   __Pyx_INCREF(__pyx_v_pos);
-  __Pyx_GIVEREF(__pyx_v_pos);
-  PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_v_pos);
-  __pyx_t_12 = 0;
-  __pyx_t_12 = __Pyx_PyObject_Call(__pyx_builtin_zip, __pyx_t_8, NULL); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_12);
-  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyTuple_New(1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GIVEREF(__pyx_t_12);
-  PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_12);
-  __pyx_t_12 = 0;
-  __pyx_t_12 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)(&PyDict_Type))), __pyx_t_8, NULL); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 92; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_12);
-  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_r = __pyx_t_12;
-  __pyx_t_12 = 0;
+  __pyx_r = __pyx_v_pos;
   goto __pyx_L0;
 
   /* "orangecontrib/network/_fr_layout.pyx":29
@@ -3672,7 +3648,7 @@ static PyObject *__pyx_pf_13orangecontrib_7network_10_fr_layout_fruchterman_rein
   return __pyx_r;
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":96
+/* "orangecontrib/network/_fr_layout.pyx":95
  * 
  * 
  * cdef inline void diff(arr_f2_t pos,             # <<<<<<<<<<<<<<
@@ -3690,7 +3666,7 @@ static CYTHON_INLINE void __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__p
   Py_ssize_t __pyx_t_6;
   Py_ssize_t __pyx_t_7;
 
-  /* "orangecontrib/network/_fr_layout.pyx":101
+  /* "orangecontrib/network/_fr_layout.pyx":100
  *                       arr_f1_t out) nogil:
  *     cdef Py_ssize_t d
  *     for d in range(out.shape[0]):             # <<<<<<<<<<<<<<
@@ -3701,7 +3677,7 @@ static CYTHON_INLINE void __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__p
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_d = __pyx_t_2;
 
-    /* "orangecontrib/network/_fr_layout.pyx":102
+    /* "orangecontrib/network/_fr_layout.pyx":101
  *     cdef Py_ssize_t d
  *     for d in range(out.shape[0]):
  *         out[d] = pos[i, d] - pos[j, d]             # <<<<<<<<<<<<<<
@@ -3716,7 +3692,7 @@ static CYTHON_INLINE void __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__p
     *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_7 * __pyx_v_out.strides[0]) )) = ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_3 * __pyx_v_pos.strides[0]) ) + __pyx_t_4 * __pyx_v_pos.strides[1]) ))) - (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_pos.data + __pyx_t_5 * __pyx_v_pos.strides[0]) ) + __pyx_t_6 * __pyx_v_pos.strides[1]) ))));
   }
 
-  /* "orangecontrib/network/_fr_layout.pyx":96
+  /* "orangecontrib/network/_fr_layout.pyx":95
  * 
  * 
  * cdef inline void diff(arr_f2_t pos,             # <<<<<<<<<<<<<<
@@ -3727,7 +3703,7 @@ static CYTHON_INLINE void __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__p
   /* function exit code */
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":105
+/* "orangecontrib/network/_fr_layout.pyx":104
  * 
  * 
  * cdef inline double magnitude(arr_f1_t a) nogil:             # <<<<<<<<<<<<<<
@@ -3744,7 +3720,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   Py_ssize_t __pyx_t_3;
   Py_ssize_t __pyx_t_4;
 
-  /* "orangecontrib/network/_fr_layout.pyx":107
+  /* "orangecontrib/network/_fr_layout.pyx":106
  * cdef inline double magnitude(arr_f1_t a) nogil:
  *     cdef:
  *         double result = 0             # <<<<<<<<<<<<<<
@@ -3753,7 +3729,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
  */
   __pyx_v_result = 0.0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":109
+  /* "orangecontrib/network/_fr_layout.pyx":108
  *         double result = 0
  *         Py_ssize_t i
  *     for i in range(a.shape[0]):             # <<<<<<<<<<<<<<
@@ -3764,7 +3740,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_i = __pyx_t_2;
 
-    /* "orangecontrib/network/_fr_layout.pyx":110
+    /* "orangecontrib/network/_fr_layout.pyx":109
  *         Py_ssize_t i
  *     for i in range(a.shape[0]):
  *         result += a[i] * a[i]             # <<<<<<<<<<<<<<
@@ -3776,7 +3752,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
     __pyx_v_result = (__pyx_v_result + ((*((double *) ( /* dim=0 */ (__pyx_v_a.data + __pyx_t_3 * __pyx_v_a.strides[0]) ))) * (*((double *) ( /* dim=0 */ (__pyx_v_a.data + __pyx_t_4 * __pyx_v_a.strides[0]) )))));
   }
 
-  /* "orangecontrib/network/_fr_layout.pyx":111
+  /* "orangecontrib/network/_fr_layout.pyx":110
  *     for i in range(a.shape[0]):
  *         result += a[i] * a[i]
  *     return sqrt(result)             # <<<<<<<<<<<<<<
@@ -3786,7 +3762,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   __pyx_r = sqrt(__pyx_v_result);
   goto __pyx_L0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":105
+  /* "orangecontrib/network/_fr_layout.pyx":104
  * 
  * 
  * cdef inline double magnitude(arr_f1_t a) nogil:             # <<<<<<<<<<<<<<
@@ -3799,7 +3775,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   return __pyx_r;
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":114
+/* "orangecontrib/network/_fr_layout.pyx":113
  * 
  * 
  * cdef inline double magnitude2(arr_f2_t a, Py_ssize_t i) nogil:             # <<<<<<<<<<<<<<
@@ -3818,7 +3794,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   Py_ssize_t __pyx_t_5;
   Py_ssize_t __pyx_t_6;
 
-  /* "orangecontrib/network/_fr_layout.pyx":116
+  /* "orangecontrib/network/_fr_layout.pyx":115
  * cdef inline double magnitude2(arr_f2_t a, Py_ssize_t i) nogil:
  *     cdef:
  *         double result = 0             # <<<<<<<<<<<<<<
@@ -3827,7 +3803,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
  */
   __pyx_v_result = 0.0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":118
+  /* "orangecontrib/network/_fr_layout.pyx":117
  *         double result = 0
  *         Py_ssize_t j
  *     for j in range(a.shape[1]):             # <<<<<<<<<<<<<<
@@ -3838,7 +3814,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_j = __pyx_t_2;
 
-    /* "orangecontrib/network/_fr_layout.pyx":119
+    /* "orangecontrib/network/_fr_layout.pyx":118
  *         Py_ssize_t j
  *     for j in range(a.shape[1]):
  *         result += a[i, j] * a[i, j]             # <<<<<<<<<<<<<<
@@ -3852,7 +3828,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
     __pyx_v_result = (__pyx_v_result + ((*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_a.data + __pyx_t_3 * __pyx_v_a.strides[0]) ) + __pyx_t_4 * __pyx_v_a.strides[1]) ))) * (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_a.data + __pyx_t_5 * __pyx_v_a.strides[0]) ) + __pyx_t_6 * __pyx_v_a.strides[1]) )))));
   }
 
-  /* "orangecontrib/network/_fr_layout.pyx":120
+  /* "orangecontrib/network/_fr_layout.pyx":119
  *     for j in range(a.shape[1]):
  *         result += a[i, j] * a[i, j]
  *     return sqrt(result)             # <<<<<<<<<<<<<<
@@ -3862,7 +3838,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   __pyx_r = sqrt(__pyx_v_result);
   goto __pyx_L0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":114
+  /* "orangecontrib/network/_fr_layout.pyx":113
  * 
  * 
  * cdef inline double magnitude2(arr_f2_t a, Py_ssize_t i) nogil:             # <<<<<<<<<<<<<<
@@ -3875,7 +3851,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
   return __pyx_r;
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":123
+/* "orangecontrib/network/_fr_layout.pyx":122
  * 
  * 
  * cdef inline double _Fr(double k, double x) nogil:             # <<<<<<<<<<<<<<
@@ -3886,7 +3862,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout_magnit
 static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fr(double __pyx_v_k, double __pyx_v_x) {
   double __pyx_r;
 
-  /* "orangecontrib/network/_fr_layout.pyx":124
+  /* "orangecontrib/network/_fr_layout.pyx":123
  * 
  * cdef inline double _Fr(double k, double x) nogil:
  *     return k*k / x             # <<<<<<<<<<<<<<
@@ -3896,7 +3872,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fr(do
   __pyx_r = ((__pyx_v_k * __pyx_v_k) / __pyx_v_x);
   goto __pyx_L0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":123
+  /* "orangecontrib/network/_fr_layout.pyx":122
  * 
  * 
  * cdef inline double _Fr(double k, double x) nogil:             # <<<<<<<<<<<<<<
@@ -3909,7 +3885,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fr(do
   return __pyx_r;
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":127
+/* "orangecontrib/network/_fr_layout.pyx":126
  * 
  * 
  * cdef inline double _Fa(double k, double x) nogil:             # <<<<<<<<<<<<<<
@@ -3920,7 +3896,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fr(do
 static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fa(double __pyx_v_k, double __pyx_v_x) {
   double __pyx_r;
 
-  /* "orangecontrib/network/_fr_layout.pyx":128
+  /* "orangecontrib/network/_fr_layout.pyx":127
  * 
  * cdef inline double _Fa(double k, double x) nogil:
  *     return x*x / k             # <<<<<<<<<<<<<<
@@ -3930,7 +3906,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fa(do
   __pyx_r = ((__pyx_v_x * __pyx_v_x) / __pyx_v_k);
   goto __pyx_L0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":127
+  /* "orangecontrib/network/_fr_layout.pyx":126
  * 
  * 
  * cdef inline double _Fa(double k, double x) nogil:             # <<<<<<<<<<<<<<
@@ -3943,7 +3919,7 @@ static CYTHON_INLINE double __pyx_f_13orangecontrib_7network_10_fr_layout__Fa(do
   return __pyx_r;
 }
 
-/* "orangecontrib/network/_fr_layout.pyx":131
+/* "orangecontrib/network/_fr_layout.pyx":130
  * 
  * 
  * cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents             # <<<<<<<<<<<<<<
@@ -4027,7 +4003,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_fruchterman_reingold", 0);
 
-  /* "orangecontrib/network/_fr_layout.pyx":140
+  /* "orangecontrib/network/_fr_layout.pyx":139
  *                                     callback):
  *     cdef:
  *         double GRAVITY = 20             # <<<<<<<<<<<<<<
@@ -4036,21 +4012,21 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
  */
   __pyx_v_GRAVITY = 20.0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":142
+  /* "orangecontrib/network/_fr_layout.pyx":141
  *         double GRAVITY = 20
  *         arr_f1_t temperature = (.15 *
  *                                 exp(log(10./1000) / iterations)**np.arange(iterations))             # <<<<<<<<<<<<<<
  *         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
  *         arr_f1_t delta = np.empty(pos.shape[1])
  */
-  __pyx_t_1 = PyFloat_FromDouble(exp((log((10. / 1000.0)) / __pyx_v_iterations))); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyFloat_FromDouble(exp((log((10. / 1000.0)) / __pyx_v_iterations))); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_arange); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_arange); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_iterations); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_iterations); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_5 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
@@ -4063,60 +4039,60 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
     }
   }
   if (!__pyx_t_5) {
-    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_2);
   } else {
-    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_5); __pyx_t_5 = NULL;
     __Pyx_GIVEREF(__pyx_t_3);
     PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_3);
     __pyx_t_3 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyNumber_Power(__pyx_t_1, __pyx_t_2, Py_None); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = PyNumber_Power(__pyx_t_1, __pyx_t_2, Py_None); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":141
+  /* "orangecontrib/network/_fr_layout.pyx":140
  *     cdef:
  *         double GRAVITY = 20
  *         arr_f1_t temperature = (.15 *             # <<<<<<<<<<<<<<
  *                                 exp(log(10./1000) / iterations)**np.arange(iterations))
  *         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
  */
-  __pyx_t_2 = PyNumber_Multiply(__pyx_float__15, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyNumber_Multiply(__pyx_float__15, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_2);
-  if (unlikely(!__pyx_t_7.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 141; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__pyx_t_7.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_temperature = __pyx_t_7;
   __pyx_t_7.memview = NULL;
   __pyx_t_7.data = NULL;
 
-  /* "orangecontrib/network/_fr_layout.pyx":143
+  /* "orangecontrib/network/_fr_layout.pyx":142
  *         arr_f1_t temperature = (.15 *
  *                                 exp(log(10./1000) / iterations)**np.arange(iterations))
  *         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))             # <<<<<<<<<<<<<<
  *         arr_f1_t delta = np.empty(pos.shape[1])
  *         double mag, adj, weight, temp
  */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyInt_FromSsize_t((__pyx_v_pos.shape[0])); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = PyInt_FromSsize_t((__pyx_v_pos.shape[0])); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = PyInt_FromSsize_t((__pyx_v_pos.shape[1])); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_6 = PyInt_FromSsize_t((__pyx_v_pos.shape[1])); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_4);
   PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_4);
@@ -4135,41 +4111,41 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
     }
   }
   if (!__pyx_t_6) {
-    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_2);
   } else {
-    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_6); __pyx_t_6 = NULL;
     __Pyx_GIVEREF(__pyx_t_3);
     PyTuple_SET_ITEM(__pyx_t_4, 0+1, __pyx_t_3);
     __pyx_t_3 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_4, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_4, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_2);
-  if (unlikely(!__pyx_t_8.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__pyx_t_8.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_disp = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "orangecontrib/network/_fr_layout.pyx":144
+  /* "orangecontrib/network/_fr_layout.pyx":143
  *                                 exp(log(10./1000) / iterations)**np.arange(iterations))
  *         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
  *         arr_f1_t delta = np.empty(pos.shape[1])             # <<<<<<<<<<<<<<
  *         double mag, adj, weight, temp
  *         Py_ssize_t row, col, i, j, d, iteration
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyInt_FromSsize_t((__pyx_v_pos.shape[1])); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyInt_FromSsize_t((__pyx_v_pos.shape[1])); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_3 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
@@ -4182,29 +4158,29 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
     }
   }
   if (!__pyx_t_3) {
-    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_GOTREF(__pyx_t_2);
   } else {
-    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_3); __pyx_t_3 = NULL;
     __Pyx_GIVEREF(__pyx_t_1);
     PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_1);
     __pyx_t_1 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_2);
-  if (unlikely(!__pyx_t_7.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__pyx_t_7.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_delta = __pyx_t_7;
   __pyx_t_7.memview = NULL;
   __pyx_t_7.data = NULL;
 
-  /* "orangecontrib/network/_fr_layout.pyx":147
+  /* "orangecontrib/network/_fr_layout.pyx":146
  *         double mag, adj, weight, temp
  *         Py_ssize_t row, col, i, j, d, iteration
  *         Py_ssize_t n_nodes = pos.shape[0]             # <<<<<<<<<<<<<<
@@ -4213,7 +4189,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
  */
   __pyx_v_n_nodes = (__pyx_v_pos.shape[0]);
 
-  /* "orangecontrib/network/_fr_layout.pyx":148
+  /* "orangecontrib/network/_fr_layout.pyx":147
  *         Py_ssize_t row, col, i, j, d, iteration
  *         Py_ssize_t n_nodes = pos.shape[0]
  *         Py_ssize_t n_edges = Edata.shape[0]             # <<<<<<<<<<<<<<
@@ -4222,7 +4198,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
  */
   __pyx_v_n_edges = (__pyx_v_Edata.shape[0]);
 
-  /* "orangecontrib/network/_fr_layout.pyx":149
+  /* "orangecontrib/network/_fr_layout.pyx":148
  *         Py_ssize_t n_nodes = pos.shape[0]
  *         Py_ssize_t n_edges = Edata.shape[0]
  *         Py_ssize_t n_dim = pos.shape[1]             # <<<<<<<<<<<<<<
@@ -4231,17 +4207,17 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
  */
   __pyx_v_n_dim = (__pyx_v_pos.shape[1]);
 
-  /* "orangecontrib/network/_fr_layout.pyx":150
+  /* "orangecontrib/network/_fr_layout.pyx":149
  *         Py_ssize_t n_edges = Edata.shape[0]
  *         Py_ssize_t n_dim = pos.shape[1]
  *         int have_callback = bool(callback)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
  */
-  __pyx_t_9 = __Pyx_PyObject_IsTrue(__pyx_v_callback); if (unlikely(__pyx_t_9 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_9 = __Pyx_PyObject_IsTrue(__pyx_v_callback); if (unlikely(__pyx_t_9 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_have_callback = (!(!__pyx_t_9));
 
-  /* "orangecontrib/network/_fr_layout.pyx":151
+  /* "orangecontrib/network/_fr_layout.pyx":150
  *         Py_ssize_t n_dim = pos.shape[1]
  *         int have_callback = bool(callback)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -4255,7 +4231,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
       #endif
       /*try:*/ {
 
-        /* "orangecontrib/network/_fr_layout.pyx":152
+        /* "orangecontrib/network/_fr_layout.pyx":151
  *         int have_callback = bool(callback)
  *     with nogil:
  *         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3             # <<<<<<<<<<<<<<
@@ -4269,7 +4245,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
         __pyx_t_12 = 2;
         *((double *) ( /* dim=0 */ (__pyx_v_temperature.data + __pyx_t_12 * __pyx_v_temperature.strides[0]) )) = .3;
 
-        /* "orangecontrib/network/_fr_layout.pyx":153
+        /* "orangecontrib/network/_fr_layout.pyx":152
  *     with nogil:
  *         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
  *         for iteration in range(iterations):             # <<<<<<<<<<<<<<
@@ -4280,7 +4256,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
         for (__pyx_t_14 = 0; __pyx_t_14 < __pyx_t_13; __pyx_t_14+=1) {
           __pyx_v_iteration = __pyx_t_14;
 
-          /* "orangecontrib/network/_fr_layout.pyx":154
+          /* "orangecontrib/network/_fr_layout.pyx":153
  *         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
  *         for iteration in range(iterations):
  *             temp = temperature[iteration]             # <<<<<<<<<<<<<<
@@ -4290,7 +4266,7 @@ static __pyx_t_13orangecontrib_7network_10_fr_layout_arr_f2_t __pyx_f_13orangeco
           __pyx_t_15 = __pyx_v_iteration;
           __pyx_v_temp = (*((double *) ( /* dim=0 */ (__pyx_v_temperature.data + __pyx_t_15 * __pyx_v_temperature.strides[0]) )));
 
-          /* "orangecontrib/network/_fr_layout.pyx":155
+          /* "orangecontrib/network/_fr_layout.pyx":154
  *         for iteration in range(iterations):
  *             temp = temperature[iteration]
  *             disp[:, :] = 0             # <<<<<<<<<<<<<<
@@ -4332,7 +4308,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           }
           __PYX_XDEC_MEMVIEW(&__pyx_t_16, 0);
 
-          /* "orangecontrib/network/_fr_layout.pyx":157
+          /* "orangecontrib/network/_fr_layout.pyx":156
  *             disp[:, :] = 0
  *             # Repulsive forces
  *             for i in range(n_nodes):             # <<<<<<<<<<<<<<
@@ -4343,7 +4319,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_i = __pyx_t_18;
 
-            /* "orangecontrib/network/_fr_layout.pyx":158
+            /* "orangecontrib/network/_fr_layout.pyx":157
  *             # Repulsive forces
  *             for i in range(n_nodes):
  *                 for j in range(n_nodes):             # <<<<<<<<<<<<<<
@@ -4354,7 +4330,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_19; __pyx_t_20+=1) {
               __pyx_v_j = __pyx_t_20;
 
-              /* "orangecontrib/network/_fr_layout.pyx":159
+              /* "orangecontrib/network/_fr_layout.pyx":158
  *             for i in range(n_nodes):
  *                 for j in range(n_nodes):
  *                     diff(pos, i, j, delta)             # <<<<<<<<<<<<<<
@@ -4363,7 +4339,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
               __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__pyx_v_pos, __pyx_v_i, __pyx_v_j, __pyx_v_delta);
 
-              /* "orangecontrib/network/_fr_layout.pyx":160
+              /* "orangecontrib/network/_fr_layout.pyx":159
  *                 for j in range(n_nodes):
  *                     diff(pos, i, j, delta)
  *                     mag = magnitude(delta)             # <<<<<<<<<<<<<<
@@ -4372,7 +4348,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
               __pyx_v_mag = __pyx_f_13orangecontrib_7network_10_fr_layout_magnitude(__pyx_v_delta);
 
-              /* "orangecontrib/network/_fr_layout.pyx":161
+              /* "orangecontrib/network/_fr_layout.pyx":160
  *                     diff(pos, i, j, delta)
  *                     mag = magnitude(delta)
  *                     if mag == 0: continue             # <<<<<<<<<<<<<<
@@ -4384,7 +4360,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
                 goto __pyx_L10_continue;
               }
 
-              /* "orangecontrib/network/_fr_layout.pyx":162
+              /* "orangecontrib/network/_fr_layout.pyx":161
  *                     mag = magnitude(delta)
  *                     if mag == 0: continue
  *                     for d in range(n_dim):             # <<<<<<<<<<<<<<
@@ -4395,7 +4371,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
               for (__pyx_t_22 = 0; __pyx_t_22 < __pyx_t_21; __pyx_t_22+=1) {
                 __pyx_v_d = __pyx_t_22;
 
-                /* "orangecontrib/network/_fr_layout.pyx":163
+                /* "orangecontrib/network/_fr_layout.pyx":162
  *                     if mag == 0: continue
  *                     for d in range(n_dim):
  *                         disp[i, d] += delta[d] / mag * _Fr(k, mag)             # <<<<<<<<<<<<<<
@@ -4411,7 +4387,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             }
           }
 
-          /* "orangecontrib/network/_fr_layout.pyx":165
+          /* "orangecontrib/network/_fr_layout.pyx":164
  *                         disp[i, d] += delta[d] / mag * _Fr(k, mag)
  *             # Attractive forces
  *             for i in range(n_edges):             # <<<<<<<<<<<<<<
@@ -4422,7 +4398,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_i = __pyx_t_18;
 
-            /* "orangecontrib/network/_fr_layout.pyx":166
+            /* "orangecontrib/network/_fr_layout.pyx":165
  *             # Attractive forces
  *             for i in range(n_edges):
  *                 row, col, weight = Erow[i], Ecol[i], Edata[i]             # <<<<<<<<<<<<<<
@@ -4439,7 +4415,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             __pyx_v_col = __pyx_t_27;
             __pyx_v_weight = __pyx_t_28;
 
-            /* "orangecontrib/network/_fr_layout.pyx":167
+            /* "orangecontrib/network/_fr_layout.pyx":166
  *             for i in range(n_edges):
  *                 row, col, weight = Erow[i], Ecol[i], Edata[i]
  *                 diff(pos, row, col, delta)             # <<<<<<<<<<<<<<
@@ -4448,7 +4424,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
             __pyx_f_13orangecontrib_7network_10_fr_layout_diff(__pyx_v_pos, __pyx_v_row, __pyx_v_col, __pyx_v_delta);
 
-            /* "orangecontrib/network/_fr_layout.pyx":168
+            /* "orangecontrib/network/_fr_layout.pyx":167
  *                 row, col, weight = Erow[i], Ecol[i], Edata[i]
  *                 diff(pos, row, col, delta)
  *                 mag = magnitude(delta)             # <<<<<<<<<<<<<<
@@ -4457,7 +4433,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
             __pyx_v_mag = __pyx_f_13orangecontrib_7network_10_fr_layout_magnitude(__pyx_v_delta);
 
-            /* "orangecontrib/network/_fr_layout.pyx":169
+            /* "orangecontrib/network/_fr_layout.pyx":168
  *                 diff(pos, row, col, delta)
  *                 mag = magnitude(delta)
  *                 if mag == 0: continue             # <<<<<<<<<<<<<<
@@ -4469,7 +4445,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
               goto __pyx_L15_continue;
             }
 
-            /* "orangecontrib/network/_fr_layout.pyx":170
+            /* "orangecontrib/network/_fr_layout.pyx":169
  *                 mag = magnitude(delta)
  *                 if mag == 0: continue
  *                 for d in range(n_dim):             # <<<<<<<<<<<<<<
@@ -4480,7 +4456,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             for (__pyx_t_29 = 0; __pyx_t_29 < __pyx_t_22; __pyx_t_29+=1) {
               __pyx_v_d = __pyx_t_29;
 
-              /* "orangecontrib/network/_fr_layout.pyx":171
+              /* "orangecontrib/network/_fr_layout.pyx":170
  *                 if mag == 0: continue
  *                 for d in range(n_dim):
  *                     adj = delta[d] / mag * weight * _Fa(k, mag)             # <<<<<<<<<<<<<<
@@ -4490,7 +4466,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
               __pyx_t_30 = __pyx_v_d;
               __pyx_v_adj = ((((*((double *) ( /* dim=0 */ (__pyx_v_delta.data + __pyx_t_30 * __pyx_v_delta.strides[0]) ))) / __pyx_v_mag) * __pyx_v_weight) * __pyx_f_13orangecontrib_7network_10_fr_layout__Fa(__pyx_v_k, __pyx_v_mag));
 
-              /* "orangecontrib/network/_fr_layout.pyx":172
+              /* "orangecontrib/network/_fr_layout.pyx":171
  *                 for d in range(n_dim):
  *                     adj = delta[d] / mag * weight * _Fa(k, mag)
  *                     disp[row, d] -= adj             # <<<<<<<<<<<<<<
@@ -4501,7 +4477,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
               __pyx_t_32 = __pyx_v_d;
               *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_disp.data + __pyx_t_31 * __pyx_v_disp.strides[0]) ) + __pyx_t_32 * __pyx_v_disp.strides[1]) )) -= __pyx_v_adj;
 
-              /* "orangecontrib/network/_fr_layout.pyx":173
+              /* "orangecontrib/network/_fr_layout.pyx":172
  *                     adj = delta[d] / mag * weight * _Fa(k, mag)
  *                     disp[row, d] -= adj
  *                     disp[col, d] += adj             # <<<<<<<<<<<<<<
@@ -4515,7 +4491,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             __pyx_L15_continue:;
           }
 
-          /* "orangecontrib/network/_fr_layout.pyx":175
+          /* "orangecontrib/network/_fr_layout.pyx":174
  *                     disp[col, d] += adj
  *             # Gravity; tend toward center
  *             for i in range(n_nodes):             # <<<<<<<<<<<<<<
@@ -4526,7 +4502,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_i = __pyx_t_18;
 
-            /* "orangecontrib/network/_fr_layout.pyx":176
+            /* "orangecontrib/network/_fr_layout.pyx":175
  *             # Gravity; tend toward center
  *             for i in range(n_nodes):
  *                 mag = magnitude2(pos, i)             # <<<<<<<<<<<<<<
@@ -4535,7 +4511,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
             __pyx_v_mag = __pyx_f_13orangecontrib_7network_10_fr_layout_magnitude2(__pyx_v_pos, __pyx_v_i);
 
-            /* "orangecontrib/network/_fr_layout.pyx":177
+            /* "orangecontrib/network/_fr_layout.pyx":176
  *             for i in range(n_nodes):
  *                 mag = magnitude2(pos, i)
  *                 for d in range(n_dim):             # <<<<<<<<<<<<<<
@@ -4546,7 +4522,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             for (__pyx_t_29 = 0; __pyx_t_29 < __pyx_t_22; __pyx_t_29+=1) {
               __pyx_v_d = __pyx_t_29;
 
-              /* "orangecontrib/network/_fr_layout.pyx":178
+              /* "orangecontrib/network/_fr_layout.pyx":177
  *                 mag = magnitude2(pos, i)
  *                 for d in range(n_dim):
  *                     disp[i, d] -= k * GRAVITY * mag * pos[i, d]             # <<<<<<<<<<<<<<
@@ -4561,7 +4537,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             }
           }
 
-          /* "orangecontrib/network/_fr_layout.pyx":180
+          /* "orangecontrib/network/_fr_layout.pyx":179
  *                     disp[i, d] -= k * GRAVITY * mag * pos[i, d]
  *             # Keep fixed nodes fixed
  *             for i in range(fixed.shape[0]):             # <<<<<<<<<<<<<<
@@ -4572,7 +4548,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_i = __pyx_t_18;
 
-            /* "orangecontrib/network/_fr_layout.pyx":181
+            /* "orangecontrib/network/_fr_layout.pyx":180
  *             # Keep fixed nodes fixed
  *             for i in range(fixed.shape[0]):
  *                 i = fixed[i]             # <<<<<<<<<<<<<<
@@ -4582,7 +4558,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             __pyx_t_22 = __pyx_v_i;
             __pyx_v_i = (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_fixed.data + __pyx_t_22 * __pyx_v_fixed.strides[0]) )));
 
-            /* "orangecontrib/network/_fr_layout.pyx":182
+            /* "orangecontrib/network/_fr_layout.pyx":181
  *             for i in range(fixed.shape[0]):
  *                 i = fixed[i]
  *                 for d in range(n_dim):             # <<<<<<<<<<<<<<
@@ -4593,7 +4569,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             for (__pyx_t_39 = 0; __pyx_t_39 < __pyx_t_29; __pyx_t_39+=1) {
               __pyx_v_d = __pyx_t_39;
 
-              /* "orangecontrib/network/_fr_layout.pyx":183
+              /* "orangecontrib/network/_fr_layout.pyx":182
  *                 i = fixed[i]
  *                 for d in range(n_dim):
  *                     disp[i, d] = 0             # <<<<<<<<<<<<<<
@@ -4606,7 +4582,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             }
           }
 
-          /* "orangecontrib/network/_fr_layout.pyx":185
+          /* "orangecontrib/network/_fr_layout.pyx":184
  *                     disp[i, d] = 0
  *             # Limit the maximum displacement
  *             for i in range(n_nodes):             # <<<<<<<<<<<<<<
@@ -4617,7 +4593,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_i = __pyx_t_18;
 
-            /* "orangecontrib/network/_fr_layout.pyx":186
+            /* "orangecontrib/network/_fr_layout.pyx":185
  *             # Limit the maximum displacement
  *             for i in range(n_nodes):
  *                 mag = magnitude2(disp, i)             # <<<<<<<<<<<<<<
@@ -4626,7 +4602,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
  */
             __pyx_v_mag = __pyx_f_13orangecontrib_7network_10_fr_layout_magnitude2(__pyx_v_disp, __pyx_v_i);
 
-            /* "orangecontrib/network/_fr_layout.pyx":187
+            /* "orangecontrib/network/_fr_layout.pyx":186
  *             for i in range(n_nodes):
  *                 mag = magnitude2(disp, i)
  *                 if mag == 0: continue             # <<<<<<<<<<<<<<
@@ -4638,7 +4614,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
               goto __pyx_L28_continue;
             }
 
-            /* "orangecontrib/network/_fr_layout.pyx":188
+            /* "orangecontrib/network/_fr_layout.pyx":187
  *                 mag = magnitude2(disp, i)
  *                 if mag == 0: continue
  *                 for d in range(n_dim):             # <<<<<<<<<<<<<<
@@ -4649,7 +4625,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             for (__pyx_t_39 = 0; __pyx_t_39 < __pyx_t_29; __pyx_t_39+=1) {
               __pyx_v_d = __pyx_t_39;
 
-              /* "orangecontrib/network/_fr_layout.pyx":189
+              /* "orangecontrib/network/_fr_layout.pyx":188
  *                 if mag == 0: continue
  *                 for d in range(n_dim):
  *                     pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)             # <<<<<<<<<<<<<<
@@ -4674,7 +4650,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
             __pyx_L28_continue:;
           }
 
-          /* "orangecontrib/network/_fr_layout.pyx":191
+          /* "orangecontrib/network/_fr_layout.pyx":190
  *                     pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
  *             # Optionally call back with the new positions
  *             if have_callback:             # <<<<<<<<<<<<<<
@@ -4684,7 +4660,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           __pyx_t_9 = (__pyx_v_have_callback != 0);
           if (__pyx_t_9) {
 
-            /* "orangecontrib/network/_fr_layout.pyx":192
+            /* "orangecontrib/network/_fr_layout.pyx":191
  *             # Optionally call back with the new positions
  *             if have_callback:
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -4697,19 +4673,19 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
                 #endif
                 /*try:*/ {
 
-                  /* "orangecontrib/network/_fr_layout.pyx":193
+                  /* "orangecontrib/network/_fr_layout.pyx":192
  *             if have_callback:
  *                 with gil:
  *                     if not callback(np.asarray(pos)):             # <<<<<<<<<<<<<<
  *                         break
  *             # If temperature too cool, finish early
  */
-                  __pyx_t_6 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_6 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_6);
-                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_1);
                   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-                  __pyx_t_6 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_6 = __pyx_memoryview_fromslice(__pyx_v_pos, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_GOTREF(__pyx_t_6);
                   __pyx_t_3 = NULL;
                   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_1))) {
@@ -4722,17 +4698,17 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
                     }
                   }
                   if (!__pyx_t_3) {
-                    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                     __Pyx_GOTREF(__pyx_t_4);
                   } else {
-                    __pyx_t_5 = PyTuple_New(1+1); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_5 = PyTuple_New(1+1); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_5);
                     __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_3); __pyx_t_3 = NULL;
                     __Pyx_GIVEREF(__pyx_t_6);
                     PyTuple_SET_ITEM(__pyx_t_5, 0+1, __pyx_t_6);
                     __pyx_t_6 = 0;
-                    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_4);
                     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                   }
@@ -4749,27 +4725,27 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
                     }
                   }
                   if (!__pyx_t_5) {
-                    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
                     __Pyx_GOTREF(__pyx_t_2);
                   } else {
-                    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_6);
                     __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_5); __pyx_t_5 = NULL;
                     __Pyx_GIVEREF(__pyx_t_4);
                     PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_4);
                     __pyx_t_4 = 0;
-                    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                     __Pyx_GOTREF(__pyx_t_2);
                     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                   }
                   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-                  __pyx_t_9 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_9 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 193; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
+                  __pyx_t_9 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_9 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L37_error;}
                   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
                   __pyx_t_50 = ((!__pyx_t_9) != 0);
                   if (__pyx_t_50) {
 
-                    /* "orangecontrib/network/_fr_layout.pyx":194
+                    /* "orangecontrib/network/_fr_layout.pyx":193
  *                 with gil:
  *                     if not callback(np.asarray(pos)):
  *                         break             # <<<<<<<<<<<<<<
@@ -4780,7 +4756,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
                   }
                 }
 
-                /* "orangecontrib/network/_fr_layout.pyx":192
+                /* "orangecontrib/network/_fr_layout.pyx":191
  *             # Optionally call back with the new positions
  *             if have_callback:
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -4813,7 +4789,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           }
           __pyx_L33:;
 
-          /* "orangecontrib/network/_fr_layout.pyx":196
+          /* "orangecontrib/network/_fr_layout.pyx":195
  *                         break
  *             # If temperature too cool, finish early
  *             if temp < .0005:             # <<<<<<<<<<<<<<
@@ -4823,7 +4799,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
           __pyx_t_50 = ((__pyx_v_temp < .0005) != 0);
           if (__pyx_t_50) {
 
-            /* "orangecontrib/network/_fr_layout.pyx":197
+            /* "orangecontrib/network/_fr_layout.pyx":196
  *             # If temperature too cool, finish early
  *             if temp < .0005:
  *                 break             # <<<<<<<<<<<<<<
@@ -4835,7 +4811,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
         __pyx_L7_break:;
       }
 
-      /* "orangecontrib/network/_fr_layout.pyx":151
+      /* "orangecontrib/network/_fr_layout.pyx":150
  *         Py_ssize_t n_dim = pos.shape[1]
  *         int have_callback = bool(callback)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -4859,7 +4835,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
       }
   }
 
-  /* "orangecontrib/network/_fr_layout.pyx":198
+  /* "orangecontrib/network/_fr_layout.pyx":197
  *             if temp < .0005:
  *                 break
  *     return pos             # <<<<<<<<<<<<<<
@@ -4868,7 +4844,7 @@ __pyx_t_16.strides[1] = __pyx_v_disp.strides[1];
   __pyx_r = __pyx_v_pos;
   goto __pyx_L0;
 
-  /* "orangecontrib/network/_fr_layout.pyx":131
+  /* "orangecontrib/network/_fr_layout.pyx":130
  * 
  * 
  * cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents             # <<<<<<<<<<<<<<

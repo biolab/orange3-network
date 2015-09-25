@@ -89,8 +89,7 @@ def fruchterman_reingold_layout(G,
     pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
                                            k, pos_arr, fixed,
                                            iterations, callback))
-    return dict(zip(sorted(G), pos))
-
+    return pos
 
 
 cdef inline void diff(arr_f2_t pos,
