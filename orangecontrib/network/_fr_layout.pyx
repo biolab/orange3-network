@@ -37,12 +37,18 @@ def fruchterman_reingold_layout(G,
     """
     Position nodes using Fruchterman-Reingold force-directed algorithm.
 
+    The parameters are equal to those of networkx.spring_layout(), with the
+    following exceptions:
+
     Parameters
     ----------
+    weight: str or np.ndarray
+        The string attribute of the graph's edges that represents edge weights,
+        or a 2D distance matrix.
     callaback: callable
         A function accepting `pos` ndarray to call after each iteration.
+        The algorithm is stopped if the return value is ``False``-ish.
 
-    Other parameters equal to those of networkx.spring_layout().
     """
     if G is None or len(G) == 0: return {}
     if len(G) == 1: return {G.nodes()[0]: [.5, .5]}
@@ -61,8 +67,17 @@ def fruchterman_reingold_layout(G,
     nodelist = sorted(G)
     index = dict(zip(nodelist, range(len(nodelist))))
     try:
-        Erow, Ecol, Edata = zip(*[(index[u], index[v], d.get(weight, 1.))
-                                  for u, v, d in G.edges_iter(nodelist, data=True)])
+        if isinstance(weight, str):
+            Erow, Ecol, Edata = zip(*[(index[u], index[v], w or 0)  # 0 if None
+                                      for u, v, w in G.edges_iter(nodelist, data=weight)])
+        elif isinstance(weight, np.ndarray):
+            Erow, Ecol, Edata = zip(*[(index[u], index[v], weight[u, v])
+                                      for u, v in G.edges_iter(nodelist)])
+        else: raise TypeError('weight must be str or ndarray')
+        # Don't allow zero weights
+        try: min_w = np.min([i for i in Edata if i])
+        except ValueError: min_w = 1
+        Edata = np.clip(Edata, min_w, np.inf)
     except ValueError:  # No edges
         Erow, Ecol, Edata = [], [], []
     Erow = np.asarray(Erow, dtype=np.int32)
@@ -74,8 +89,7 @@ def fruchterman_reingold_layout(G,
     pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
                                            k, pos_arr, fixed,
                                            iterations, callback))
-    return dict(zip(sorted(G), pos))
-
+    return pos
 
 
 cdef inline void diff(arr_f2_t pos,
@@ -123,11 +137,11 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                     callback):
     cdef:
         double GRAVITY = 20
-        arr_f1_t temperature = (.2 *
+        arr_f1_t temperature = (.15 *
                                 exp(log(10./1000) / iterations)**np.arange(iterations))
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
-        double mag, adj, weight
+        double mag, adj, weight, temp
         Py_ssize_t row, col, i, j, d, iteration
         Py_ssize_t n_nodes = pos.shape[0]
         Py_ssize_t n_edges = Edata.shape[0]
@@ -136,6 +150,7 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
     with nogil:
         temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
         for iteration in range(iterations):
+            temp = temperature[iteration]
             disp[:, :] = 0
             # Repulsive forces
             for i in range(n_nodes):
@@ -170,14 +185,13 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                 mag = magnitude2(disp, i)
                 if mag == 0: continue
                 for d in range(n_dim):
-                    pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]),
-                                                        temperature[iteration])
+                    pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
             # Optionally call back with the new positions
             if have_callback:
                 with gil:
                     if not callback(np.asarray(pos)):
                         break
             # If temperature too cool, finish early
-            if temperature[iteration] < .005:
+            if temp < .0005:
                 break
     return pos
