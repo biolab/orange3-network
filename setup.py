@@ -26,7 +26,7 @@ KEYWORDS = (
     'machine learning',
     'artificial intelligence',
     'orange',
-    'orange add-on',
+    'orange3 add-on',
 )
 
 CLASSIFIERS = (
