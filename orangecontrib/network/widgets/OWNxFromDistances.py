@@ -156,6 +156,7 @@ class OWNxFromDistances(widget.OWWidget):
         self.generateGraph()
 
     def changeUpperSpin(self):
+        if self.matrix is None: return
         self.spinUpperThreshold = np.clip(self.spinUpperThreshold, *self.histogram.boundary())
         self.percentil = 100 * np.searchsorted(self.matrix_values, self.spinUpperThreshold) / len(self.matrix_values)
         self.generateGraph()
@@ -272,6 +273,10 @@ class OWNxFromDistances(widget.OWWidget):
             self.infoc.setText("Network edges: %d (%.2f edges/node)" % (
                 self.nedges, self.nedges / float(self.pconnected)
                 if self.pconnected else 0))
+
+        self.warning(303)
+        if self.pconnected > 1000 or self.nedges > 2000:
+            self.warning(303, 'Large number of nodes/edges; performance will be hindered.')
 
         self.sendSignals()
         self.histogram.setRegion(0, self.spinUpperThreshold)
