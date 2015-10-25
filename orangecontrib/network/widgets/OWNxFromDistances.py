@@ -40,6 +40,8 @@ class OWNxFromDistances(widget.OWWidget):
                ("Data", Orange.data.Table),
                ("Distances", Orange.misc.DistMatrix)]
 
+    resizing_enabled = False
+
     # TODO: make settings input-dependent
     percentil = settings.Setting(1)
     include_knn = settings.Setting(False)

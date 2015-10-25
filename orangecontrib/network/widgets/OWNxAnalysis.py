@@ -43,6 +43,8 @@ class OWNxAnalysis(widget.OWWidget):
     icon = 'icons/NetworkAnalysis.svg'
     priority = 6425
 
+    resizing_enabled = False
+
     inputs = [("Network", network.Graph, 'set_graph'),
               ("Items", Orange.data.Table, 'set_items')]
     outputs = [("Network", network.Graph),

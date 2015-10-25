@@ -61,6 +61,8 @@ class OWNxInsideView(widget.OWWidget):
     icon = "icons/NetworkInsideView.svg"
     priority = 6460
 
+    resizing_enabled = False
+
     outputs = [("Nx View", network.NxView)]
 
     _nhops = settings.Setting(2)
@@ -75,6 +77,8 @@ class OWNxInsideView(widget.OWWidget):
 
         self.inside_view = NxInsideView(self._nhops)
         self.send("Nx View", self.inside_view)
+
+        self.warning('This widget, at best, does nothing at the moment. Check back later.')
 
     def update_view(self):
         self.inside_view.set_nhops(self._nhops)

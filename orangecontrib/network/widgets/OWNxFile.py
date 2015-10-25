@@ -18,6 +18,8 @@ class OWNxFile(widget.OWWidget):
     outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
+    resizing_enabled = False
+
     recentFiles = settings.Setting(['(none)'])
     recentDataFiles = settings.Setting(['(none)'])
     recentEdgesFiles = settings.Setting(['(none)'])
