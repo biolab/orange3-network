@@ -305,9 +305,7 @@ class OWNxFile(widget.OWWidget):
                 'y' in items.domain and \
                 len(self.graph.items()) == len(table) and \
                 'x' not in table.domain and 'y' not in table.domain:
-            domain = Orange.data.Domain([items.domain['x'],
-                                         items.domain['y']])
-            tmp = Orange.data.Table.from_table(domain, items)
+            tmp = Orange.data.Table.from_table(items.domain, items)
             table = Orange.data.Table.concatenate([table, tmp])
 
         self.graph.set_items(table)
