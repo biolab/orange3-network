@@ -253,24 +253,40 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
                 break
         # Read vertices lines
         for line in f:
-            i, label, x, y = shlex.split(line)[:4]
-            i, x, y = int(i) - 1, float(x), float(y)  # -1 because pajek is 1-indexed
+            parts = shlex.split(line)[:4]
+            if len(parts) == 1:
+                i = label = parts[0]
+            elif len(parts) == 2:
+                i, label = parts
+                metas.append((label,))
+            elif len(parts) == 4:
+                i, label, x, y = parts
+                x, y = float(x), float(y)
+                rows.append((x, y))
+                metas.append((label,))
+            i = int(i) - 1  # -1 because pajek is 1-indexed
             remapping[label] = i
-            rows.append((x, y))
-            metas.append((label,))
             nvertices -= 1
             if not nvertices: break
-    # Construct x-y table (added in OWNxFile.readDataFile())
-    domain = Orange.data.Domain([Orange.data.ContinuousVariable('x'),
-                                 Orange.data.ContinuousVariable('y')],
-                                metas=[Orange.data.StringVariable('label')])
-    table = Orange.data.Table.from_numpy(domain, np.array(rows, dtype=float), metas=np.array(metas, dtype=str))
-    G.set_items(table)
+    from Orange.data import Domain, Table, ContinuousVariable, StringVariable
+    # Construct x-y-label table (added in OWNxFile.readDataFile())
+    table = None
+    if rows:
+        domain = Domain([ContinuousVariable('x'), ContinuousVariable('y')],
+                        metas=[StringVariable('label')])
+        table = Table.from_numpy(domain, np.array(rows, dtype=float),
+                                 metas=np.array(metas, dtype=str))
+    elif metas:
+        domain = Domain([], metas=[StringVariable('label')])
+        table = Table.from_numpy(domain, np.zeros((len(metas), 0)),
+                                 metas=np.array(metas, dtype=str))
+    if table is not None:
+        G.set_items(table)
     # Relabel nodes to integers, sorted by appearance
     for node in G.node:
         G.node[node]['label'] = node
     nx.relabel_nodes(G, remapping, copy=False)
-    assert len(table) == G.number_of_nodes(), 'There was a bug in NetworkX. Please update to git if need be'
+    assert not table or len(table) == G.number_of_nodes(), 'There was a bug in NetworkX. Please update to git if need be'
     return G
 
 def write_pajek(G, path, encoding='UTF-8'):
