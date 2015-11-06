@@ -93,12 +93,10 @@ class OWNxFile(widget.OWWidget):
         self.filecombo.addItem("Browse documentation networks...")
 
         self.datacombo.clear()
-        if not self.recentDataFiles or self.recentDataFiles == ['(none)']:
+        if not self.recentDataFiles:
             self.datacombo.addItem("(none)")
-        else:
-            for file in self.recentDataFiles:
-                if file != "(none)":
-                    self.datacombo.addItem(os.path.split(file)[1])
+        for file in self.recentDataFiles:
+            self.datacombo.addItem(file if file == '(none)' else os.path.split(file)[1])
 
         self.filecombo.updateGeometry()
         self.datacombo.updateGeometry()
