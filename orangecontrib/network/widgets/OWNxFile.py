@@ -44,6 +44,8 @@ class OWNxFile(widget.OWWidget):
         button = gui.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button = gui.button(hb, self, 'Reload', callback=self.reload)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically", callback=lambda: self.selectNetFile(self.filecombo.currentIndex()))
 
         self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
@@ -52,6 +54,8 @@ class OWNxFile(widget.OWWidget):
         button = gui.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button = gui.button(self.databox, self, 'Reload', callback=self.reload_data)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
 
         # info
         box = gui.widgetBox(self.controlArea, "Info")
@@ -67,30 +71,34 @@ class OWNxFile(widget.OWWidget):
         self.connect(self.datacombo, SIGNAL('activated(int)'), self.selectDataFile)
 
         self.setFileLists()
-        self.openFile(self.recentFiles[0])
+        self.reload()
 
+    def reload(self):
+        if self.recentFiles:
+            self.openFile(self.recentFiles[0])
+
+    def reload_data(self):
+        if self.recentDataFiles:
+            self.addDataFile(self.recentDataFiles[0])
 
     # set the comboboxes
     def setFileLists(self):
         self.filecombo.clear()
-        if not self.recentFiles:
+        if not self.recentFiles or self.recentFiles == ['(none)']:
             self.filecombo.addItem("(none)")
-        for file in self.recentFiles:
-            if file == "(none)":
-                self.filecombo.addItem("(none)")
-            else:
-                self.filecombo.addItem(os.path.split(file)[1])
+        else:
+            for file in self.recentFiles:
+                if file != "(none)":
+                    self.filecombo.addItem(os.path.split(file)[1])
         self.filecombo.addItem("Browse documentation networks...")
 
         self.datacombo.clear()
-        if not self.recentDataFiles:
+        if not self.recentDataFiles or self.recentDataFiles == ['(none)']:
             self.datacombo.addItem("(none)")
-        for file in self.recentDataFiles:
-            if file == "(none)":
-                self.datacombo.addItem("(none)")
-            else:
-                self.datacombo.addItem(os.path.split(file)[1])
-
+        else:
+            for file in self.recentDataFiles:
+                if file != "(none)":
+                    self.datacombo.addItem(os.path.split(file)[1])
 
         self.filecombo.updateGeometry()
         self.datacombo.updateGeometry()
@@ -113,7 +121,7 @@ class OWNxFile(widget.OWWidget):
 
     # user selected a graph file from the combo box
     def selectNetFile(self, n):
-        if n < len(self.recentFiles) :
+        if n < len(self.recentFiles) - 1:
             name = self.recentFiles[n]
             self.recentFiles.remove(name)
             self.recentFiles.insert(0, name)
@@ -125,7 +133,7 @@ class OWNxFile(widget.OWWidget):
             self.openFile(self.recentFiles[0])
 
     def selectDataFile(self, n):
-        if n < len(self.recentDataFiles) :
+        if n < len(self.recentDataFiles) - 1:
             name = self.recentDataFiles[n]
             self.recentDataFiles.remove(name)
             self.recentDataFiles.insert(0, name)
