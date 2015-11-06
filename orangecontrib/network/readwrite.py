@@ -245,7 +245,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     # Additionally read values into Table; needed to get G nodes properly sorted
     # (Consult OWNxFile.readDataFile(), orangeom.GraphLayout.readPajek(), and the Pajek format spec)
     import shlex, numpy as np
-    rows, remapping = [], {}
+    rows, metas, remapping = [], [], {}
     with open(path) as f:
         for line in f:
             if line.lower().startswith('*vertices'):
@@ -257,12 +257,14 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
             i, x, y = int(i) - 1, float(x), float(y)  # -1 because pajek is 1-indexed
             remapping[label] = i
             rows.append((x, y))
+            metas.append((label,))
             nvertices -= 1
             if not nvertices: break
     # Construct x-y table (added in OWNxFile.readDataFile())
     domain = Orange.data.Domain([Orange.data.ContinuousVariable('x'),
-                                 Orange.data.ContinuousVariable('y')])
-    table = Orange.data.Table.from_numpy(domain, np.array(rows, dtype=float))
+                                 Orange.data.ContinuousVariable('y')],
+                                metas=[Orange.data.StringVariable('label')])
+    table = Orange.data.Table.from_numpy(domain, np.array(rows, dtype=float), metas=np.array(metas, dtype=str))
     G.set_items(table)
     # Relabel nodes to integers, sorted by appearance
     for node in G.node:

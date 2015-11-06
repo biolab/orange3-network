@@ -12,6 +12,8 @@ class OWNxClustering(widget.OWWidget):
     outputs = [("Network", Graph),
                ("Community Detection", cd.CommunityDetection)]
 
+    resizing_enabled = False
+
     method = settings.Setting(0)
     iterations = settings.Setting(1000)
     hop_attenuation = settings.Setting(0.1)

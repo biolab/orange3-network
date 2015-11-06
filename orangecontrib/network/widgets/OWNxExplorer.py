@@ -641,30 +641,33 @@ class OWNxExplorer(widget.OWWidget):
         if not self.graph: return
         table = self.graph.items()
         if not table: return
-        try:
-            if attribute.is_string:
-                values = np.array([i.list[0].count(',') + 1
-                                   for i in table[:, attribute]])
-            else:
-                values = np.array(table[:, attribute]).T[0]
-        except (AttributeError, TypeError, KeyError):
+        if attribute in table.domain.class_vars:
+            values = table[:, attribute].Y
+            if values.ndim > 1:
+                values = values.T
+        elif attribute in table.domain.metas:
+            values = table[:, attribute].metas[:, 0]
+        elif attribute in table.domain.attributes:
+            values = table[:, attribute].X[:, 0]
+        else:
             for node in self.view.nodes:
                 node.setSize(self.minNodeSize)
+            return
+        values = np.array(values)
+        if self.invertNodeSize:
+            values += np.nanmin(values) + 1
+            values = 1/values
+        nodemin, nodemax = np.nanmin(values), np.nanmax(values)
+        if nodemin == nodemax:
+            # np.polyfit borks on this condition
+            sizes = (self.minNodeSize for i in range(len(self.view.nodes)))
         else:
-            if self.invertNodeSize:
-                values += np.nanmin(values) + 1
-                values = 1/values
-            nodemin, nodemax = np.nanmin(values), np.nanmax(values)
-            if nodemin == nodemax:
-                # np.polyfit borks on this condition
-                sizes = (self.minNodeSize for i in range(len(self.view.nodes)))
-            else:
-                k, n = np.polyfit([nodemin, nodemax],
-                                  [self.minNodeSize, self.maxNodeSize], 1)
-                sizes = values * k + n
-                sizes[np.isnan(sizes)] = np.nanmean(sizes)
-            for node, size in zip(self.view.nodes, sizes):
-                node.setSize(size)
+            k, n = np.polyfit([nodemin, nodemax],
+                              [self.minNodeSize, self.maxNodeSize], 1)
+            sizes = values * k + n
+            sizes[np.isnan(sizes)] = np.nanmean(sizes)
+        for node, size in zip(self.view.nodes, sizes):
+            node.setSize(size)
 
     def set_edge_sizes(self):
         if not self.graph: return

@@ -18,9 +18,10 @@ class OWNxFile(widget.OWWidget):
     outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
+    resizing_enabled = False
+
     recentFiles = settings.Setting(['(none)'])
     recentDataFiles = settings.Setting(['(none)'])
-    recentEdgesFiles = settings.Setting(['(none)'])
     auto_table = settings.Setting(True)
 
     def __init__(self):
@@ -43,6 +44,8 @@ class OWNxFile(widget.OWWidget):
         button = gui.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button = gui.button(hb, self, 'Reload', callback=self.reload)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically", callback=lambda: self.selectNetFile(self.filecombo.currentIndex()))
 
         self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
@@ -51,20 +54,14 @@ class OWNxFile(widget.OWWidget):
         button = gui.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-
-        self.edgesbox = gui.widgetBox(self.controlArea, box="Edges Data File", orientation="horizontal")
-        self.edgescombo = gui.comboBox(self.edgesbox, self, "edgesname")
-        self.edgescombo.setMinimumWidth(250)
-        button = gui.button(self.edgesbox, self, '...', callback=self.browseEdgesFile, disabled=0)
-        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button = gui.button(self.databox, self, 'Reload', callback=self.reload_data)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
 
         # info
         box = gui.widgetBox(self.controlArea, "Info")
         self.infoa = gui.widgetLabel(box, 'No data loaded.')
         self.infob = gui.widgetLabel(box, ' ')
         self.infoc = gui.widgetLabel(box, ' ')
-        self.infod = gui.widgetLabel(box, ' ')
 
         gui.rubber(self.controlArea)
         self.resize(150, 100)
@@ -72,55 +69,45 @@ class OWNxFile(widget.OWWidget):
         # connecting GUI to code
         self.connect(self.filecombo, SIGNAL('activated(int)'), self.selectNetFile)
         self.connect(self.datacombo, SIGNAL('activated(int)'), self.selectDataFile)
-        self.connect(self.edgescombo, SIGNAL('activated(int)'), self.selectEdgesFile)
 
         self.setFileLists()
-        self.openFile(self.recentFiles[0])
+        self.reload()
 
+    def reload(self):
+        if self.recentFiles:
+            self.openFile(self.recentFiles[0])
+
+    def reload_data(self):
+        if self.recentDataFiles:
+            self.addDataFile(self.recentDataFiles[0])
 
     # set the comboboxes
     def setFileLists(self):
         self.filecombo.clear()
-        if not self.recentFiles:
+        if not self.recentFiles or self.recentFiles == ['(none)']:
             self.filecombo.addItem("(none)")
-        for file in self.recentFiles:
-            if file == "(none)":
-                self.filecombo.addItem("(none)")
-            else:
-                self.filecombo.addItem(os.path.split(file)[1])
+        else:
+            for file in self.recentFiles:
+                if file != "(none)":
+                    self.filecombo.addItem(os.path.split(file)[1])
         self.filecombo.addItem("Browse documentation networks...")
 
         self.datacombo.clear()
-        if not self.recentDataFiles:
+        if not self.recentDataFiles or self.recentDataFiles == ['(none)']:
             self.datacombo.addItem("(none)")
-        for file in self.recentDataFiles:
-            if file == "(none)":
-                self.datacombo.addItem("(none)")
-            else:
-                self.datacombo.addItem(os.path.split(file)[1])
-
-        self.edgescombo.clear()
-        if not self.recentEdgesFiles:
-            self.edgescombo.addItem("(none)")
-        for file in self.recentEdgesFiles:
-            if file == "(none)":
-                self.edgescombo.addItem("(none)")
-            else:
-                self.edgescombo.addItem(os.path.split(file)[1])
+        else:
+            for file in self.recentDataFiles:
+                if file != "(none)":
+                    self.datacombo.addItem(os.path.split(file)[1])
 
         self.filecombo.updateGeometry()
         self.datacombo.updateGeometry()
-        self.edgescombo.updateGeometry()
 
     def activateLoadedSettings(self):
         # remove missing data set names
         self.recentFiles = list(filter(os.path.exists, self.recentFiles))
         self.recentDataFiles = list(filter(os.path.exists, self.recentDataFiles))
-        self.recentEdgesFiles = list(filter(os.path.exists, self.recentEdgesFiles))
 
-        self.recentFiles.append("(none)")
-        self.recentDataFiles.append("(none)")
-        self.recentEdgesFiles.append("(none)")
         self.setFileLists()
 
         if len(self.recentFiles) > 0 and os.path.exists(self.recentFiles[0]):
@@ -132,15 +119,9 @@ class OWNxFile(widget.OWWidget):
                 os.path.exists(self.recentDataFiles[1]):
             self.selectDataFile(1)
 
-        # if links not loaded with the network, load previous links
-        if len(self.recentEdgesFiles) > 1 and \
-            self.recentEdgesFiles[0] == 'none' and \
-                os.path.exists(self.recentEdgesFiles[1]):
-            self.selectEdgesFile(1)
-
     # user selected a graph file from the combo box
     def selectNetFile(self, n):
-        if n < len(self.recentFiles) :
+        if n < len(self.recentFiles) - 1:
             name = self.recentFiles[n]
             self.recentFiles.remove(name)
             self.recentFiles.insert(0, name)
@@ -151,19 +132,8 @@ class OWNxFile(widget.OWWidget):
             self.setFileLists()
             self.openFile(self.recentFiles[0])
 
-    # user selected a data file from the combo box
-    def selectEdgesFile(self, n):
-        if n < len(self.recentEdgesFiles) :
-            name = self.recentEdgesFiles[n]
-            self.recentEdgesFiles.remove(name)
-            self.recentEdgesFiles.insert(0, name)
-
-        if len(self.recentEdgesFiles) > 0:
-            self.setFileLists()
-            self.addEdgesFile(self.recentEdgesFiles[0])
-
     def selectDataFile(self, n):
-        if n < len(self.recentDataFiles) :
+        if n < len(self.recentDataFiles) - 1:
             name = self.recentDataFiles[n]
             self.recentDataFiles.remove(name)
             self.recentDataFiles.insert(0, name)
@@ -172,14 +142,13 @@ class OWNxFile(widget.OWWidget):
             self.setFileLists()
             self.addDataFile(self.recentDataFiles[0])
 
-    def readingFailed(self, infoa='No data loaded', infob='', infoc='', infod=''):
+    def readingFailed(self, infoa='No data loaded', infob='', infoc=''):
         self.graph = None
         self.send("Network", None)
         self.send("Items", None)
         self.infoa.setText(infoa)
         self.infob.setText(infob)
         self.infoc.setText(infoc)
-        self.infod.setText(infod)
 
     def openFile(self, fn):
         """Read network from file."""
@@ -248,16 +217,6 @@ class OWNxFile(widget.OWWidget):
                 self.recentDataFiles.remove('(none)')
             self.recentDataFiles.insert(0, '(none)')
 
-        # Find links data file for selected network
-        links_candidate = os.path.splitext(fn)[0] + "_links.tab"
-        if os.path.exists(links_candidate):
-            self.readEdgesFile(links_candidate)
-            self.recentEdgesFiles.insert(0, links_candidate)
-        else:
-            if '(none)' in self.recentEdgesFiles:
-                self.recentEdgesFiles.remove('(none)')
-            self.recentEdgesFiles.insert(0, '(none)')
-
         self.setFileLists()
 
         self.send("Network", self.graph)
@@ -303,49 +262,11 @@ class OWNxFile(widget.OWWidget):
                 'y' in items.domain and \
                 len(self.graph.items()) == len(table) and \
                 'x' not in table.domain and 'y' not in table.domain:
-            domain = Orange.data.Domain([items.domain['x'],
-                                         items.domain['y']])
-            tmp = Orange.data.Table.from_table(domain, items)
+            tmp = Orange.data.Table.from_table(items.domain, items)
             table = Orange.data.Table.concatenate([table, tmp])
 
         self.graph.set_items(table)
         self.infoc.setText("Vertices data file added")
-
-    def addEdgesFile(self, fn):
-        if fn == "(none)" or self.graph == None:
-            self.infod.setText("No edges data file specified")
-            #self.graph.setattr("links", None)
-            self.send("Network", self.graph)
-            self.send("Items", None)
-            return
-
-        self.readEdgesFile(fn)
-
-        self.send("Network", self.graph)
-        self.send("Items", self.graph.items() if self.graph else None)
-
-    def readEdgesFile(self, fn):
-        if not self.graph:
-            self.warning(0, 'No network file loaded. Load the network first.')
-            return
-        table = Orange.data.Table.from_file(fn)
-        if self.graph.is_directed():
-            nEdges = len(self.graph.getEdges())
-        else:
-            nEdges = len(self.graph.getEdges()) / 2
-
-        if len(table) != nEdges:
-            self.infod.setText("Edges data length does not match number of edges")
-
-            if '(none)' in self.recentEdgesFiles:
-                self.recentEdgesFiles.remove('(none)')
-
-            self.recentEdgesFiles.insert(0, '(none)')
-            self.setFileLists()
-            return
-
-        self.graph.set_links(table)
-        self.infod.setText("Edges data file added")
 
     def browseNetFile(self, inDemos=0):
         """user pressed the '...' button to manually select a file to load"""
@@ -420,28 +341,6 @@ class OWNxFile(widget.OWWidget):
         self.setFileLists()
         self.addDataFile(self.recentDataFiles[0])
 
-    def browseEdgesFile(self, inDemos=0):
-        if self.graph == None:
-            return
-
-        #Display a FileDialog and select a file
-        if len(self.recentEdgesFiles) == 0 or self.recentEdgesFiles[0] == "(none)":
-            if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                startfile = "."
-            else:
-                startfile = os.path.dirname(self.recentFiles[0])
-
-        else:
-            startfile = self.recentEdgesFiles[0]
-
-        filename = str(QFileDialog.getOpenFileName(self, 'Open a Edges Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
-
-        if filename == "": return
-        if filename in self.recentEdgesFiles: self.recentEdgesFiles.remove(filename)
-        self.recentEdgesFiles.insert(0, filename)
-        self.setFileLists()
-        self.addEdgesFile(self.recentEdgesFiles[0])
-
     def setInfo(self, info):
         for (i, s) in enumerate(info):
             self.info[i].setText(s)
@@ -453,7 +352,6 @@ class OWNxFile(widget.OWWidget):
                              hasattr(self.graph, "is_directed") and ("Directed", gui.YesNo[self.graph.is_directed()])])
         self.reportSettings("Vertices meta data", [("File name", self.datacombo.currentText())])
         self.reportData(self.graph.items(), None)
-        self.reportSettings("Edges meta data", [("File name", self.edgescombo.currentText())])
         self.reportData(self.graph.links(), None, None)
 
 if __name__ == "__main__":
