@@ -122,8 +122,8 @@ class Node(QGraphicsNode):
 
     class Pen:
         DEFAULT = QPen(Qt.black, 0)
-        SELECTED = QPen(QColor('#ee0000'), 3)
-        HIGHLIGHTED = QPen(QColor('#ff7700'), 3)
+        SELECTED = QPen(QColor('#dd0000'), 3)
+        HIGHLIGHTED = QPen(QColor('#ffaa22'), 3)
 
     _TOOLTIP = lambda: ''
 
