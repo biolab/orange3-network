@@ -268,13 +268,12 @@ class GraphView(QtGui.QGraphicsView):
         super().scrollContentsBy(dx, dy)
 
     def _setState(self, nodes, extend, state_setter):
-        from numbers import Number
-        assert all(isinstance(i, Number) and int(i) == i for i in nodes)
+        nodes = set(nodes)
         if extend:
-            for node in nodes:
-                getattr(self.nodes[node], state_setter)(True)
+            for node in self.nodes:
+                if node.id in nodes:
+                    getattr(node, state_setter)(True)
         else:
-            nodes = set(nodes)
             for node in self.nodes:
                 getattr(node, state_setter)(node.id in nodes)
         self.selectionChanged.emit()
