@@ -280,7 +280,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
         domain = Domain([], metas=[StringVariable('label')])
         table = Table.from_numpy(domain, np.zeros((len(metas), 0)),
                                  metas=np.array(metas, dtype=str))
-    if table is not None:
+    if table is not None and auto_table:
         G.set_items(table)
     # Relabel nodes to integers, sorted by appearance
     for node in G.node:

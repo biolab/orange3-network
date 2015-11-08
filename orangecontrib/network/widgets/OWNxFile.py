@@ -1,5 +1,5 @@
-import sys
-import os.path
+from os import path
+from itertools import chain, product
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -7,6 +7,9 @@ from PyQt4.QtCore import *
 import Orange
 from Orange.widgets import gui, widget, settings
 import orangecontrib.network as network
+
+
+NONE = "(none)"
 
 
 class OWNxFile(widget.OWWidget):
@@ -20,8 +23,8 @@ class OWNxFile(widget.OWWidget):
 
     resizing_enabled = False
 
-    recentFiles = settings.Setting(['(none)'])
-    recentDataFiles = settings.Setting(['(none)'])
+    recentFiles = settings.Setting([])
+    recentDataFiles = settings.Setting([])
     auto_table = settings.Setting(True)
 
     def __init__(self):
@@ -31,25 +34,25 @@ class OWNxFile(widget.OWWidget):
         self.graph = None
         self.auto_items = None
 
-        self.filename = '(none)'
-        self.dataname = '(none)'
-        self.edgesname = '(none)'
+        self.net_index = 0
+        self.data_index = 0
 
         #GUI
         self.controlArea.layout().setMargin(4)
         self.box = gui.widgetBox(self.controlArea, box="Graph File", orientation="vertical")
         hb = gui.widgetBox(self.box, orientation="horizontal")
-        self.filecombo = gui.comboBox(hb, self, "filename")
+        self.filecombo = gui.comboBox(hb, self, "net_index", callback=self.selectNetFile)
         self.filecombo.setMinimumWidth(250)
         button = gui.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         button = gui.button(hb, self, 'Reload', callback=self.reload)
         button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-        gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically", callback=lambda: self.selectNetFile(self.filecombo.currentIndex()))
+        gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically",
+                     callback=self.selectNetFile)
 
         self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
-        self.datacombo = gui.comboBox(self.databox, self, "dataname")
+        self.datacombo = gui.comboBox(self.databox, self, "data_index", callback=self.selectDataFile)
         self.datacombo.setMinimumWidth(250)
         button = gui.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
@@ -59,289 +62,188 @@ class OWNxFile(widget.OWWidget):
 
         # info
         box = gui.widgetBox(self.controlArea, "Info")
-        self.infoa = gui.widgetLabel(box, 'No data loaded.')
-        self.infob = gui.widgetLabel(box, ' ')
-        self.infoc = gui.widgetLabel(box, ' ')
+        self.info = gui.widgetLabel(box, 'No data loaded.')
 
         gui.rubber(self.controlArea)
         self.resize(150, 100)
 
-        # connecting GUI to code
-        self.connect(self.filecombo, SIGNAL('activated(int)'), self.selectNetFile)
-        self.connect(self.datacombo, SIGNAL('activated(int)'), self.selectDataFile)
-
-        self.setFileLists()
+        self.populate_comboboxes()
         self.reload()
 
     def reload(self):
         if self.recentFiles:
-            self.openFile(self.recentFiles[0])
+            self.selectNetFile()
 
     def reload_data(self):
         if self.recentDataFiles:
-            self.addDataFile(self.recentDataFiles[0])
+            self.selectDataFile()
 
-    # set the comboboxes
-    def setFileLists(self):
+    def populate_comboboxes(self):
         self.filecombo.clear()
-        if not self.recentFiles or self.recentFiles == ['(none)']:
-            self.filecombo.addItem("(none)")
-        else:
-            for file in self.recentFiles:
-                if file != "(none)":
-                    self.filecombo.addItem(os.path.split(file)[1])
+        for file in self.recentFiles or (NONE,):
+            self.filecombo.addItem(path.basename(file))
         self.filecombo.addItem("Browse documentation networks...")
+        self.filecombo.updateGeometry()
 
         self.datacombo.clear()
-        if not self.recentDataFiles:
-            self.datacombo.addItem("(none)")
         for file in self.recentDataFiles:
-            self.datacombo.addItem(file if file == '(none)' else os.path.split(file)[1])
-
-        self.filecombo.updateGeometry()
+            self.datacombo.addItem(path.basename(file))
+        self.datacombo.addItem(NONE)
         self.datacombo.updateGeometry()
 
-    def activateLoadedSettings(self):
-        # remove missing data set names
-        self.recentFiles = list(filter(os.path.exists, self.recentFiles))
-        self.recentDataFiles = list(filter(os.path.exists, self.recentDataFiles))
+    def selectNetFile(self):
+        """user selected a graph file from the combo box"""
+        if self.net_index > len(self.recentFiles) - 1:
+            self.browseNetFile(True)
+        elif self.net_index:
+            self.recentFiles.insert(0, self.recentFiles.pop(self.net_index))
+            self.net_index = 0
+            self.populate_comboboxes()
+        self.openNetFile(self.recentFiles[0])
 
-        self.setFileLists()
+    def selectDataFile(self):
+        if self.data_index > len(self.recentDataFiles) - 1:
+            return self.openDataFile(NONE)
+        self.recentDataFiles.insert(0, self.recentDataFiles.pop(self.data_index))
+        self.data_index = 0
+        self.populate_comboboxes()
+        self.openDataFile(self.recentDataFiles[0])
 
-        if len(self.recentFiles) > 0 and os.path.exists(self.recentFiles[0]):
-            self.selectNetFile(0)
-
-        # if items not loaded with the network, load previous items
-        if len(self.recentDataFiles) > 1 and \
-            self.recentDataFiles[0] == 'none' and \
-                os.path.exists(self.recentDataFiles[1]):
-            self.selectDataFile(1)
-
-    # user selected a graph file from the combo box
-    def selectNetFile(self, n):
-        if n < len(self.recentFiles) - 1:
-            name = self.recentFiles[n]
-            self.recentFiles.remove(name)
-            self.recentFiles.insert(0, name)
-        elif n:
-            self.browseNetFile(1)
-
-        if len(self.recentFiles) > 0:
-            self.setFileLists()
-            self.openFile(self.recentFiles[0])
-
-    def selectDataFile(self, n):
-        if n < len(self.recentDataFiles) - 1:
-            name = self.recentDataFiles[n]
-            self.recentDataFiles.remove(name)
-            self.recentDataFiles.insert(0, name)
-
-        if len(self.recentDataFiles) > 0:
-            self.setFileLists()
-            self.addDataFile(self.recentDataFiles[0])
-
-    def readingFailed(self, infoa='No data loaded', infob='', infoc=''):
+    def readingFailed(self, message=''):
         self.graph = None
         self.send("Network", None)
         self.send("Items", None)
-        self.infoa.setText(infoa)
-        self.infob.setText(infob)
-        self.infoc.setText(infoc)
+        self.info.setText('No data loaded.\n' + message)
 
-    def openFile(self, fn):
+    def openNetFile(self, filename):
         """Read network from file."""
+        if path.splitext(filename)[1].lower() not in (".net", ".gml", ".gpickle"):
+            return self.readingFailed('Network file type not supported')
 
-        # read network file
-        if fn == "(none)":
-            self.readingFailed()
-            return
+        G = network.readwrite.read(filename, auto_table=self.auto_table)
+        if G is None:
+            return self.readingFailed('Error reading file "{}"'.format(filename))
 
-        fileExt = os.path.splitext(fn)[1].lower()
-        if not fileExt in (".net", ".gml", ".gpickle"):
-            self.readingFailed(infob='Network file type not supported')
-            return
+        info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
+                '{} nodes, {} edges'.format(G.number_of_nodes(), G.number_of_edges()),
+                'Vertices data generated from graph' if self.auto_table else '')
+        self.info.setText('\n'.join(info))
 
-        #try:
-        net = network.readwrite.read(fn, auto_table=self.auto_table)
+        self.auto_items = G.items()
+        assert self.auto_table or self.auto_items is None, \
+            (self.auto_table, self.auto_items)
 
-        #except:
-        #    self.readingFailed(infob='Could not read file')
-        #    return
-
-        if net == None:
-            self.readingFailed(infob='Error reading file')
-            return
-
-        if self.auto_table:
-            self.infoc.setText("Vertices data generated and added automatically")
-            self.auto_items = net.items()
-        else:
-            self.auto_items = None
-
-        self.infoa.setText("%d nodes" % net.number_of_nodes())
-
-        if net.is_directed():
-            self.infob.setText("Directed graph")
-        else:
-            self.infob.setText("Undirected graph")
-
-        # make new data and send it
-        fName = os.path.split(fn)[1]
-        if "." in fName:
-            #data.name = string.join(string.split(fName, '.')[:-1], '.')
-            pass
-        else:
-            #data.name = fName
-            pass
-
-        self.graph = net
+        self.graph = G
         self.warning(0)
 
         # Find items data file for selected network
-        items_candidate = os.path.splitext(fn)[0] + ".tab"
-        if os.path.exists(items_candidate):
-            self.readDataFile(items_candidate)
-            if items_candidate in self.recentDataFiles:
-                self.recentDataFiles.remove(items_candidate)
-            self.recentDataFiles.insert(0, items_candidate)
-        elif os.path.exists(os.path.splitext(fn)[0] + "_items.tab"):
-            items_candidate = os.path.splitext(fn)[0] + "_items.tab"
-            self.readDataFile(items_candidate)
-            if items_candidate in self.recentDataFiles:
-                self.recentDataFiles.remove(items_candidate)
-            self.recentDataFiles.insert(0, items_candidate)
+        for basename, ext in product((filename,
+                                      path.splitext(filename)[0],
+                                      path.splitext(filename)[0] + '_items'),
+                                     ('.tab', '.tsv', '.csv')):
+            candidate = basename + ext
+            if path.exists(candidate):
+                try: self.recentDataFiles.remove(candidate)
+                except ValueError: pass
+                self.recentDataFiles.insert(0, candidate)
+                self.data_index = 0
+                self.populate_comboboxes()
+                self.openDataFile(self.recentDataFiles[0])
+                break
         else:
-            if '(none)' in self.recentDataFiles:
-                self.recentDataFiles.remove('(none)')
-            self.recentDataFiles.insert(0, '(none)')
+            self.data_index = len(self.recentDataFiles)
 
-        self.setFileLists()
+        self.send("Network", G)
+        self.send("Items", G.items() if G else None)
 
-        self.send("Network", self.graph)
-        if self.graph != None and self.graph.items() != None:
-            self.send("Items", self.graph.items())
-        else:
-            self.send("Items", None)
-
-    def addDataFile(self, fn):
-        if fn == "(none)":
+    def openDataFile(self, filename):
+        self.error(1)
+        self.warning(0)
+        if filename == NONE:
             if self.graph:
-                if self.auto_items is not None:
-                    self.infoc.setText("Vertices data generated and added automatically")
-                    self.graph.set_items(self.auto_items)
-                else:
-                    self.infoc.setText("No vertices data file specified")
-                    self.graph.set_items(None)
+                self.graph.set_items(self.auto_items)
+                self.info.setText(self.info.text().rpartition('\n')[0] + '\n' +
+                                  ('Vertices data generated from graph'
+                                   if self.auto_items is not None else
+                                   "No vertices data file specified"))
         else:
-            self.readDataFile(fn)
-
+            self.readDataFile(filename)
         self.send("Network", self.graph)
         self.send("Items", self.graph.items() if self.graph else None)
 
-    def readDataFile(self, fn):
+    def readDataFile(self, filename):
         if not self.graph:
             self.warning(0, 'No network file loaded. Load the network first.')
             return
-        table = Orange.data.Table.from_file(fn)
+
+        table = Orange.data.Table.from_file(filename)
 
         if len(table) != self.graph.number_of_nodes():
-            self.infoc.setText("Vertices data length does not match number of vertices")
-
-            if '(none)' in self.recentDataFiles:
-                self.recentDataFiles.remove('(none)')
-
-            self.recentDataFiles.insert(0, '(none)')
-            self.setFileLists()
+            self.error(1, "Vertices data length does not match the number of vertices")
+            self.populate_comboboxes()
             return
 
-        items = self.graph.items()
-        if items is not None and \
-                'x' in items.domain and \
-                'y' in items.domain and \
-                len(self.graph.items()) == len(table) and \
-                'x' not in table.domain and 'y' not in table.domain:
-            tmp = Orange.data.Table.from_table(items.domain, items)
-            table = Orange.data.Table.concatenate([table, tmp])
+        items = self.auto_items
+        if items is not None and len(items) == len(table):
+            domain = [v for v in chain(items.domain.attributes,
+                                       items.domain.class_vars,
+                                       items.domain.metas)
+                      if v.name not in table.domain]
+            if domain:
+                table = Orange.data.Table.concatenate([table, items[:, domain]])
 
         self.graph.set_items(table)
-        self.infoc.setText("Vertices data file added")
+        self.info.setText(self.info.text().rpartition('\n')[0] + '\n' +
+                          'Vertices data added')
 
-    def browseNetFile(self, inDemos=0):
+    def browseNetFile(self, browse_demos=False):
         """user pressed the '...' button to manually select a file to load"""
-
-        "Display a FileDialog and select a file"
-        if inDemos:
-            import os
+        if browse_demos:
             from pkg_resources import load_entry_point
-            startfile = next(load_entry_point("Orange3-Network", "orange.data.io.search_paths", "network")())[1]
-
-#            if not startfile or not os.path.exists(startfile):
-#                try:
-#                    import win32api, win32con
-#                    t = win32api.RegOpenKey(win32con.HKEY_LOCAL_MACHINE, "SOFTWARE\\Python\\PythonCore\\%i.%i\\PythonPath\\Orange" % sys.version_info[:2], 0, win32con.KEY_READ)
-#                    t = win32api.RegQueryValueEx(t, "")[0]
-#                    startfile = t[:t.find("orange")] + "orange\\doc\\networks"
-#                except:
-#                    startfile = ""
-#
-#            if not startfile or not os.path.exists(startfile):
-#                d = gui.__file__
-#                if d[-8:] == "gui.py":
-#                    startfile = d[:-22] + "doc/networks"
-#                elif d[-9:] == "gui.pyc":
-#                    startfile = d[:-23] + "doc/networks"
-#
-#            if not startfile or not os.path.exists(startfile):
-#                d = os.getcwd()
-#                if d[-12:] == "OrangeCanvas":
-#                    startfile = d[:-12] + "doc/networks"
-#                else:
-#                    if d[-1] not in ["/", "\\"]:
-#                        d += "/"
-#                    startfile = d + "doc/networks"
-
-            if not os.path.exists(startfile):
-                QMessageBox.information(None, "File", "Cannot find the directory with example networks", QMessageBox.Ok + QMessageBox.Default)
-                return
+            startfile = next(load_entry_point("Orange3-Network",
+                                              "orange.data.io.search_paths",
+                                              "network")())[1]
         else:
-            if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                startfile = "."
-            else:
-                startfile = self.recentFiles[0]
+            startfile = self.recentFiles[0] if self.recentFiles else '.'
 
-        filename = str(QFileDialog.getOpenFileName(self, 'Open a Network File', startfile, "All network files (*.gpickle *.net *.gml)\nNetworkX graph as Python pickle (*.gpickle)\nPajek files (*.net)\nGML files (*.gml)\nAll files (*.*)"))
+        filename = QFileDialog.getOpenFileName(
+            self, 'Open a Network File', startfile,
+            "All network files (*.gpickle *.net *.gml)\n"
+            "NetworkX graph as Python pickle (*.gpickle)\n"
+            "Pajek files (*.net)\n"
+            "GML files (*.gml)\n"
+            "All files (*.*)")
 
-        if filename == "": return
-        if filename in self.recentFiles: self.recentFiles.remove(filename)
+        if not filename: return
+        try: self.recentFiles.remove(filename)
+        except ValueError: pass
         self.recentFiles.insert(0, filename)
-        self.setFileLists()
-        self.selectNetFile(0)
 
-    def browseDataFile(self, inDemos=0):
-        if self.graph == None:
+        self.populate_comboboxes()
+        self.net_index = 0
+        self.selectNetFile()
+
+    def browseDataFile(self):
+        if self.graph is None:
+            self.warning(0, 'No network file loaded. Load the network first.')
             return
 
-        #Display a FileDialog and select a file
-        if len(self.recentDataFiles) == 0 or self.recentDataFiles[0] == "(none)":
-            if len(self.recentFiles) == 0 or self.recentFiles[0] == "(none)":
-                startfile = "."
-            else:
-                startfile = os.path.dirname(self.recentFiles[0])
+        startfile = (self.recentDataFiles[0] if self.recentDataFiles else
+                     path.dirname(self.recentFiles[0]) if self.recentFiles else
+                     '.')
 
-        else:
-            startfile = self.recentDataFiles[0]
+        filename = QFileDialog.getOpenFileName(
+            self, 'Open a Vertices Data File', startfile,
+            'Data files (*.tab *.tsv *.csv)\n'
+            'All files(*.*)')
 
-        filename = str(QFileDialog.getOpenFileName(self, 'Open a Vertices Data File', startfile, 'Data files (*.tab)\nAll files(*.*)'))
-
-        if filename == "": return
-        if filename in self.recentDataFiles: self.recentDataFiles.remove(filename)
+        if not filename: return
+        try: self.recentDataFiles.remove(filename)
+        except ValueError: pass
         self.recentDataFiles.insert(0, filename)
-        self.setFileLists()
-        self.addDataFile(self.recentDataFiles[0])
-
-    def setInfo(self, info):
-        for (i, s) in enumerate(info):
-            self.info[i].setText(s)
+        self.populate_comboboxes()
+        self.data_index = 0
+        self.selectDataFile()
 
     def sendReport(self):
         self.reportSettings("Network file",
@@ -354,7 +256,7 @@ class OWNxFile(widget.OWWidget):
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
-    a = QApplication(sys.argv)
+    a = QApplication([])
     owf = OWNxFile()
     owf.show()
     a.exec_()
