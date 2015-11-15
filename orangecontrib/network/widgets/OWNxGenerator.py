@@ -83,6 +83,7 @@ class OWNxGenerator(widget.OWWidget):
                  10, 500, 10,
                  label='Approx. number of nodes:',
                  orientation='horizontal',
+                 callbackOnReturn=True,
                  callback=self.generate)
         gui.auto_commit(self.controlArea, self, 'auto_commit',
                         label='Generate graph',
@@ -104,4 +105,3 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
-    owFile.saveSettings()
