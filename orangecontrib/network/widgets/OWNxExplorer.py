@@ -79,6 +79,23 @@ class OWNxExplorer(widget.OWWidget):
     settingsList = ["lastVertexSizeColumn", "lastColorColumn",
                     "lastLabelColumns", "lastTooltipColumns",]
     # TODO: set settings
+
+    UserAdviceMessages = [
+        widget.Message('When selecting nodes on the Marking tab, '
+                       'press <b><tt>Enter</tt></b> key to add '
+                       '<b><font color="{}">highlighted</font></b> nodes to '
+                       '<b><font color="{}">selection</font></b>.'
+                       .format(Node.Pen.HIGHLIGHTED.color().name(),
+                               Node.Pen.SELECTED.color().name()),
+                       'marking-info',
+                       widget.Message.Information),
+        widget.Message('Left-click to select nodes '
+                       '(hold <b><tt>Shift</tt></b> to append to selection). '
+                       'Right-click to pan/move the view. Scroll to zoom.',
+                       'mouse-info',
+                       widget.Message.Information),
+    ]
+
     do_auto_commit = settings.Setting(True)
     maxNodeSize = settings.Setting(50)
     minNodeSize = settings.Setting(8)
@@ -261,28 +278,18 @@ class OWNxExplorer(widget.OWWidget):
         self.searchStringTimer.stop()
         self.searchStringTimer.start(300)
 
-    def showTabTitleText(self, index=None):
+    def switchTab(self, index=None):
         index = index or self.tabs.currentIndex()
-        text, curTab = '', self.tabs.widget(index)
+        curTab = self.tabs.widget(index)
         self.acceptingEnterKeypress = False
         if curTab == self.markTab and self.selectionMode != SelectionMode.NONE:
-            text = ('<div style="background-color:#f0f0f0; padding:5px;">'
-                    '<font color="#444444"><b>Press <tt>Enter</tt> to add '
-                    '<i><font color="{}">highlighted</font></i> nodes to '
-                    '<i><font color="{}">selection</font></i> ...</font></b></div>'
-                    .format(Node.Pen.HIGHLIGHTED.color().name(),
-                            Node.Pen.SELECTED.color().name()))
             self.acceptingEnterKeypress = True
-        elif curTab == self.displayTab:
-            text = ('<b>Left-click to select nodes. Hold <tt>Shift</tt> to append to selection.'
-                    '<br>Right-click to pan the view. Scroll to zoom.</b>')
-        self.view.setText(text)
 
     @non_reentrant
     def set_selection_mode(self, selectionMode=None):
         self.searchStringTimer.stop()
         selectionMode = self.selectionMode = selectionMode or self.selectionMode
-        self.showTabTitleText()
+        self.switchTab()
         if (self.graph is None or
             self.tabs.widget(self.tabs.currentIndex()) != self.markTab):
             return
