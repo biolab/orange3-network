@@ -63,10 +63,12 @@ class OWNxExplorer(widget.OWWidget):
     icon = "icons/NetworkExplorer.svg"
     priority = 6420
 
-    inputs = [("Network", network.Graph, "set_graph", widget.Default),
-              ("Items", Table, "set_items"),
-              ("Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
-              ("Item Subset", Table, 'set_marking_items')]
+    inputs = [
+        ("Network", network.Graph, "set_graph", widget.Default),
+        ("Node Subset", Table, 'set_marking_items'),
+        ("Node Data", Table, "set_items"),
+        ("Node Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
+    ]
 
     outputs = [(Output.SUBGRAPH, network.Graph),
                (Output.DISTANCE, Orange.misc.DistMatrix),
