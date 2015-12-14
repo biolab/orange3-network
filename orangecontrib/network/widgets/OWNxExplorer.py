@@ -722,7 +722,7 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
-    owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
     #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'airtraffic.net'))
     #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
     #~ owFile.show()
