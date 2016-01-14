@@ -253,9 +253,14 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
                 metas.append((label,))
             elif len(parts) == 4:
                 i, label, x, y = parts
-                x, y = float(x), float(y)
-                rows.append((x, y))
-                metas.append((label,))
+                # The format specification was never set in stone, it seems
+                try:
+                    x, y = float(x), float(y)
+                except ValueError:
+                    metas.append((label, x, y))
+                else:
+                    rows.append((x, y))
+                    metas.append((label,))
             i = int(i) - 1  # -1 because pajek is 1-indexed
             remapping[label] = i
             nvertices -= 1
@@ -263,14 +268,13 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     from Orange.data import Domain, Table, ContinuousVariable, StringVariable
     # Construct x-y-label table (added in OWNxFile.readDataFile())
     table = None
-    if rows:
-        domain = Domain([ContinuousVariable('x'), ContinuousVariable('y')],
-                        metas=[StringVariable('label')])
-        table = Table.from_numpy(domain, np.array(rows, dtype=float),
-                                 metas=np.array(metas, dtype=str))
-    elif metas:
-        domain = Domain([], metas=[StringVariable('label')])
-        table = Table.from_numpy(domain, np.zeros((len(metas), 0)),
+    vars = [ContinuousVariable('x'), ContinuousVariable('y')] if rows else []
+    meta_vars = [StringVariable('label ' + str(i)) for i in range(len(metas[0]) if metas else 0)]
+    if rows or metas:
+        domain = Domain(vars, metas=meta_vars)
+        table = Table.from_numpy(domain,
+                                 np.array(rows, dtype=float).reshape(len(metas),
+                                                                     len(rows[0]) if rows else 0),
                                  metas=np.array(metas, dtype=str))
     if table is not None and auto_table:
         G.set_items(table)

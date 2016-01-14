@@ -173,6 +173,7 @@ class OWNxExplorer(widget.OWWidget):
             box, self, "node_color_attr", label='Color:',
             orientation='horizontal', callback=self.set_node_colors)
 
+        self.invertNodeSizeCheck = self.maxNodeSizeSpin = QWidget()  # Forward declaration
         self.nodeSizeCombo = gui.comboBox(
             box, self, "node_size_attr",
             label='Size:',
