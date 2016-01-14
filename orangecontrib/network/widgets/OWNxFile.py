@@ -14,7 +14,7 @@ NONE = "(none)"
 
 class OWNxFile(widget.OWWidget):
     name = "Network File"
-    description = "Read network graph file (Pajek networks (*.net) files and GML network files)."
+    description = "Read network graph file in Pajek or GML format."
     icon = "icons/NetworkFile.svg"
     priority = 6410
 
@@ -117,7 +117,7 @@ class OWNxFile(widget.OWWidget):
 
     def openNetFile(self, filename):
         """Read network from file."""
-        if path.splitext(filename)[1].lower() not in (".net", ".gml", ".gpickle"):
+        if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
         G = network.readwrite.read(filename, auto_table=self.auto_table)
@@ -208,11 +208,12 @@ class OWNxFile(widget.OWWidget):
 
         filename = QFileDialog.getOpenFileName(
             self, 'Open a Network File', startfile,
-            "All network files (*.gpickle *.net *.gml)\n"
-            "NetworkX graph as Python pickle (*.gpickle)\n"
-            "Pajek files (*.net)\n"
-            "GML files (*.gml)\n"
-            "All files (*.*)")
+            ';;'.join(("All network files (*.{})".format(
+                           ' *.'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
+                       "NetworkX graph as Python pickle (*.gpickle)",
+                       "Pajek files (*.net *.pajek)",
+                       "GML files (*.gml)",
+                       "All files (*.*)")))
 
         if not filename: return
         try: self.recentFiles.remove(filename)
