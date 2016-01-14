@@ -30,9 +30,9 @@ import Orange
 from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
 
-__all__ = ['read', 'write', 'read_gpickle', 'write_gpickle', 'read_pajek',
-           'write_pajek', 'parse_pajek', 'generate_pajek', 'read_gml',
-           'write_gml']
+SUPPORTED_READ_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle', '.gz']
+SUPPORTED_WRITE_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle']
+
 
 def _wrap(g):
     for base, new in [(nx.Graph, Graph),
@@ -124,16 +124,12 @@ def read(path, encoding='UTF-8', auto_table=0):
     :obj:`Orange.network.DiGraph`.
 
     """
-
-    #supported = ['.net', '.gml', '.gpickle', '.gz', '.bz2', '.graphml']
-    supported = ['.net', '.gml', '.gpickle', '.gz']
-
     path = _check_network_dir(path)
-    root, ext = os.path.splitext(path)
-    if not ext in supported:
+    _, ext = os.path.splitext(path.lower())
+    if not ext in SUPPORTED_READ_EXTENSIONS:
         raise ValueError('Extension %s is not supported.' % ext)
 
-    if ext == '.net':
+    if ext in ('.net', '.pajek'):
         return read_pajek(path, encoding, auto_table=auto_table)
 
     if ext == '.gml':
@@ -156,15 +152,11 @@ def write(G, path, encoding='UTF-8'):
     :type path: string
 
     """
-
-    #supported = ['.net', '.gml', '.gpickle', '.gz', '.bz2', '.graphml']
-    supported = ['.net', '.gml', '.gpickle']
-
-    root, ext = os.path.splitext(path)
-    if not ext in supported:
+    _, ext = os.path.splitext(path.lower())
+    if not ext in SUPPORTED_WRITE_EXTENSIONS:
         raise ValueError('Extension %s is not supported. Use %s.' % (ext, ', '.join(supported)))
 
-    if ext == '.net':
+    if ext in ('.net', '.pajek'):
         write_pajek(G, path, encoding)
 
     if ext == '.gml':
