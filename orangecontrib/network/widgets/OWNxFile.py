@@ -99,7 +99,8 @@ class OWNxFile(widget.OWWidget):
             self.recentFiles.insert(0, self.recentFiles.pop(self.net_index))
             self.net_index = 0
             self.populate_comboboxes()
-        self.openNetFile(self.recentFiles[0])
+        if self.recentFiles:
+            self.openNetFile(self.recentFiles[0])
 
     def selectDataFile(self):
         if self.data_index > len(self.recentDataFiles) - 1:
@@ -208,12 +209,12 @@ class OWNxFile(widget.OWWidget):
 
         filename = QFileDialog.getOpenFileName(
             self, 'Open a Network File', startfile,
-            ';;'.join(("All network files (*.{})".format(
-                           ' *.'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
+            ';;'.join(("All network files (*{})".format(
+                           ' *'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
                        "NetworkX graph as Python pickle (*.gpickle)",
                        "Pajek files (*.net *.pajek)",
                        "GML files (*.gml)",
-                       "All files (*.*)")))
+                       "All files (*)")))
 
         if not filename: return
         try: self.recentFiles.remove(filename)
@@ -235,8 +236,8 @@ class OWNxFile(widget.OWWidget):
 
         filename = QFileDialog.getOpenFileName(
             self, 'Open a Vertices Data File', startfile,
-            'Data files (*.tab *.tsv *.csv)\n'
-            'All files(*.*)')
+            'Data files (*.tab *.tsv *.csv);;'
+            'All files(*)')
 
         if not filename: return
         try: self.recentDataFiles.remove(filename)
