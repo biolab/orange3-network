@@ -367,7 +367,8 @@ class OWNxExplorer(widget.OWWidget):
         filename = QFileDialog.getSaveFileName(
             self, 'Save Network', '',
             'NetworkX graph as Python pickle (*.gpickle)\n'
-            'Pajek network (*.net)\n'
+            'NetworkX edge list (*.edgelist)\n'
+            'Pajek network (*.net *.pajek)\n'
             'GML network (*.gml)')
         if filename:
             _, ext = os.path.splitext(filename)

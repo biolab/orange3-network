@@ -212,6 +212,7 @@ class OWNxFile(widget.OWWidget):
             ';;'.join(("All network files (*{})".format(
                            ' *'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
                        "NetworkX graph as Python pickle (*.gpickle)",
+                       "NetworkX edge list (*.edgelist)",
                        "Pajek files (*.net *.pajek)",
                        "GML files (*.gml)",
                        "All files (*)")))

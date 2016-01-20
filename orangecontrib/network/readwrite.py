@@ -30,8 +30,8 @@ import Orange
 from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
 
-SUPPORTED_READ_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle', '.gz']
-SUPPORTED_WRITE_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle']
+SUPPORTED_READ_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle', '.gz', '.edgelist']
+SUPPORTED_WRITE_EXTENSIONS = ['.net', '.pajek', '.gml', '.gpickle', '.edgelist']
 
 
 def _wrap(g):
@@ -104,7 +104,7 @@ def graph_to_table(G):
         data = [[node.get(f).replace('\t', ' ') if isinstance(node.get(f, 1), str) else str(node.get(f, '?'))
                  for f in features]
                 for node in G.node.values()]
-        fp = tempfile.NamedTemporaryFile('wt', suffix='.txt', delete=False)
+        fp = tempfile.NamedTemporaryFile('wt', suffix='.tab', delete=False)
         fp.write('\n'.join('\t'.join(line) for line in [features] + data))
         fp.close()
         table = Orange.data.Table(fp.name)
@@ -131,6 +131,9 @@ def read(path, encoding='UTF-8', auto_table=0):
 
     if ext in ('.net', '.pajek'):
         return read_pajek(path, encoding, auto_table=auto_table)
+
+    if ext == '.edgelist':
+        return read_edgelist(path, auto_table)
 
     if ext == '.gml':
         return read_gml(path, encoding, auto_table=auto_table)
@@ -159,6 +162,9 @@ def write(G, path, encoding='UTF-8'):
     if ext in ('.net', '.pajek'):
         write_pajek(G, path, encoding)
 
+    if ext == '.edgelist':
+        write_edgelist(G, path)
+
     if ext == '.gml':
         write_gml(G, path)
 
@@ -170,6 +176,18 @@ def write(G, path, encoding='UTF-8'):
 
     if G.links() is not None:
         G.links().save(root + '_links.tab')
+
+
+def read_edgelist(path, auto_table):
+    G = _wrap(nx.read_edgelist(path))
+    if auto_table:
+        G.set_items(graph_to_table(G))
+    return G
+
+
+def write_edgelist(G, path):
+    nx.write_edgelist(G, path)
+
 
 def read_gpickle(path, auto_table=False):
     """NetworkX read_gpickle method and wrap graph to Orange network.
