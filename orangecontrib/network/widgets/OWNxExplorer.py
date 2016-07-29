@@ -111,6 +111,8 @@ class OWNxExplorer(widget.OWWidget):
     markNBest = settings.Setting(1)
     markNConnections = settings.Setting(2)
 
+    graph_name = 'view'
+
     def __init__(self):
         super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
