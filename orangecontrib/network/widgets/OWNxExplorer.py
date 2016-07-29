@@ -50,6 +50,7 @@ class SelectionMode:
 
 class Output:
     SUBGRAPH = 'Selected sub-network'
+    UNSELECTED_SUBGRAPH = 'Remaining sub-network'
     DISTANCE = 'Distance matrix'
     SELECTED = 'Selected items'
     HIGHLIGHTED = 'Highlighted items'
@@ -71,6 +72,7 @@ class OWNxExplorer(widget.OWWidget):
     ]
 
     outputs = [(Output.SUBGRAPH, network.Graph),
+               (Output.UNSELECTED_SUBGRAPH, network.Graph),
                (Output.DISTANCE, Orange.misc.DistMatrix),
                (Output.SELECTED, Table),
                (Output.HIGHLIGHTED, Table),
@@ -396,6 +398,8 @@ class OWNxExplorer(widget.OWWidget):
         selected = self.view.getSelected()
         self.send(Output.SUBGRAPH,
                   self.graph.subgraph(selected) if selected else None)
+        self.send(Output.UNSELECTED_SUBGRAPH,
+                  self.graph.subgraph(self.view.getUnselected()) if selected else self.graph)
         self.send(Output.DISTANCE,
                   self.items_matrix.submatrix(sorted(selected)) if self.items_matrix is not None and selected else None)
         items = self.graph.items()
