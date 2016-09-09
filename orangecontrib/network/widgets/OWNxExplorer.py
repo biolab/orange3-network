@@ -99,7 +99,7 @@ class OWNxExplorer(widget.OWWidget):
     do_auto_commit = settings.Setting(True)
     maxNodeSize = settings.Setting(50)
     minNodeSize = settings.Setting(8)
-    selectionMode = settings.Setting(0)
+    selectionMode = settings.Setting(SelectionMode.FROM_INPUT)
     tabIndex = settings.Setting(0)
     showEdgeWeights = settings.Setting(False)
     relativeEdgeWidths = settings.Setting(False)
@@ -258,7 +258,7 @@ class OWNxExplorer(widget.OWWidget):
         ib = gui.indentedBox(ribg)
         self.markInputCombo = gui.comboBox(ib, self, 'markInput',
                                            callback=lambda: self.set_selection_mode(SelectionMode.FROM_INPUT))
-        self.markInputRadioButton.setEnabled(False)
+        self.markInputRadioButton.setEnabled(True)
 
         gui.auto_commit(ribg, self, 'do_auto_commit', 'Output changes')
         self.markTab.layout().addStretch(1)
@@ -292,7 +292,7 @@ class OWNxExplorer(widget.OWWidget):
         selectionMode = self.selectionMode = selectionMode or self.selectionMode
         self.switchTab()
         if (self.graph is None or
-            self.tabs.widget(self.tabs.currentIndex()) != self.markTab):
+            self.tabs.widget(self.tabs.currentIndex()) != self.markTab and selectionMode != SelectionMode.FROM_INPUT):
             return
 
         if selectionMode == SelectionMode.NONE:
@@ -540,6 +540,7 @@ class OWNxExplorer(widget.OWWidget):
         self.warning()
 
         if items is None:
+            self.view.selectionChanged.emit()
             return
 
         if self.graph is None or self.graph.items() is None:
@@ -564,6 +565,7 @@ class OWNxExplorer(widget.OWWidget):
                     self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(orgVar)], orgVar.name)
 
             self.markInputRadioButton.setEnabled(True)
+        self.view.selectionChanged.emit()
 
     def relayout(self):
         if self.graph is None or self.graph.number_of_nodes() <= 1:
