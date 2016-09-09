@@ -1,6 +1,5 @@
 import os
-from operator import itemgetter, add
-from functools import reduce, wraps
+from functools import wraps
 from itertools import chain
 from threading import Lock
 
@@ -12,11 +11,9 @@ from PyQt4.QtCore import *
 import Orange
 from Orange.util import scale
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.unsupervised.owmds import torgerson as MDS
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 
-from Orange.data import Table, Domain, DiscreteVariable, StringVariable
+from Orange.data import Table, DiscreteVariable, StringVariable
 import orangecontrib.network as network
 from orangecontrib.network.widgets.graphview import GraphView, Node, FR_ITERATIONS
 
@@ -108,6 +105,8 @@ class OWNxExplorer(widget.OWWidget):
     markSearchString = settings.Setting("")
     markNBest = settings.Setting(1)
     markNConnections = settings.Setting(2)
+
+    graph_name = 'view'
 
     def __init__(self):
         super().__init__()
@@ -693,21 +692,21 @@ class OWNxExplorer(widget.OWWidget):
         for edge, width in zip(self.view.edges, widths):
             edge.setSize(width)
 
-    def sendReport(self):
-        self.reportSettings("Graph data",
-                            [("Number of vertices", self.graph.number_of_nodes()),
-                             ("Number of edges", self.graph.number_of_edges()),
-                             ("Vertices per edge", "%.3f" % self.verticesPerEdge),
-                             ("Edges per vertex", "%.3f" % self.edgesPerVertex),
-                             ])
+    def send_report(self):
+        self.report_data("Data", self.graph.items())
+        self.report_items('Graph info', [
+            ("Number of vertices", self.graph.number_of_nodes()),
+            ("Number of edges", self.graph.number_of_edges()),
+            ("Vertices per edge", "%.3f" % self.verticesPerEdge),
+            ("Edges per vertex", "%.3f" % self.edgesPerVertex),
+        ])
         if self.node_color_attr or self.node_size_attr or self.node_label_attrs:
-            self.reportSettings("Visual settings",
-                                [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
-                                 self.node_size_attr and ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
-                                 self.node_label_attrs and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
-                                ])
-        self.reportSection("Graph")
-        self.reportImage(self.view)
+            self.report_items("Visual settings", [
+                ("Vertex color", self.colorCombo.currentText()),
+                ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
+                ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
+            ])
+        self.report_plot("Graph", self.view)
 
 
 if __name__ == "__main__":
