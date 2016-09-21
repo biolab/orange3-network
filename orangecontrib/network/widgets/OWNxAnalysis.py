@@ -182,7 +182,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.graphIndices = gui.createTabPage(self.tabs, "Graph-level indices")
         self.nodeIndices = gui.createTabPage(self.tabs, "Node-level indices")
         self.tabs.setCurrentIndex(self.tab_index)
-        self.connect(self.tabs, SIGNAL("currentChanged(int)"), lambda index: setattr(self, 'tab_index', index))
+        self.tabs.currentChanged.connect(lambda index: setattr(self, 'tab_index', index))
 
         for name, default, label, type, algorithm in self.methods:
             if type == NODELEVEL:
@@ -279,8 +279,7 @@ class OWNxAnalysis(widget.OWWidget):
 
         #if type == NODELEVEL:
         job = WorkerThread(self, name, label, type, algorithm)
-        self.connect(job, SIGNAL("terminated()"), lambda j=job: self.job_terminated(j))
-        self.connect(job, SIGNAL("finished()"), lambda j=job: self.job_finished(j))
+        job.finished.connect(lambda j=job: self.job_finished(j))
         self.job_queue.insert(0, job)
         setattr(self, "lbl_" + job.name, "   waiting")
 

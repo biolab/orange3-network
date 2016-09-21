@@ -2,7 +2,8 @@ import sys
 import os.path
 import itertools
 
-from PyQt4.QtGui import *
+from PyQt4.QtGui import QPixmap
+from PyQt4.QtGui import QLabel, QScrollArea, QLayout, QAbstractItemView
 
 import Orange.data
 import orangecontrib.network as network
@@ -53,7 +54,6 @@ class OWNxSNAP(widget.OWWidget):
         self.setMinimumSize(960, 600)
 
     def add_tables(self, networks):
-        from PyQt4.QtCore import SIGNAL
         self.networks = networks
         self.tables = []
 
@@ -74,7 +74,8 @@ class OWNxSNAP(widget.OWWidget):
                 table.verticalHeader().hide()
                 table.setSelectionMode(QAbstractItemView.SingleSelection)
                 table.setSelectionBehavior(QAbstractItemView.SelectRows)
-                self.connect(table, SIGNAL('itemSelectionChanged()'), lambda table=table: self.select_network(table))
+                table.itemSelectionChanged.connect(
+                    lambda table=table: self.select_network(table))
 
                 for i, net in enumerate(network_group):
                     lbl = QLabel("<a href='"+ net.link +"'>" + net.name + "</a>")
