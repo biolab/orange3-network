@@ -332,7 +332,7 @@ class GraphView(QtGui.QGraphicsView):
         if event.orientation() != Qt.Vertical: return
         self.scaleView(2**(event.delta() / 240))
     def scaleView(self, factor):
-        magnitude = self.matrix().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
+        magnitude = self.transform().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
         if 0.2 < magnitude < 30:
             self.scale(factor, factor)
         # Reposition nodes' labela and edges, both of which are node-dependend

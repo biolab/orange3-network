@@ -177,15 +177,12 @@ class SNAP(object):
 
     def __init__(self):
         self.network_list = []
-        self.http = None
+        self._netmanager = None
+        self._reply = None
 
     def parse_snap(self, error, done_callback, progress_callback=None):
         if not error:
-            #self.last_total = self.http.bytesAvailable()
-            #if self.last_total <= 0:
-            #    self.last_total = 24763
-
-            src = str(self.http.readAll())
+            src = bytes(self._reply.readAll()).decode("utf-8")
             snap_parser = SNAPParser()
             snap_parser.feed(src)
 
@@ -220,20 +217,21 @@ class SNAP(object):
             self.network_list = snap_parser.networks
             return self.network_list
         else:
-            import PyQt4.QtNetwork
-            from PyQt4.QtCore import QObject, SIGNAL
+            from PyQt4.QtNetwork import \
+                QNetworkAccessManager, QNetworkRequest, QNetworkReply
+            from PyQt4.QtCore import QUrl
+            self._netmanager = QNetworkAccessManager()
+            request = QNetworkRequest(
+                QUrl("http://snap.stanford.edu/data/index.html"))
+            self._reply = reply = self._netmanager.get(request)
 
-            self.http = PyQt4.QtNetwork.QHttp()
+            @reply.finished.connect
+            def onfinished():
+                error = self._reply.error() != QNetworkReply.NoError
+                self.parse_snap(error, done_callback, progress_callback)
+                self._reply.close()
 
-            QObject.connect(self.http, SIGNAL('done(bool)'), lambda error,\
-                    done_callback=done_callback, progress_callback=progress_callback: \
-                    self.parse_snap(error, done_callback, progress_callback))
-
-            if progress_callback is not None:
-                QObject.connect(self.http, SIGNAL('dataReadProgress(int,int)'), progress_callback)
-
-            self.http.setHost('snap.stanford.edu')
-            self.http.get('/data/index.html')
+            reply.downloadProgress.connect(progress_callback)
 
     def get_network(self, id):
         """Find and return the network by name. If no network is found, return
