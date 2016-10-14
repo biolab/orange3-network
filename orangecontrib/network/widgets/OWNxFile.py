@@ -38,7 +38,7 @@ class OWNxFile(widget.OWWidget):
         self.data_index = 0
 
         #GUI
-        self.controlArea.layout().setMargin(4)
+        self.controlArea.layout().setContentsMargins(4, 4, 4, 4)
         self.box = gui.widgetBox(self.controlArea, box="Graph File", orientation="vertical")
         hb = gui.widgetBox(self.box, orientation="horizontal")
         self.filecombo = gui.comboBox(hb, self, "net_index", callback=self.selectNetFile)
