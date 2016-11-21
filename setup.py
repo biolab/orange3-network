@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
 import os
+import sys
 
 from setuptools import find_packages
+
+if sys.version_info < (3, 4):
+    sys.exit('Orange3-Network requires Python >= 3.4')
+
 from numpy.distutils.core import setup
 
 NAME = 'Orange3-Network'
