@@ -9,7 +9,7 @@ from orangecontrib.text import twitter as txt_twitter
 from PyQt4 import QtGui, QtCore
 from collections import defaultdict
 
-class OWTwitterNetwork(widget.OWWidget):
+class OWNxTwitterGraph(widget.OWWidget):
     class APICredentialsDialog(widget.OWWidget):
         name = "Twitter API Credentials"
         want_main_area = False
@@ -69,7 +69,7 @@ class OWTwitterNetwork(widget.OWWidget):
     name = "Twitter User Graph"
     description = "Create a graph of Twitter users."
     icon = "icons/Twitter.svg"
-    priority = 10
+    priority = 6470
     outputs = [("Followers", network.Graph),
                ("Following", network.Graph),
                ("All", network.Graph)]
@@ -115,7 +115,6 @@ class OWTwitterNetwork(widget.OWWidget):
         followers_graph = nx.Graph()
         following_graph = nx.Graph()
         all_users = nx.Graph()
-
         users = self.users.toPlainText().split("\n")
         mapping = defaultdict(list)
         fwers_id = 0
@@ -241,9 +240,9 @@ class OWTwitterNetwork(widget.OWWidget):
         self.n_followers = len(followers)
         self.n_following = len(following)
 
-if __name__=="__main__":
+if __name__== "__main__":
     from PyQt4.QtGui import QApplication
     a = QApplication([])
-    ow = OWTwitterNetwork()
+    ow = OWNxTwitterGraph()
     ow.show()
     a.exec_()

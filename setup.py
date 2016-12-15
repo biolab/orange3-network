@@ -66,6 +66,7 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'networkx>=1.10',
     'pyqtgraph>=0.9.10',
+    'twitter>=1.17.1'
 ),
 
 EXTRAS_REQUIRE = {
