@@ -252,11 +252,7 @@ class OWNxExplorer(widget.OWWidget):
                                        label="Number of nodes:",
                                        callback=lambda: self.set_selection_mode(SelectionMode.MOST_CONN))
         ib.layout().addStretch(1)
-        self.markInputRadioButton = gui.appendRadioButton(ribg, "... given in the ItemSubset input signal")
-        self.markInput = 0
-        ib = gui.indentedBox(ribg)
-        self.markInputCombo = gui.comboBox(ib, self, 'markInput',
-                                           callback=lambda: self.set_selection_mode(SelectionMode.FROM_INPUT))
+        self.markInputRadioButton = gui.appendRadioButton(ribg, "... from Node Subset input signal")
         self.markInputRadioButton.setEnabled(True)
 
         gui.auto_commit(ribg, self, 'do_auto_commit', 'Output changes')
@@ -333,18 +329,11 @@ class OWNxExplorer(widget.OWWidget):
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
             self.view.setHighlighted(toMark)
         elif selectionMode == SelectionMode.FROM_INPUT:
-            var = self.markInputCombo.currentText()
             tomark = {}
             if self.markInputItems:
-                if var == 'ID':
-                    values = {x.id for x in self.markInputItems}
-                    tomark = {x for x in self.graph.nodes()
-                              if self.graph.items()[x].id in values}
-                else:
-                    clean = lambda s: str(s).strip().upper()
-                    values = {clean(x[var]) for x in self.markInputItems}
-                    tomark = {x for x in self.graph.nodes()
-                              if clean(self.graph.items()[x][var]) in values}
+                ids = set(self.markInputItems.ids)
+                tomark = {x for x in self.graph.nodes()
+                          if self.graph.items()[x].id in ids}
             self.view.setHighlighted(tomark)
 
     def keyReleaseEvent(self, ev):
@@ -532,7 +521,6 @@ class OWNxExplorer(widget.OWWidget):
         self._set_combos()
 
     def set_marking_items(self, items):
-        self.markInputCombo.clear()
         self.markInputRadioButton.setEnabled(False)
         self.markInputItems = items
 
@@ -554,14 +542,6 @@ class OWNxExplorer(widget.OWWidget):
                                                     items.domain.metas))
                           & set(x.name for x in chain(domain.variables,
                                                       domain.metas)))
-
-            self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(DiscreteVariable())], "ID")
-
-            for var in commonVars:
-                orgVar, mrkVar = domain[var], items.domain[var]
-
-                if type(orgVar) == type(mrkVar) == StringVariable:
-                    self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(orgVar)], orgVar.name)
 
             self.markInputRadioButton.setEnabled(True)
         self.view.selectionChanged.emit()
