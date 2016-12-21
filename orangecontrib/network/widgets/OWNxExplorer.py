@@ -630,22 +630,24 @@ class OWNxExplorer(widget.OWWidget):
         depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
         for w in depending_widgets:
             w.setDisabled(not attribute)
-        if not self.graph: return
+
+        if not self.graph:
+            return
         table = self.graph.items()
-        if not table: return
-        if attribute in table.domain.class_vars:
-            values = table[:, attribute].Y
-            if values.ndim > 1:
-                values = values.T
-        elif attribute in table.domain.metas:
-            values = table[:, attribute].metas[:, 0]
-        elif attribute in table.domain.attributes:
-            values = table[:, attribute].X[:, 0]
-        else:
+        if table is None:
+            return
+
+        try:
+            values = table.get_column_view(attribute)[0]
+        except Exception:
             for node in self.view.nodes:
                 node.setSize(self.minNodeSize)
             return
-        values = np.array(values)
+
+        if isinstance(table.domain[attribute], StringVariable):
+            values = np.array([(s.count(',') + 1) if s else np.nan
+                               for s in values])
+
         if self.invertNodeSize:
             values += np.nanmin(values) + 1
             values = 1/values
