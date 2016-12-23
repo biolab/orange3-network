@@ -1,3 +1,5 @@
+from AnyQt.QtCore import Qt
+
 from Orange.widgets import gui, widget, settings
 from orangecontrib.network import Graph, community as cd
 
@@ -13,11 +15,12 @@ class OWNxClustering(widget.OWWidget):
                ("Community Detection", cd.CommunityDetection)]
 
     resizing_enabled = False
+    want_main_area = False
 
     method = settings.Setting(0)
     iterations = settings.Setting(1000)
     hop_attenuation = settings.Setting(0.1)
-    autoApply = settings.Setting(False)
+    autoApply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -40,7 +43,7 @@ class OWNxClustering(widget.OWWidget):
         self.info = gui.widgetLabel(self.controlArea, ' ')
 
         gui.auto_commit(self.controlArea, self, "autoApply", 'Commit',
-                        checkbox_label='Auto-commit')
+                        checkbox_label='Auto-commit', orientation=Qt.Horizontal)
         commit()
 
     def setNetwork(self, net):
@@ -74,7 +77,8 @@ class OWNxClustering(widget.OWWidget):
 
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import *
+    from AnyQt.QtCore import *
+    from AnyQt.QtWidgets import QApplication
     a = QApplication([])
     ow = OWNxClustering()
     ow.show()
