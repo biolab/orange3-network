@@ -18,6 +18,9 @@ class OWNxClustering(widget.OWWidget):
     resizing_enabled = False
     want_main_area = False
 
+    want_control_area = True
+    want_main_area = False
+
     method = settings.Setting(0)
     iterations = settings.Setting(1000)
     hop_attenuation = settings.Setting(0.1)
