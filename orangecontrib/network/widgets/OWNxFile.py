@@ -121,9 +121,17 @@ class OWNxFile(widget.OWWidget):
         if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
-        G = network.readwrite.read(filename, auto_table=self.auto_table)
+        try:
+            G = network.readwrite.read(filename, auto_table=self.auto_table)
+        except OSError:
+            self.error(7, 'File not found: "{}"'.format(filename))
+            return self.readingFailed('Network file not found')
+        else:
+            self.error(7)
         if G is None:
+            self.error(9, 'Error reading file "{}"'.format(filename))
             return self.readingFailed('Error reading file "{}"'.format(filename))
+        self.error(9)
 
         info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
                 '{} nodes, {} edges'.format(G.number_of_nodes(), G.number_of_edges()),
