@@ -279,6 +279,10 @@ class GraphView(QtGui.QGraphicsView):
         self.selectionChanged.emit()
     def getSelected(self):
         return [node.id for node in self.scene().selectedItems()]
+    def getUnselected(self):
+        return [node.id
+                for node in (set(self.scene().items()) - set(self.scene().selectedItems()))
+                if isinstance(node, Node)]
     def setSelected(self, nodes, extend=False):
         self._setState(nodes, extend, 'setSelected')
     def getHighlighted(self):
