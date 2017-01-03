@@ -88,11 +88,6 @@ def _make_str(t):
 def _check_network_dir(p):
     if type(p) == str:
         if not os.path.isfile(p):
-            path = Orange.data.io.find_file(os.path.split(p)[1])
-
-            if os.path.isfile(path):
-                return path
-
             raise OSError('File %s does not exist.' % p)
 
     return p

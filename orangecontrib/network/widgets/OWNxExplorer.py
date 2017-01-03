@@ -1,6 +1,5 @@
 import os
-from operator import itemgetter, add
-from functools import reduce, wraps
+from functools import wraps
 from itertools import chain
 from threading import Lock
 
@@ -12,11 +11,9 @@ from PyQt4.QtCore import *
 import Orange
 from Orange.util import scale
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.unsupervised.owmds import torgerson as MDS
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 
-from Orange.data import Table, Domain, DiscreteVariable, StringVariable
+from Orange.data import Table, DiscreteVariable, StringVariable
 import orangecontrib.network as network
 from orangecontrib.network.widgets.graphview import GraphView, Node, FR_ITERATIONS
 
@@ -99,7 +96,7 @@ class OWNxExplorer(widget.OWWidget):
     do_auto_commit = settings.Setting(True)
     maxNodeSize = settings.Setting(50)
     minNodeSize = settings.Setting(8)
-    selectionMode = settings.Setting(0)
+    selectionMode = settings.Setting(SelectionMode.FROM_INPUT)
     tabIndex = settings.Setting(0)
     showEdgeWeights = settings.Setting(False)
     relativeEdgeWidths = settings.Setting(False)
@@ -108,6 +105,8 @@ class OWNxExplorer(widget.OWWidget):
     markSearchString = settings.Setting("")
     markNBest = settings.Setting(1)
     markNConnections = settings.Setting(2)
+
+    graph_name = 'view'
 
     def __init__(self):
         super().__init__()
@@ -253,12 +252,8 @@ class OWNxExplorer(widget.OWWidget):
                                        label="Number of nodes:",
                                        callback=lambda: self.set_selection_mode(SelectionMode.MOST_CONN))
         ib.layout().addStretch(1)
-        self.markInputRadioButton = gui.appendRadioButton(ribg, "... given in the ItemSubset input signal")
-        self.markInput = 0
-        ib = gui.indentedBox(ribg)
-        self.markInputCombo = gui.comboBox(ib, self, 'markInput',
-                                           callback=lambda: self.set_selection_mode(SelectionMode.FROM_INPUT))
-        self.markInputRadioButton.setEnabled(False)
+        self.markInputRadioButton = gui.appendRadioButton(ribg, "... from Node Subset input signal")
+        self.markInputRadioButton.setEnabled(True)
 
         gui.auto_commit(ribg, self, 'do_auto_commit', 'Output changes')
         self.markTab.layout().addStretch(1)
@@ -292,7 +287,7 @@ class OWNxExplorer(widget.OWWidget):
         selectionMode = self.selectionMode = selectionMode or self.selectionMode
         self.switchTab()
         if (self.graph is None or
-            self.tabs.widget(self.tabs.currentIndex()) != self.markTab):
+            self.tabs.widget(self.tabs.currentIndex()) != self.markTab and selectionMode != SelectionMode.FROM_INPUT):
             return
 
         if selectionMode == SelectionMode.NONE:
@@ -334,18 +329,11 @@ class OWNxExplorer(widget.OWWidget):
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
             self.view.setHighlighted(toMark)
         elif selectionMode == SelectionMode.FROM_INPUT:
-            var = self.markInputCombo.currentText()
             tomark = {}
             if self.markInputItems:
-                if var == 'ID':
-                    values = {x.id for x in self.markInputItems}
-                    tomark = {x for x in self.graph.nodes()
-                              if self.graph.items()[x].id in values}
-                else:
-                    clean = lambda s: str(s).strip().upper()
-                    values = {clean(x[var]) for x in self.markInputItems}
-                    tomark = {x for x in self.graph.nodes()
-                              if clean(self.graph.items()[x][var]) in values}
+                ids = set(self.markInputItems.ids)
+                tomark = {x for x in self.graph.nodes()
+                          if self.graph.items()[x].id in ids}
             self.view.setHighlighted(tomark)
 
     def keyReleaseEvent(self, ev):
@@ -488,6 +476,10 @@ class OWNxExplorer(widget.OWWidget):
             self.set_graph_none()
             self.information('I\'m not really in a mood to visualize just one node. Try again tomorrow.')
             return
+        if graph.number_of_nodes() + graph.number_of_edges() > 30000:
+            self.set_graph_none()
+            self.error('Network is too large to visualize. Sorry.')
+            return
         self.information()
 
         all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges_iter(data='weight'))))
@@ -508,10 +500,6 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesPerVertex = self.graph.number_of_edges() / max(1, self.graph.number_of_nodes())
 
         self._set_combos()
-        if self.graph.number_of_nodes() + self.graph.number_of_edges() > 30000:
-            self.set_graph_none()
-            self.error('Network is too large to visualize. Sorry.')
-            return
         self.error()
 
         self.set_selection_mode()
@@ -533,13 +521,13 @@ class OWNxExplorer(widget.OWWidget):
         self._set_combos()
 
     def set_marking_items(self, items):
-        self.markInputCombo.clear()
         self.markInputRadioButton.setEnabled(False)
         self.markInputItems = items
 
         self.warning()
 
         if items is None:
+            self.view.selectionChanged.emit()
             return
 
         if self.graph is None or self.graph.items() is None:
@@ -555,15 +543,8 @@ class OWNxExplorer(widget.OWWidget):
                           & set(x.name for x in chain(domain.variables,
                                                       domain.metas)))
 
-            self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(DiscreteVariable())], "ID")
-
-            for var in commonVars:
-                orgVar, mrkVar = domain[var], items.domain[var]
-
-                if type(orgVar) == type(mrkVar) == StringVariable:
-                    self.markInputCombo.addItem(gui.attributeIconDict[gui.vartype(orgVar)], orgVar.name)
-
             self.markInputRadioButton.setEnabled(True)
+        self.view.selectionChanged.emit()
 
     def relayout(self):
         if self.graph is None or self.graph.number_of_nodes() <= 1:
@@ -649,22 +630,24 @@ class OWNxExplorer(widget.OWWidget):
         depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
         for w in depending_widgets:
             w.setDisabled(not attribute)
-        if not self.graph: return
+
+        if not self.graph:
+            return
         table = self.graph.items()
-        if not table: return
-        if attribute in table.domain.class_vars:
-            values = table[:, attribute].Y
-            if values.ndim > 1:
-                values = values.T
-        elif attribute in table.domain.metas:
-            values = table[:, attribute].metas[:, 0]
-        elif attribute in table.domain.attributes:
-            values = table[:, attribute].X[:, 0]
-        else:
+        if table is None:
+            return
+
+        try:
+            values = table.get_column_view(attribute)[0]
+        except Exception:
             for node in self.view.nodes:
                 node.setSize(self.minNodeSize)
             return
-        values = np.array(values)
+
+        if isinstance(table.domain[attribute], StringVariable):
+            values = np.array([(s.count(',') + 1) if s else np.nan
+                               for s in values])
+
         if self.invertNodeSize:
             values += np.nanmin(values) + 1
             values = 1/values
@@ -691,21 +674,21 @@ class OWNxExplorer(widget.OWWidget):
         for edge, width in zip(self.view.edges, widths):
             edge.setSize(width)
 
-    def sendReport(self):
-        self.reportSettings("Graph data",
-                            [("Number of vertices", self.graph.number_of_nodes()),
-                             ("Number of edges", self.graph.number_of_edges()),
-                             ("Vertices per edge", "%.3f" % self.verticesPerEdge),
-                             ("Edges per vertex", "%.3f" % self.edgesPerVertex),
-                             ])
+    def send_report(self):
+        self.report_data("Data", self.graph.items())
+        self.report_items('Graph info', [
+            ("Number of vertices", self.graph.number_of_nodes()),
+            ("Number of edges", self.graph.number_of_edges()),
+            ("Vertices per edge", "%.3f" % self.verticesPerEdge),
+            ("Edges per vertex", "%.3f" % self.edgesPerVertex),
+        ])
         if self.node_color_attr or self.node_size_attr or self.node_label_attrs:
-            self.reportSettings("Visual settings",
-                                [self.node_color_attr and ("Vertex color", self.colorCombo.currentText()),
-                                 self.node_size_attr and ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
-                                 self.node_label_attrs and ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
-                                ])
-        self.reportSection("Graph")
-        self.reportImage(self.view)
+            self.report_items("Visual settings", [
+                ("Vertex color", self.colorCombo.currentText()),
+                ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
+                ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
+            ])
+        self.report_plot("Graph", self.view)
 
 
 if __name__ == "__main__":
