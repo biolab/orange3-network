@@ -20,6 +20,7 @@ class OWNxSNAP(widget.OWWidget):
                ("Items", Orange.data.Table)]
 
     last_total = settings.Setting(24763)
+    selected_network = settings.Setting(())
 
     def __init__(self):
         super().__init__()
@@ -98,6 +99,10 @@ class OWNxSNAP(widget.OWWidget):
 
                 gui.separator(self.network_list, 10, 10)
 
+        if self.selected_network:
+            table_idx, row = self.selected_network
+            self.tables[table_idx].selectRow(row)
+
     def download_progress(self, numblocks, blocksize, filesize):
         try:
             percent = min((numblocks*blocksize*100)/filesize, 100)
@@ -108,7 +113,7 @@ class OWNxSNAP(widget.OWWidget):
                 print(str(percent)+'%')
 
     def select_network(self, selected_table):
-        for table in self.tables:
+        for i_table, table in enumerate(self.tables):
             selected = table.selectedIndexes()
             if len(selected) > 0:
                 row = selected[0].row()
@@ -117,6 +122,7 @@ class OWNxSNAP(widget.OWWidget):
                 self.progressBarInit()
                 try:
                     network = network_info.read(progress_callback=self.download_progress)
+                    self.selected_network = (i_table, row)
                 except Exception:
                     network = None
                     QMessageBox.critical(self, 'Network error',
