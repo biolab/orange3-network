@@ -476,6 +476,10 @@ class OWNxExplorer(widget.OWWidget):
             self.set_graph_none()
             self.information('I\'m not really in a mood to visualize just one node. Try again tomorrow.')
             return
+        if graph.number_of_nodes() + graph.number_of_edges() > 30000:
+            self.set_graph_none()
+            self.error('Network is too large to visualize. Sorry.')
+            return
         self.information()
 
         all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges_iter(data='weight'))))
@@ -496,10 +500,6 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesPerVertex = self.graph.number_of_edges() / max(1, self.graph.number_of_nodes())
 
         self._set_combos()
-        if self.graph.number_of_nodes() + self.graph.number_of_edges() > 30000:
-            self.set_graph_none()
-            self.error('Network is too large to visualize. Sorry.')
-            return
         self.error()
 
         self.set_selection_mode()
