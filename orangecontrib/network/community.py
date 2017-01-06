@@ -21,7 +21,7 @@ from Orange.data import Domain, Table, DiscreteVariable
 CLUSTERING_LABEL = 'Cluster'
 
 
-def add_results_to_items(G, lblhistory):
+def add_results_to_items(G, labels):
     items = G.items()
     if items is not None and CLUSTERING_LABEL in items.domain:
         domain = Domain([a for a in items.domain.attributes
@@ -30,10 +30,12 @@ def add_results_to_items(G, lblhistory):
                         items.domain.metas)
         items = Table.from_table(domain, items)
 
-    attrs = [DiscreteVariable(CLUSTERING_LABEL,
-                              values=list(set([l for l in lblhistory[-1]])))]
+    attrs = [DiscreteVariable(
+        CLUSTERING_LABEL,
+        values=["C%d" % (x + 1) for x in set(labels.values())])]
+
     domain = Domain(attrs)
-    data = Table(domain, [[l] for l in lblhistory[-1]])
+    data = Table(domain, [[l] for l in labels.values()])
 
     if items is None:
         G.set_items(data)
@@ -80,7 +82,6 @@ def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
     degrees = dict(zip(vertices, [G.degree(v) for v in vertices]))
     labels = dict(zip(vertices, range(G.number_of_nodes())))
     scores = dict(zip(vertices, [1] * G.number_of_nodes()))
-    lblhistory = []
     m = node_degree_preference
 
     for i in range(iterations):
@@ -107,13 +108,14 @@ def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
                                        if labels[u] == labels[v]) - delta)
                 stop = 0
 
-        lblhistory.append([str(labels[key]) for key in sorted(labels.keys())])
         # if stopping condition is satisfied (no label switched color)
         if stop:
             break
 
+    labels = remap_labels(labels)
+
     if results2items:
-        add_results_to_items(G, lblhistory)
+        add_results_to_items(G, labels)
 
     return labels
 
@@ -149,7 +151,6 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
         m = max(lbls)[0]
         return [l for c, l in lbls if c >= m]
 
-    lblhistory = []
     for i in range(iterations):
         random.shuffle(vertices)
         stop = 1
@@ -165,7 +166,6 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
 
             labels[v] = random.choice(max_lbls)
 
-        lblhistory.append([str(labels[key]) for key in sorted(labels.keys())])
         # if stopping condition might be satisfied, check it
         # stop when no label would switch anymore
         if stop:
@@ -181,7 +181,14 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
             if stop:
                 break
 
+    labels = remap_labels(labels)
+
     if results2items:
-        add_results_to_items(G, lblhistory)
+        add_results_to_items(G, labels)
 
     return labels
+
+def remap_labels(labels):
+    unique_labels = sorted(set(labels.values()))
+    dict_labels = {label:i for i, label in enumerate(unique_labels)}
+    return {key: dict_labels[val] for key, val in labels.items()}
