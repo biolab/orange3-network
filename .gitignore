@@ -2,7 +2,7 @@
 build
 dist
 Orange3_Network.egg-info
-doc/build
+doc/_build
 *.so
 *.pyd
 *.pyc
