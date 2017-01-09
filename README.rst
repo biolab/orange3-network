@@ -30,20 +30,24 @@ Python's site-packages directory), run
 
 You can also run
 
-	pip install -e .
+    pip install -e .
 
 which is sometimes preferable as you can *pip uninstall* packages later.
 
-Installation on Windows
------------------------
+Anaconda
+~~~~~~~~
 
-Windows users have to compile the code. Run it with either Microsoft Visual Studio
+If using Anaconda Python distribution, simply run
+
+    pip install orange3-network
+
+Compiling on Windows
+~~~~~~~~~~~~~~~~~~~~
+
+If you are not using Anaconda distribution, but building the add-on directly from the source code, Windows users need to compile the code.
+Dowload `Microsoft Visual Studio compiler <http://landinghub.visualstudio.com/visual-cpp-build-tools>`_ and run the command
 
     python setup.py build_ext -i --compiler=msvc install
-
-or `Mingw32 <https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/rubenvb/gcc-4.8-release/>`__:
-
-    python setup.py build_ext -i --compiler=mingw32 install
 
 Usage
 -----
