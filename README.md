@@ -1,14 +1,14 @@
 Orange3 Network
 ===============
 
-Orange3-Network is an add-on for Orange_ data mining software package. It
+[![Documentation Status](https://readthedocs.org/projects/orange3-network/badge/?version=latest)](http://orange3-network.readthedocs.io/en/latest/?badge=latest)
+
+Orange3-Network is an add-on for [Orange] data mining software package. It
 provides network visualization and network analysis tools.
 
-.. _Orange: http://orange.biolab.si/
+[Orange]: http://orange.biolab.si/
 
-Documentation is found at:
-
-http://orange3-network.rtfd.io
+Documentation is found at: http://orange3-network.rtfd.io
 
 Installation
 ------------
@@ -34,20 +34,20 @@ You can also run
 
 which is sometimes preferable as you can *pip uninstall* packages later.
 
-Anaconda
-~~~~~~~~
+### Anaconda
 
 If using Anaconda Python distribution, simply run
 
     pip install orange3-network
 
-Compiling on Windows
-~~~~~~~~~~~~~~~~~~~~
+### Compiling on Windows
 
 If you are not using Anaconda distribution, but building the add-on directly from the source code, Windows users need to compile the code.
-Dowload `Microsoft Visual Studio compiler <http://landinghub.visualstudio.com/visual-cpp-build-tools>`_ and run the command
+Download [Microsoft Visual Studio compiler] and run the command
 
     python setup.py build_ext -i --compiler=msvc install
+
+[Microsoft Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
 
 Usage
 -----
