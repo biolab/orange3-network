@@ -7,8 +7,7 @@ import math
 from itertools import chain
 import numpy as np
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from AnyQt.QtCore import QLineF, QSize
 
 import Orange
 from Orange.widgets import gui, widget, settings
@@ -389,6 +388,7 @@ class Histogram(pg.PlotWidget):
 
 
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     appl = QApplication([])
     ow = OWNxFromDistances()
     ow.show()

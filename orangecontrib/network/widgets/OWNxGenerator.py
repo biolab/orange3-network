@@ -1,6 +1,6 @@
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from AnyQt.QtGui import *
+from AnyQt.QtCore import *
 
 import numpy as np
 import networkx as nx
@@ -100,6 +100,7 @@ class OWNxGenerator(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     a = QApplication([])
     ow = OWNxGenerator()
     ow.show()

@@ -1,8 +1,7 @@
 from os import path
 from itertools import chain, product
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
 import Orange
 from Orange.widgets import gui, widget, settings
@@ -215,7 +214,7 @@ class OWNxFile(widget.OWWidget):
         else:
             startfile = self.recentFiles[0] if self.recentFiles else '.'
 
-        filename = QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, 'Open a Network File', startfile,
             ';;'.join(("All network files (*{})".format(
                            ' *'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
@@ -266,7 +265,7 @@ class OWNxFile(widget.OWWidget):
         self.reportData(self.graph.links(), None, None)
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     a = QApplication([])
     owf = OWNxFile()
     owf.show()
