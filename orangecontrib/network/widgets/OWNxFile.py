@@ -80,7 +80,7 @@ class OWNxFile(widget.OWWidget):
     def populate_comboboxes(self):
         self.filecombo.clear()
         for file in self.recentFiles or (NONE,):
-            self.filecombo.addItem(path.basename(file))
+            self.filecombo.addItem(path.basename(file[0]))
         self.filecombo.addItem("Browse documentation networks...")
         self.filecombo.updateGeometry()
 
@@ -117,11 +117,11 @@ class OWNxFile(widget.OWWidget):
 
     def openNetFile(self, filename):
         """Read network from file."""
-        if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
+        if path.splitext(filename[0])[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
         try:
-            G = network.readwrite.read(filename, auto_table=self.auto_table)
+            G = network.readwrite.read(filename[0], auto_table=self.auto_table)
         except OSError:
             self.error(7, 'File not found: "{}"'.format(filename))
             return self.readingFailed('Network file not found')
@@ -146,10 +146,10 @@ class OWNxFile(widget.OWWidget):
 
         # Find items data file for selected network
         for basename, ext in product((filename,
-                                      path.splitext(filename)[0],
-                                      path.splitext(filename)[0] + '_items'),
+                                      path.splitext(filename[0])[0],
+                                      path.splitext(filename[0])[0] + '_items'),
                                      ('.tab', '.tsv', '.csv')):
-            candidate = basename + ext
+            candidate = basename[0] + ext
             if path.exists(candidate):
                 try: self.recentDataFiles.remove(candidate)
                 except ValueError: pass
