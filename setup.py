@@ -66,12 +66,14 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'networkx>=1.10',
     'pyqtgraph>=0.9.10',
+    'numpy>=1.8.0',
+    'Orange3>=3.3.9'
 ),
 
 EXTRAS_REQUIRE = {
     # Dependencies which are problematic to install automatically
     'GUI': (
-        'PyQt4',
+        'AnyQt',
     ),
     'reST': (
         'numpydoc',

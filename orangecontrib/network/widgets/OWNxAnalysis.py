@@ -1,6 +1,6 @@
-from PyQt4 import QtCore
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from AnyQt.QtCore import QThread, QMutex
+from AnyQt.QtWidgets import QApplication, QSizePolicy, QWidget, QGridLayout
+
 import numpy as np
 import networkx as nx
 import sys
@@ -16,7 +16,7 @@ NODELEVEL = 0
 GRAPHLEVEL = 1
 
 
-class WorkerThread(QtCore.QThread):
+class WorkerThread(QThread):
     def __init__(self, receiver, name, label, type, algorithm):
         super().__init__()
         self.receiver = receiver
@@ -169,7 +169,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.methods = [method for method in self.methods if method[-1] is not None]
 
         self.tab_index = 0
-        self.mutex = QtCore.QMutex()
+        self.mutex = QMutex()
 
         self.graph = None
         self.items = None          # items set by Items signal
@@ -258,7 +258,7 @@ class OWNxAnalysis(widget.OWWidget):
             return
 
         self.clear_labels()
-        qApp.processEvents()
+        QApplication.processEvents()
 
         self.clear_results()
 
@@ -456,11 +456,11 @@ if __name__ == "__main__":
         #if signal == 'Items':
         #    ow.set_items(data)
 
-    from . import OWNxFile
+    import OWNxFile
+    from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
-    owFile.show()
-    owFile.selectNetFile(0)
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
     a.exec_()
     ow.saveSettings()

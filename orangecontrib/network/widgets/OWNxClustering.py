@@ -78,7 +78,6 @@ class OWNxClustering(widget.OWWidget):
 
 
 if __name__ == "__main__":
-    from AnyQt.QtCore import *
     from AnyQt.QtWidgets import QApplication
     a = QApplication([])
     ow = OWNxClustering()
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.send = setNetwork
-    owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
     a.exec_()
     ow.saveSettings()

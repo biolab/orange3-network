@@ -5,8 +5,8 @@ from threading import Lock
 
 import numpy as np
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from AnyQt.QtCore import QTimer, QSize, Qt
+from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
 
 import Orange
 from Orange.util import scale
@@ -696,6 +696,7 @@ class OWNxExplorer(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     import sys
     a = QApplication(sys.argv)
     ow = OWNxExplorer()
