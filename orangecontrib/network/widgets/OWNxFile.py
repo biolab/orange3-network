@@ -4,14 +4,15 @@ from itertools import chain, product
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
 import Orange
-from Orange.widgets import gui, widget, settings
+from Orange.widgets import gui, settings
+from Orange.widgets.widget import OWWidget, Msg
 import orangecontrib.network as network
 
 
 NONE = "(none)"
 
 
-class OWNxFile(widget.OWWidget):
+class OWNxFile(OWWidget):
     name = "Network File"
     description = "Read network graph file in Pajek or GML format."
     icon = "icons/NetworkFile.svg"
@@ -25,6 +26,14 @@ class OWNxFile(widget.OWWidget):
     recentFiles = settings.Setting([])
     recentDataFiles = settings.Setting([])
     auto_table = settings.Setting(True)
+
+    class Warning(OWWidget.Warning):
+        no_network_file = Msg('No network file loaded. Load the network first.')
+
+    class Error(OWWidget.Error):
+        file_not_found = Msg('File not found: "{}"')
+        vertices_length_not_matching = Msg('Vertices data length does not match the number of vertices')
+        error_reading_file = Msg('Error reading file "{}"')
 
     def __init__(self):
         super().__init__()
@@ -123,14 +132,14 @@ class OWNxFile(widget.OWWidget):
         try:
             G = network.readwrite.read(filename, auto_table=self.auto_table)
         except OSError:
-            self.error(7, 'File not found: "{}"'.format(filename))
+            self.Error.file_not_found(''.format(filename))
             return self.readingFailed('Network file not found')
         else:
-            self.error(7)
+            self.Error.file_not_found.clear()
         if G is None:
-            self.error(9, 'Error reading file "{}"'.format(filename))
+            self.Error.error_reading_file(''.format(filename))
             return self.readingFailed('Error reading file "{}"'.format(filename))
-        self.error(9)
+        self.Error.error_reading_file.clear()
 
         info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
                 '{} nodes, {} edges'.format(G.number_of_nodes(), G.number_of_edges()),
@@ -142,7 +151,7 @@ class OWNxFile(widget.OWWidget):
             (self.auto_table, self.auto_items)
 
         self.graph = G
-        self.warning(0)
+        self.Warning.no_network_file.clear()
 
         # Find items data file for selected network
         for basename, ext in product((filename,
@@ -165,8 +174,8 @@ class OWNxFile(widget.OWWidget):
         self.send("Items", G.items() if G else None)
 
     def openDataFile(self, filename):
-        self.error(1)
-        self.warning(0)
+        self.Error.vertices_length_not_matching.clear()
+        self.Warning.no_network_file.clear()
         if filename == NONE:
             if self.graph:
                 self.graph.set_items(self.auto_items)
@@ -181,13 +190,13 @@ class OWNxFile(widget.OWWidget):
 
     def readDataFile(self, filename):
         if not self.graph:
-            self.warning(0, 'No network file loaded. Load the network first.')
+            self.Warning.no_network_file()
             return
 
         table = Orange.data.Table.from_file(filename)
 
         if len(table) != self.graph.number_of_nodes():
-            self.error(1, "Vertices data length does not match the number of vertices")
+            self.Error.vertices_length_not_matching()
             self.populate_comboboxes()
             return
 
@@ -235,7 +244,7 @@ class OWNxFile(widget.OWWidget):
 
     def browseDataFile(self):
         if self.graph is None:
-            self.warning(0, 'No network file loaded. Load the network first.')
+            self.Warning.no_network_file()
             return
 
         startfile = (self.recentDataFiles[0] if self.recentDataFiles else
