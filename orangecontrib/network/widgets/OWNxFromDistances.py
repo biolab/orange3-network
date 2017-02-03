@@ -49,6 +49,13 @@ class OWNxFromDistances(widget.OWWidget):
     edge_weights = settings.Setting(0)
     excludeLimit = settings.Setting(2)
 
+    class Warning(widget.OWWidget.Warning):
+        kNN_too_large  = widget.Msg('kNN larger then supplied distance matrix dimension. Using k = {}')
+        large_number_of_nodes = widget.Msg('Large number of nodes/edges; performance will be hindered')
+
+    class Error(widget.OWWidget.Error):
+        number_of_edges = widget.Msg('Estimated number of edges is too high ({})')
+
     def __init__(self):
         super().__init__()
 
@@ -165,9 +172,9 @@ class OWNxFromDistances(widget.OWWidget):
         self.changeUpperSpin()
 
     def generateGraph(self, N_changed=False):
-        self.error()
+        self.Error.clear()
+        self.Warning.clear()
         matrix = None
-        self.warning('')
 
         if N_changed:
             self.node_selection = NodeSelection.COMPONENTS
@@ -192,7 +199,7 @@ class OWNxFromDistances(widget.OWWidget):
             self.graph = None
             nedges = 0
             n = 0
-            self.error('Estimated number of edges is too high (%d).' % nEdgesEstimate)
+            self.Error.number_of_edges(nEdgesEstimate)
         else:
             graph = network.Graph()
             graph.add_nodes_from(range(self.matrix.shape[0]))
@@ -208,9 +215,9 @@ class OWNxFromDistances(widget.OWWidget):
 
             # set the threshold
             # set edges where distance is lower than threshold
-            self.warning(0)
+            self.Warning.kNN_too_large.clear()
             if self.kNN >= self.matrix.shape[0]:
-                self.warning(0, "kNN larger then supplied distance matrix dimension. Using k = %i" % (self.matrix.shape[0] - 1))
+                self.Warning.kNN_too_large(self.matrix.shape[0] - 1)
 
             def edges_from_distance_matrix(matrix, upper, knn):
                 rows, cols = matrix.shape
@@ -273,9 +280,9 @@ class OWNxFromDistances(widget.OWWidget):
                 self.nedges, self.nedges / float(self.pconnected)
                 if self.pconnected else 0))
 
-        self.warning(303)
+        self.Warning.large_number_of_nodes.clear()
         if self.pconnected > 1000 or self.nedges > 2000:
-            self.warning(303, 'Large number of nodes/edges; performance will be hindered.')
+            self.Warning.large_number_of_nodes()
 
         self.sendSignals()
         self.histogram.setRegion(0, self.spinUpperThreshold)
