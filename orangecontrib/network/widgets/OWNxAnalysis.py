@@ -17,6 +17,9 @@ GRAPHLEVEL = 1
 
 
 class WorkerThread(QThread):
+    class Error(widget.OWWidget.Warning):
+        exception = ("{}")
+
     def __init__(self, receiver, name, label, type, algorithm):
         super().__init__()
         self.receiver = receiver
@@ -27,7 +30,7 @@ class WorkerThread(QThread):
 
         self.stopped = 0
         self.result = None
-        self.error = None
+        self.Error.clear()
         self.is_terminated = False
 
     def run(self):
@@ -35,7 +38,7 @@ class WorkerThread(QThread):
             self.result = self.algorithm(self.receiver.graph)
         except Exception as ex:
             self.result = None
-            self.error = ex
+            self.Error.exception(ex)
 
 
 class OWNxAnalysis(widget.OWWidget):
