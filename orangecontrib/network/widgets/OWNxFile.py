@@ -34,6 +34,8 @@ class OWNxFile(OWWidget):
         file_not_found = Msg('File not found: "{}"')
         vertices_length_not_matching = Msg('Vertices data length does not match the number of vertices')
         error_reading_file = Msg('Error reading file "{}"')
+    
+    want_main_area = False
 
     def __init__(self):
         super().__init__()
@@ -56,16 +58,18 @@ class OWNxFile(OWWidget):
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         button = gui.button(hb, self, 'Reload', callback=self.reload)
         button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-        gui.checkBox(self.box, self, "auto_table", "Build graph data table automatically",
+        chb = gui.widgetBox(self.box, orientation="horizontal")
+        gui.checkBox(chb, self, "auto_table", "Build graph data table automatically",
                      callback=self.selectNetFile)
 
-        self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="horizontal")
-        self.datacombo = gui.comboBox(self.databox, self, "data_index", callback=self.selectDataFile)
+        self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="vertical")
+        vdf = gui.widgetBox(self.databox, orientation="horizontal")
+        self.datacombo = gui.comboBox(vdf, self, "data_index", callback=self.selectDataFile)
         self.datacombo.setMinimumWidth(250)
-        button = gui.button(self.databox, self, '...', callback=self.browseDataFile, disabled=0)
+        button = gui.button(vdf, self, '...', callback=self.browseDataFile, disabled=0)
         button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        button = gui.button(self.databox, self, 'Reload', callback=self.reload_data)
+        button = gui.button(vdf, self, 'Reload', callback=self.reload_data)
         button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
 
         # info
