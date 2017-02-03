@@ -8,6 +8,7 @@ import sys
 import Orange
 from Orange.data import Table, Domain
 from Orange.widgets import gui, widget
+from Orange.widgets.settings import Setting
 import orangecontrib.network as network
 
 
@@ -50,6 +51,11 @@ class OWNxAnalysis(widget.OWWidget):
     outputs = [("Network", network.Graph),
                ("Items", Orange.data.Table)]
 
+    want_main_area = False
+    want_control_area = True
+
+    auto_commit = Setting(False)
+
     settingsList = [
         "auto_commit", "tab_index", "degree", "in_degree", "out_degree", "average_neighbor_degree",
         "clustering", "triangles", "square_clustering", "number_of_cliques",
@@ -70,10 +76,13 @@ class OWNxAnalysis(widget.OWWidget):
     ]
     # TODO: set settings
 
-    want_main_area = False
-
     def __init__(self):
         super().__init__()
+        self.controlArea = QWidget(self.controlArea)
+        self.layout().addWidget(self.controlArea)
+        layout = QGridLayout()
+        self.controlArea.setLayout(layout)
+        layout.setContentsMargins(4, 4, 4, 4)
 
         self.methods = [
             ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
@@ -159,7 +168,6 @@ class OWNxAnalysis(widget.OWWidget):
 
         self.methods = [method for method in self.methods if method[-1] is not None]
 
-        self.auto_commit = False
         self.tab_index = 0
         self.mutex = QtCore.QMutex()
 
@@ -198,15 +206,12 @@ class OWNxAnalysis(widget.OWWidget):
         self.graphIndices.layout().addStretch(1)
         self.nodeIndices.layout().addStretch(1)
 
-        gui.checkBox(self.controlArea, self, "auto_commit", label="Commit automatically")
-
-        hb = gui.widgetBox(self.controlArea, None, orientation='horizontal')
-        self.btnCommit = gui.button(hb, self, "Commit", callback=self.analyze, toggleButton=1)
-        self.btnStopA = gui.button(hb, self, "Cancel", callback=lambda: self.stop_job(current=False))
-        self.btnStopA.setEnabled(False)
-
-        #~ self.reportButton = gui.button(hb, self, "&Report", self.reportAndFinish, debuggingEnabled=0)
-        #~ self.reportButton.setAutoDefault(0)
+        autobox = gui.auto_commit(None, self, "auto_commit", "Commit", commit=self.analyze)
+        layout.addWidget(autobox, 3, 0, 1, 1)
+        cancel = gui.button(None, self, "Cancel", callback=lambda: self.stop_job(current=False))
+        autobox.layout().insertWidget(3, cancel)
+        autobox.layout().insertSpacing(2, 10)
+        cancel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
     def set_graph(self, graph):
         if graph is None:
@@ -221,7 +226,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.items_analysis = graph.items()
 
         if self.items is not None:
-            self.items_analysis =  self.items
+            self.items_analysis = self.items
 
         self.clear_results()
         self.clear_labels()
@@ -230,10 +235,7 @@ class OWNxAnalysis(widget.OWWidget):
 
         self.mutex.unlock()
 
-        if self.auto_commit:
-            self.btnCommit.setChecked(True)
-            self.analyze()
-
+        self.unconditional_analyze()
 
     def set_items(self, items):
         self.mutex.lock()
@@ -249,13 +251,12 @@ class OWNxAnalysis(widget.OWWidget):
         self.mutex.unlock()
 
     def analyze(self):
-        if self.graph is None or not self.btnCommit.isChecked():
+        if self.graph is None:
             return
 
         if len(self.job_queue) > 0 or len(self.job_working) > 0:
             return
 
-        self.btnStopA.setEnabled(True)
         self.clear_labels()
         qApp.processEvents()
 
@@ -384,9 +385,6 @@ class OWNxAnalysis(widget.OWWidget):
 
     def send_data(self):
         if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
-            self.btnCommit.setChecked(False)
-            self.btnStopA.setEnabled(False)
-
             if self.analdata is not None and len(self.analdata) > 0 and \
                                                     len(self.analfeatures) > 0:
                 vars = []
@@ -406,23 +404,24 @@ class OWNxAnalysis(widget.OWWidget):
 
             self.clear_results()
 
+    def commit(self):
+        self.analyze()
+
     def method_clicked(self, name):
-        if self.auto_commit:
-            self.mutex.lock()
-            if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
-                self.btnCommit.setChecked(True)
+        self.mutex.lock()
+        if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
+            self.mutex.unlock()
+            self.analyze()
+        else:
+            is_method_enabled = getattr(self, name)
+            if is_method_enabled:
+                for method in self.methods:
+                    if name == method[0]:
+                        self.add_job(method)
                 self.mutex.unlock()
-                self.analyze()
             else:
-                is_method_enabled = getattr(self, name)
-                if is_method_enabled:
-                    for method in self.methods:
-                        if name == method[0]:
-                            self.add_job(method)
-                    self.mutex.unlock()
-                else:
-                    self.mutex.unlock()
-                    self.stop_job(name=name)
+                self.mutex.unlock()
+                self.stop_job(name=name)
 
     def clear_results(self):
         del self.job_queue[:]
