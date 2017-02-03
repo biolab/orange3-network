@@ -110,6 +110,15 @@ class OWNxExplorer(widget.OWWidget):
 
     graph_name = 'view'
 
+    class Warning(widget.OWWidget.Warning):
+        distance_matrix_size = widget.Msg("Distance matrix size doesn't match the number of network nodes. Not using it.")
+        no_graph_found = widget.Msg('No graph found!')
+        no_graph_or_items = widget.Msg('No graph provided or no items attached to the graph.')
+
+    class Error(widget.OWWidget.Error):
+        instance_for_each_node = widget.Msg('Items table must have one instance for each network node.')
+        network_too_large = widget.Msg('Network is too large to visualize. Sorry.')
+
     def __init__(self):
         super().__init__()
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
@@ -482,7 +491,7 @@ class OWNxExplorer(widget.OWWidget):
             return
         if graph.number_of_nodes() + graph.number_of_edges() > 30000:
             self.set_graph_none()
-            self.error('Network is too large to visualize. Sorry.')
+            self.Error.network_too_large()
             return
         self.information()
 
@@ -504,7 +513,7 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesPerVertex = self.graph.number_of_edges() / max(1, self.graph.number_of_nodes())
 
         self._set_combos()
-        self.error()
+        self.Error.clear()
 
         self.set_selection_mode()
         self.relayout()
@@ -514,13 +523,13 @@ class OWNxExplorer(widget.OWWidget):
         if items is None:
             return self.set_graph(self.graph_base)
         if not self.graph:
-            self.warning('No graph found!')
+            self.Warning.no_graph_found()
             return
-        self.warning()
+        self.Warning.clear()
         if len(items) != self.graph.number_of_nodes():
-            self.error('Items table must have one instance for each network node.')
+            self.Error.instance_for_each_node()
             return
-        self.error()
+        self.Error.instance_for_each_node.clear()
         self.graph.set_items(items)
         self._set_combos()
 
@@ -528,14 +537,14 @@ class OWNxExplorer(widget.OWWidget):
         self.markInputRadioButton.setEnabled(False)
         self.markInputItems = items
 
-        self.warning()
+        self.Warning.clear()
 
         if items is None:
             self.view.selectionChanged.emit()
             return
 
         if self.graph is None or self.graph.items() is None:
-            self.warning('No graph provided or no items attached to the graph.')
+            self.Warning.no_graph_or_items()
             return
 
         graph_items = self.graph.items()
@@ -557,9 +566,9 @@ class OWNxExplorer(widget.OWWidget):
 
         distmatrix = self.items_matrix
         if distmatrix is not None and distmatrix.shape[0] != self.graph.number_of_nodes():
-            self.warning(17, "Distance matrix size doesn't match the number of network nodes. Not using it.")
+            self.Warning.distance_matrix_size()
             distmatrix = None
-        self.warning(17)
+        self.Warning.distance_matrix_size.clear()
 
         self.relayout_button.setDisabled(True)
         self.view.relayout(randomize=False, weight=distmatrix)
