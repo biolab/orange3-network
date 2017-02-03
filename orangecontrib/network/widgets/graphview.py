@@ -3,15 +3,17 @@ from threading import Thread
 import numpy as np
 import networkx as nx
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import QLineF, QPointF, QRectF, Qt
-from PyQt4.QtGui import qApp, QBrush, QPen, QPolygonF, QStyle, QColor
+from AnyQt import QtCore, QtGui
+from AnyQt.QtCore import QLineF, QRectF, Qt
+from AnyQt.QtGui import QBrush, QPen, QColor
+from AnyQt.QtWidgets import qApp, QStyle, QGraphicsLineItem, QGraphicsEllipseItem, \
+    QGraphicsView, QGraphicsScene, QWidget, QGraphicsSimpleTextItem, QApplication
 
 from orangecontrib.network._fr_layout import fruchterman_reingold_layout
 
 # Expose OpenGL rendering for large graphs, if available
 HAVE_OPENGL = True
-try: from PyQt4 import QtOpenGL
+try: from AnyQt import QtOpenGL
 except: HAVE_OPENGL = False
 
 FR_ITERATIONS = 60
@@ -20,7 +22,7 @@ IS_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 4000
 IS_VERY_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 10000
 
 
-class QGraphicsEdge(QtGui.QGraphicsLineItem):
+class QGraphicsEdge(QGraphicsLineItem):
     def __init__(self, source, dest, view=None):
         super().__init__()
         self.setAcceptedMouseButtons(Qt.NoButton)
@@ -35,7 +37,7 @@ class QGraphicsEdge(QtGui.QGraphicsLineItem):
         self.dest = dest
         self.__transform = view.transform
         # Add text labels
-        label = self.label = QtGui.QGraphicsSimpleTextItem('test', self)
+        label = self.label = QGraphicsSimpleTextItem('test', self)
         label.setVisible(False)
         label.setBrush(Qt.gray)
         label.setZValue(2)
@@ -68,7 +70,7 @@ class Edge(QGraphicsEdge):
         self.setPen(QPen(QColor(color or Qt.gray), self.pen().width()))
 
 
-class QGraphicsNode(QtGui.QGraphicsEllipseItem):
+class QGraphicsNode(QGraphicsEllipseItem):
     """This class is the bare minimum to sustain a connected graph"""
     def __init__(self, rect=QRectF(-5, -5, 10, 10), view=None):
         super().__init__(rect)
@@ -85,7 +87,7 @@ class QGraphicsNode(QtGui.QGraphicsEllipseItem):
         self._radius = rect.width() / 2
         self.__transform = view.transform
         # Add text labels
-        label = self.label = QtGui.QGraphicsSimpleTextItem('test', self)
+        label = self.label = QGraphicsSimpleTextItem('test', self)
         label.setVisible(False)
         label.setFlags(self.ItemIgnoresParentOpacity |
                        self.ItemIgnoresTransformations)
@@ -174,7 +176,7 @@ class Node(QGraphicsNode):
         self.setToolTip('');
 
 
-class GraphView(QtGui.QGraphicsView):
+class GraphView(QGraphicsView):
 
     positionsChanged = QtCore.pyqtSignal(np.ndarray)
     # Emitted when nodes' selected or highlighted state changes
@@ -191,7 +193,7 @@ class GraphView(QtGui.QGraphicsView):
         self._clicked_node = None
         self.is_animating = False
 
-        scene = QtGui.QGraphicsScene(self)
+        scene = QGraphicsScene(self)
         scene.setItemIndexMethod(scene.BspTreeIndex)
         scene.setBspTreeDepth(2)
         self.setScene(scene)
@@ -308,7 +310,7 @@ class GraphView(QtGui.QGraphicsView):
         self.setViewport(QtOpenGL.QGLWidget()
                          # FIXME: Try reenable the following test after Qt5 port
                          if large_graph and HAVE_OPENGL else
-                         QtGui.QWidget())
+                         QWidget())
         self.setRenderHints(QtGui.QPainter.RenderHint() if very_large_graph else
                             (QtGui.QPainter.Antialiasing |
                              QtGui.QPainter.TextAntialiasing))
@@ -333,8 +335,8 @@ class GraphView(QtGui.QGraphicsView):
         self.scene().addItem(edge)
 
     def wheelEvent(self, event):
-        if event.orientation() != Qt.Vertical: return
-        self.scaleView(2**(event.delta() / 240))
+        if event.angleDelta().x() != 0: return
+        self.scaleView(2**(event.angleDelta().y() / 240))
     def scaleView(self, factor):
         magnitude = self.transform().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
         if 0.2 < magnitude < 30:
@@ -393,7 +395,7 @@ class GraphView(QtGui.QGraphicsView):
 
 if __name__ == '__main__':
     import sys
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     widget = GraphView()
     widget.show()
     import networkx as nx
