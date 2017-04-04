@@ -1,9 +1,11 @@
 Welcome to Orange3-Network's documentation!
 ===========================================
 
+Widgets
+-------
+
 .. toctree::
    :maxdepth: 1
-   :caption: Widgets
 
    widgets/networkfile
    widgets/networkexplorer
