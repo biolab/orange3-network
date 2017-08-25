@@ -108,7 +108,7 @@ class OWNxExplorer(widget.OWWidget):
     markNBest = settings.Setting(1)
     markNConnections = settings.Setting(2)
 
-    graph_name = 'view'
+    graph_name = 'scene'
 
     class Warning(widget.OWWidget.Warning):
         distance_matrix_size = widget.Msg("Distance matrix size doesn't match the number of network nodes. Not using it.")
@@ -124,6 +124,7 @@ class OWNxExplorer(widget.OWWidget):
         #self.contextHandlers = {"": DomainContextHandler("", [ContextField("attributes", selected="node_label_attrs"), ContextField("attributes", selected="tooltipAttributes"), "color"])}
 
         self.view = GraphView(self)
+        self.scene = self.view.scene()
         self.mainArea.layout().addWidget(self.view)
 
         self.graph_attrs = []
@@ -701,7 +702,7 @@ class OWNxExplorer(widget.OWWidget):
                 ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
                 ("Labels", ", ".join(self.graph_attrs[i].name for i in self.node_label_attrs)),
             ])
-        self.report_plot("Graph", self.view)
+        self.report_plot("Graph", self.view.scene())
 
 
 if __name__ == "__main__":

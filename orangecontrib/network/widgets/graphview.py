@@ -26,8 +26,7 @@ class QGraphicsEdge(QGraphicsLineItem):
     def __init__(self, source, dest, view=None):
         super().__init__()
         self.setAcceptedMouseButtons(Qt.NoButton)
-        self.setFlags(self.ItemIgnoresTransformations |
-                      self.ItemIgnoresParentOpacity)
+        self.setFlags(self.ItemIgnoresParentOpacity)
         self.setZValue(1)
         self.setPen(QPen(Qt.gray, .7))
 
@@ -48,10 +47,9 @@ class QGraphicsEdge(QGraphicsLineItem):
         self.adjust()
 
     def adjust(self):
-        line = QLineF(self.mapFromItem(self.source, 0, 0),
-                      self.mapFromItem(self.dest, 0, 0))
+        line = QLineF(self.source.pos(), self.dest.pos())
+        self.setLine(line)
         self.label.setPos(line.pointAt(.5))
-        self.setLine(self.__transform().map(line))
 
 
 class Edge(QGraphicsEdge):
