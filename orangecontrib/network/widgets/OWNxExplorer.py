@@ -447,16 +447,28 @@ class OWNxExplorer(widget.OWWidget):
                 self.set_node_colors()
                 break
 
-        for i in range(self.attListBox.count()):
-            if str(self.attListBox.item(i).text()) in lastLabelColumns:
-                self.attListBox.item(i).setSelected(True)
+        if lastLabelColumns:
+            selection = QItemSelection()
+            model = self.attListBox.model()
+            for i in range(self.attListBox.count()):
+                if str(self.attListBox.item(i).text()) in lastLabelColumns:
+                    selection.append(QItemSelectionRange(model.index(i, 0)))
+            selmodel = self.attListBox.selectionModel()
+            selmodel.select(selection, selmodel.Select | selmodel.Clear)
+        else:
+            self.attListBox.selectionModel().clearSelection()
         self._on_node_label_attrs_changed()
 
-        for i in range(self.tooltipListBox.count()):
-            if (self.tooltipListBox.item(i).text() in lastTooltipColumns or
-                not lastTooltipColumns):
-                self.tooltipListBox.item(i).setSelected(True)
-
+        if lastTooltipColumns:
+            selection = QItemSelection()
+            model = self.tooltipListBox.model()
+            for i in range(self.tooltipListBox.count()):
+                if self.tooltipListBox.item(i).text() in lastTooltipColumns:
+                    selection.append(QItemSelectionRange(model.index(i, 0)))
+            selmodel = self.tooltipListBox.selectionModel()
+            selmodel.select(selection, selmodel.Select | selmodel.Clear)
+        else:
+            self.tooltipListBox.selectionModel().clearSelection()
         self._clicked_tooltip_lstbox()
 
         self.lastLabelColumns = lastLabelColumns
