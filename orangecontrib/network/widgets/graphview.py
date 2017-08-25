@@ -334,7 +334,8 @@ class GraphView(QGraphicsView):
 
     def wheelEvent(self, event):
         if event.angleDelta().x() != 0: return
-        self.scaleView(2**(event.angleDelta().y() / 240))
+        self.scaleView(2**(event.pixelDelta().y() / 160))
+        event.accept()
     def scaleView(self, factor):
         magnitude = self.transform().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
         if 0.2 < magnitude < 30:
