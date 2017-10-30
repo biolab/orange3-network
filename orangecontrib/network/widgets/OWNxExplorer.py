@@ -319,22 +319,22 @@ class OWNxExplorer(widget.OWWidget):
             self.view.setHighlighted(neighbors)
         elif selectionMode == SelectionMode.AT_LEAST_N:
             self.view.setHighlighted(
-                set(node for node, degree in self.graph.degree().items()
+                set(node for node, degree in self.graph.degree()
                     if degree >= self.markNConnections))
         elif selectionMode == SelectionMode.AT_MOST_N:
             self.view.setHighlighted(
-                set(node for node, degree in self.graph.degree().items()
+                set(node for node, degree in self.graph.degree()
                     if degree <= self.markNConnections))
         elif selectionMode == SelectionMode.ANY_NEIGH:
             self.view.setHighlighted(
-                set(node for node, degree in self.graph.degree().items()
-                    if degree > max(self.graph.degree(self.graph[node]).values(), default=0)))
+                set(node for node, degree in self.graph.degree()
+                    if degree > max(dict(self.graph.degree(self.graph[node])).values(), default=0)))
         elif selectionMode == SelectionMode.AVG_NEIGH:
             self.view.setHighlighted(
-                set(node for node, degree in self.graph.degree().items()
-                    if degree > np.nan_to_num(np.mean(list(self.graph.degree(self.graph[node]).values())))))
+                set(node for node, degree in self.graph.degree()
+                    if degree > np.nan_to_num(np.mean(list(dict(self.graph.degree(self.graph[node])).values())))))
         elif selectionMode == SelectionMode.MOST_CONN:
-            degrees = np.array(sorted(self.graph.degree().items(), key=lambda i: i[1], reverse=True))
+            degrees = np.array(sorted(self.graph.degree(), key=lambda i: i[1], reverse=True))
             cut_ind = max(1, min(self.markNBest, self.graph.number_of_nodes()))
             cut_degree = degrees[cut_ind - 1, 1]
             toMark = set(degrees[degrees[:, 1] >= cut_degree, 0])
@@ -343,7 +343,7 @@ class OWNxExplorer(widget.OWWidget):
             tomark = {}
             if self.markInputItems:
                 ids = set(self.markInputItems.ids)
-                tomark = {x for x in self.graph.nodes()
+                tomark = {x for x in self.graph
                           if self.graph.items()[x].id in ids}
             self.view.setHighlighted(tomark)
 
@@ -507,7 +507,7 @@ class OWNxExplorer(widget.OWWidget):
             return
         self.information()
 
-        all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges_iter(data='weight'))))
+        all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges(data='weight'))))
         self.checkbox_show_weights.setEnabled(not all_edges_equal)
         self.checkbox_relative_edges.setEnabled(not all_edges_equal)
 
@@ -616,7 +616,7 @@ class OWNxExplorer(widget.OWWidget):
 
     def set_edge_labels(self):
         if self.showEdgeWeights:
-            weights = (str(w or '') for u, v, w in self.graph.edges_iter(data='weight'))
+            weights = (str(w or '') for u, v, w in self.graph.edges(data='weight'))
         else:
             weights = ('' for i in range(self.graph.number_of_edges()))
         for edge, weight in zip(self.view.edges, weights):
@@ -691,7 +691,7 @@ class OWNxExplorer(widget.OWWidget):
     def set_edge_sizes(self):
         if not self.graph: return
         if self.relativeEdgeWidths:
-            widths = [self.graph.edge[u][v].get('weight', 1)
+            widths = [self.graph.adj[u][v].get('weight', 1)
                       for u, v in self.graph.edges()]
             widths = scale(widths, .7, 8)
         else:

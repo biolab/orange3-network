@@ -69,10 +69,10 @@ def fruchterman_reingold_layout(G,
     try:
         if isinstance(weight, str):
             Erow, Ecol, Edata = zip(*[(index[u], index[v], w or 0)  # 0 if None
-                                      for u, v, w in G.edges_iter(nodelist, data=weight)])
+                                      for u, v, w in G.edges(nodelist, data=weight)])
         elif isinstance(weight, np.ndarray):
             Erow, Ecol, Edata = zip(*[(index[u], index[v], weight[u, v])
-                                      for u, v in G.edges_iter(nodelist)])
+                                      for u, v in G.edges(nodelist)])
         else: raise TypeError('weight must be str or ndarray')
         # Don't allow zero weights
         try: min_w = np.min([i for i in Edata if i])

@@ -87,7 +87,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.methods = [
             ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
             ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
-            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.average(list(G.degree().values()))),
+            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.mean(list(dict(G.degree()).values()))),
             ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
             ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
             ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),
@@ -121,9 +121,9 @@ class OWNxAnalysis(widget.OWWidget):
             # returns dict of dict
             #("shortest_path_length", False, "Shortest path length", GRAPHLEVEL, nx.shortest_path_length),
 
-            ("degree", False, "Degree", NODELEVEL, nx.degree),
-            ("in_degree", False, "In-degree", NODELEVEL, lambda G: G.in_degree()),
-            ("out_degree", False, "Out-degree", NODELEVEL, lambda G: G.out_degree()),
+            ("degree", False, "Degree", NODELEVEL, lambda G: dict(G.degree())),
+            ("in_degree", False, "In-degree", NODELEVEL, lambda G: dict(G.in_degree())),
+            ("out_degree", False, "Out-degree", NODELEVEL, lambda G: dict(G.out_degree())),
             ("average_neighbor_degree", False, "Average neighbor degree", NODELEVEL, nx.average_neighbor_degree),
             ("clustering", False, "Clustering coefficient", NODELEVEL, nx.clustering),
             ("triangles", False, "Number of triangles", NODELEVEL, nx.triangles),
