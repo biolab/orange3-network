@@ -78,8 +78,8 @@ def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
         raise nx.NetworkXError("""Not allowed for directed graph
               G Use UG=G.to_undirected() to create an undirected graph.""")
 
-    vertices = G.nodes()
-    degrees = dict(zip(vertices, [G.degree(v) for v in vertices]))
+    vertices = list(G.nodes())
+    degrees = dict(G.degree())
     labels = dict(zip(vertices, range(G.number_of_nodes())))
     scores = dict(zip(vertices, [1] * G.number_of_nodes()))
     m = node_degree_preference
@@ -88,11 +88,11 @@ def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
         random.shuffle(vertices)
         stop = 1
         for v in vertices:
-            neighbors = G.neighbors(v)
+            neighbors = list(G.neighbors(v))
             if len(neighbors) == 0:
                 continue
 
-            lbls = sorted(((G.edge[v][u].get('weight', 1), labels[u], u) \
+            lbls = sorted(((G.adj[v][u].get('weight', 1), labels[u], u) \
                            for u in neighbors), key=lambda x: x[1])
             lbls = [(sum(scores[u] * degrees[u] ** m * weight for weight, \
                          _u_label, u in group), label) for label, group in \
@@ -138,7 +138,7 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
     if seed is not None:
         random.seed(seed)
 
-    vertices = sorted(G.nodes_iter())
+    vertices = sorted(G.nodes())
     labels = dict(zip(vertices, range(G.number_of_nodes())))
 
     def next_label(neighbors):
@@ -155,7 +155,7 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
         random.shuffle(vertices)
         stop = 1
         for v in vertices:
-            nbh = G.neighbors(v)
+            nbh = list(G.neighbors(v))
             if len(nbh) == 0:
                 continue
 
@@ -170,7 +170,7 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
         # stop when no label would switch anymore
         if stop:
             for v in vertices:
-                nbh = G.neighbors(v)
+                nbh = list(G.neighbors(v))
                 if len(nbh) == 0:
                     continue
                 max_lbls = next_label(nbh)

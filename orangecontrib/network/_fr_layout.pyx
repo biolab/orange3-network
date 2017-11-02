@@ -69,10 +69,10 @@ def fruchterman_reingold_layout(G,
     try:
         if isinstance(weight, str):
             Erow, Ecol, Edata = zip(*[(index[u], index[v], w or 0)  # 0 if None
-                                      for u, v, w in G.edges_iter(nodelist, data=weight)])
+                                      for u, v, w in G.edges(nodelist, data=weight)])
         elif isinstance(weight, np.ndarray):
             Erow, Ecol, Edata = zip(*[(index[u], index[v], weight[u, v])
-                                      for u, v in G.edges_iter(nodelist)])
+                                      for u, v in G.edges(nodelist)])
         else: raise TypeError('weight must be str or ndarray')
         # Don't allow zero weights
         try: min_w = np.min([i for i in Edata if i])
@@ -135,10 +135,10 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                     arr_i1_t fixed,
                                     int iterations,
                                     callback):
+    iterations *= 4
     cdef:
         double GRAVITY = 20
-        arr_f1_t temperature = (.15 *
-                                exp(log(10./1000) / iterations)**np.arange(iterations))
+        arr_f1_t temperature = np.linspace(.4, .05, iterations)
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
         double mag, adj, weight, temp
@@ -148,7 +148,7 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
         Py_ssize_t n_dim = pos.shape[1]
         int have_callback = bool(callback)
     with nogil:
-        temperature[0] = .8; temperature[1] = .5; temperature[2] = .3
+        temperature[:6] = .8
         for iteration in range(iterations):
             temp = temperature[iteration]
             disp[:, :] = 0
@@ -187,11 +187,8 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                 for d in range(n_dim):
                     pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
             # Optionally call back with the new positions
-            if have_callback:
+            if iteration % 4 == 0 and have_callback:
                 with gil:
                     if not callback(np.asarray(pos)):
                         break
-            # If temperature too cool, finish early
-            if temp < .0005:
-                break
     return pos

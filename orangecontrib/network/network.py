@@ -147,10 +147,10 @@ class BaseGraph():
         index_to_node = dict(zip(range(self.number_of_nodes()), node_list))
 
         G.add_nodes_from(zip(range(self.number_of_nodes()), [copy.deepcopy(self.node[nid]) for nid in node_list]))
-        G.add_edges_from(((node_to_index[u], node_to_index[v], copy.deepcopy(self.edge[u][v])) for u, v in self.edges()))
+        G.add_edges_from(((node_to_index[u], node_to_index[v], copy.deepcopy(self.adj[u][v])) for u, v in self.edges()))
 
-        for id in G.node.keys():
-            G.node[id]['old_id'] = index_to_node[id]
+        for id, data in G.nodes(data=True):
+            data['old_id'] = index_to_node[id]
 
         if self.items():
             G.set_items(self.items())
@@ -176,12 +176,24 @@ class BaseGraph():
                 if i.name not in ('u', 'v')]
 
     def subgraph(self, nbunch):
-        G = super().subgraph(nbunch)
+        G = self.copy()
+        G.remove_nodes_from(list(set(G) - set(nbunch)))
         G = G.to_orange_network()
         if self.items():
             items = self.items()[sorted(G.nodes()), :]
             G.set_items(items)
         return G
+
+    def copy(self, *args, **kwargs):
+        obj = super().copy(*args, **kwargs)
+        obj._items = copy.deepcopy(self._items)
+        obj._links = copy.deepcopy(self._links)
+        return obj
+
+    @classmethod
+    def fresh_copy(cls):
+        return cls()
+
 
 class Graph(BaseGraph, nx.Graph):
     """Bases: `NetworkX.Graph <http://networkx.lanl.gov/reference/classes.graph.html>`_,
