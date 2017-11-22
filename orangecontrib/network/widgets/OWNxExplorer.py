@@ -423,13 +423,6 @@ class OWNxExplorer(widget.OWWidget):
 
             if var.is_continuous:
                 self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
-            elif var.is_string:
-                try: value = self.graph.items()[0][var].value
-                except (IndexError, TypeError): pass
-                else:
-                    # can value be a list?
-                    if len(value.split(',')) > 1:
-                        self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
 
         self.nodeSizeCombo.setDisabled(not self.graph_attrs)
         self.colorCombo.setDisabled(not self.graph_attrs)
@@ -668,10 +661,6 @@ class OWNxExplorer(widget.OWWidget):
             for node in self.view.nodes:
                 node.setSize(self.minNodeSize)
             return
-
-        if isinstance(table.domain[attribute], StringVariable):
-            values = np.array([(s.count(',') + 1) if s else np.nan
-                               for s in values])
 
         if self.invertNodeSize:
             values += np.nanmin(values) + 1

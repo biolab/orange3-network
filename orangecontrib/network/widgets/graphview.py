@@ -197,6 +197,7 @@ class GraphView(QGraphicsView):
         scene.setItemIndexMethod(scene.BspTreeIndex)
         scene.setBspTreeDepth(2)
         self.setScene(scene)
+        self.setSceneRect(-1e5, -1e5, 2e5, 2e5)
         self.setText('')
 
         self.setCacheMode(self.CacheBackground)
@@ -211,7 +212,20 @@ class GraphView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.positionsChanged.connect(self._update_positions, type=Qt.BlockingQueuedConnection)
-        self.animationFinished.connect(lambda: setattr(self, 'is_animating', False))
+        self.animationFinished.connect(self.finish)
+
+    def finish(self):
+        self.is_animating = False
+        self.centerView()
+
+    def centerView(self):
+        xs, ys = zip(*((item.x(), item.y())
+                       for item in self.scene().items()
+                       if isinstance(item, Node)))
+        mx, Mx = min(xs), max(xs)
+        my, My = min(ys), max(ys)
+        w, h = Mx-mx, My-my
+        self.centerOn(mx+w/2, my+h/2)
 
     def mousePressEvent(self, event):
         self._selection = []
