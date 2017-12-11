@@ -16,7 +16,7 @@ HAVE_OPENGL = True
 try: from AnyQt import QtOpenGL
 except: HAVE_OPENGL = False
 
-FR_ITERATIONS = 60
+FR_ITERATIONS = 250
 
 IS_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 4000
 IS_VERY_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 10000
@@ -178,7 +178,7 @@ class Node(QGraphicsNode):
 
 class GraphView(QGraphicsView):
 
-    positionsChanged = QtCore.pyqtSignal(np.ndarray)
+    positionsChanged = QtCore.pyqtSignal(np.ndarray, float)
     # Emitted when nodes' selected or highlighted state changes
     selectionChanged = QtCore.pyqtSignal()
     # Emitted when the relayout() animation finishes
@@ -387,9 +387,10 @@ class GraphView(QGraphicsView):
                                                      pos=pos,
                                                      weight=weight,
                                                      iterations=self.iterations,
-                                                     callback=self.callback)
-                if not self.callback:  # update once at the end
-                    graphview.update_positions(newpos)
+                                                     sample_ratio=0.1,
+                                                     callback=self.callback,
+                                                     callback_rate=0.25)
+                graphview.update_positions(newpos)
                 graphview.animationFinished.emit()
 
         iterations, callback = FR_ITERATIONS, self.update_positions
@@ -398,10 +399,10 @@ class GraphView(QGraphicsView):
             iterations, callback = 5, None
         AnimationThread(iterations, callback).start()
 
-    def update_positions(self, positions):
-        self.positionsChanged.emit(positions)
+    def update_positions(self, positions, progress=1.0):
+        self.positionsChanged.emit(positions, progress)
         return self._is_animating
-    def _update_positions(self, positions):
+    def _update_positions(self, positions, progress):
         for node, pos in zip(self.nodes, positions*300):
             node.setPos(*pos)
         qApp.processEvents()

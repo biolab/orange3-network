@@ -17,7 +17,8 @@ http://emr.cs.iit.edu/~reingold/force-directed.pdf
 cimport numpy as np
 import numpy as np
 
-from libc.math cimport exp, log, sqrt, fabs
+from libc.math cimport exp, log, sqrt, fabs, ceil
+from libc.stdlib cimport rand
 
 
 ctypedef np.float64_t   double
@@ -32,8 +33,10 @@ def fruchterman_reingold_layout(G,
                                 pos=None,
                                 fixed=None,
                                 iterations=50,
+                                sample_ratio=0.1,
                                 weight='weight',
-                                callback=None):
+                                callback=None,
+                                callback_rate=0.25):
     """
     Position nodes using Fruchterman-Reingold force-directed algorithm.
 
@@ -42,14 +45,20 @@ def fruchterman_reingold_layout(G,
 
     Parameters
     ----------
+    sample_ratio: float
+        Use a sample of size `sample_ratio` * `n` to estimate repulsive forces
+        acting on each node. Results in a (1 / `sample_ratio`)-times speed-up.
     weight: str or np.ndarray
         The string attribute of the graph's edges that represents edge weights,
         or a 2D distance matrix.
-    callaback: callable
+    callback: callable
         A function accepting `pos` ndarray to call after each iteration.
         The algorithm is stopped if the return value is ``False``-ish.
-
+    callback_rate: float
+        Call the `callback` function only every 1 / `callback_rate` iteration.
+        Overall, the `callback` is called `callback_rate` * `iterations` times.
     """
+
     if G is None or len(G) == 0: return {}
     if len(G) == 1: return {G.nodes()[0]: [.5, .5]}
 
@@ -88,7 +97,8 @@ def fruchterman_reingold_layout(G,
     # Run...
     pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
                                            k, pos_arr, fixed,
-                                           iterations, callback))
+                                           iterations, sample_ratio,
+                                           callback, callback_rate))
     return pos
 
 
@@ -134,32 +144,41 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                     arr_f2_t pos,
                                     arr_i1_t fixed,
                                     int iterations,
-                                    callback):
-    iterations *= 4
+                                    double sample_ratio,
+                                    callback,
+                                    double callback_rate):
     cdef:
         double GRAVITY = 20
         arr_f1_t temperature = np.linspace(.4, .05, iterations)
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
         double mag, adj, weight, temp
-        Py_ssize_t row, col, i, j, d, iteration
+        Py_ssize_t row, col, i, j, d, iteration, s
         Py_ssize_t n_nodes = pos.shape[0]
         Py_ssize_t n_edges = Edata.shape[0]
         Py_ssize_t n_dim = pos.shape[1]
         int have_callback = bool(callback)
+        Py_ssize_t sample_size = max(int(round(n_nodes*sample_ratio)), 1)
+        arr_i1_t sample = np.zeros(sample_size, dtype=np.int32)
+        int callback_freq = int(round(1/callback_rate))
     with nogil:
         temperature[:6] = .8
         for iteration in range(iterations):
             temp = temperature[iteration]
             disp[:, :] = 0
+            for i in range(sample_size):
+                sample[i] = rand() % n_nodes
             # Repulsive forces
             for i in range(n_nodes):
-                for j in range(n_nodes):
+                for s in range(sample_size):
+                    j = sample[s]
                     diff(pos, i, j, delta)
                     mag = magnitude(delta)
                     if mag == 0: continue
                     for d in range(n_dim):
                         disp[i, d] += delta[d] / mag * _Fr(k, mag)
+                for d in range(n_dim):
+                    disp[i,d] *= 1.0/sample_ratio
             # Attractive forces
             for i in range(n_edges):
                 row, col, weight = Erow[i], Ecol[i], Edata[i]
@@ -187,8 +206,8 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                 for d in range(n_dim):
                     pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
             # Optionally call back with the new positions
-            if iteration % 4 == 0 and have_callback:
+            if iteration % callback_freq == 0 and have_callback:
                 with gil:
-                    if not callback(np.asarray(pos)):
+                    if not callback(np.asarray(pos), (iteration+1.0)/iterations):
                         break
     return pos
