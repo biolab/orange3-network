@@ -173,7 +173,8 @@ class OWNxExplorer(widget.OWWidget):
 
         self.relayout_button = gui.button(box, self, 'Re-layout',
                                           callback=self.relayout, autoDefault=False)
-        self.view.positionsChanged.connect(lambda _: self.progressbar.advance())
+        self.view.positionsChanged.connect(lambda positions, progress:
+                                           self.progressbar.widget.progressBarSet(int(round(100 * progress))))
         def animationFinished():
             self.relayout_button.setEnabled(True)
             self.progressbar.finish()
