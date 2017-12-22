@@ -237,7 +237,8 @@ class OWNxFile(OWWidget):
                        "GML files (*.gml)",
                        "All files (*)")))
 
-        if not filename: return
+        if not filename:
+            return
         try: self.recentFiles.remove(filename)
         except ValueError: pass
         self.recentFiles.insert(0, filename)
@@ -255,12 +256,13 @@ class OWNxFile(OWWidget):
                      path.dirname(self.recentFiles[0]) if self.recentFiles else
                      '.')
 
-        filename = QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, 'Open a Vertices Data File', startfile,
             'Data files (*.tab *.tsv *.csv);;'
             'All files(*)')
 
-        if not filename: return
+        if not filename:
+            return
         try: self.recentDataFiles.remove(filename)
         except ValueError: pass
         self.recentDataFiles.insert(0, filename)
