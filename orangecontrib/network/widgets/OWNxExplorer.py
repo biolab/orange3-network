@@ -384,7 +384,7 @@ class OWNxExplorer(widget.OWWidget):
         if not self.graph:
             for output in dir(self.Outputs):
                 if not output.startswith('__'):
-                    a.send(None)
+                    getattr(self.Outputs, output).send(None)
             return
         selected = self.view.getSelected()
         self.Outputs.subgraph.send(self.graph.subgraph(selected) if selected else None)
@@ -709,16 +709,13 @@ if __name__ == "__main__":
     ow = OWNxExplorer()
     ow.show()
 
-    def setNetwork(signal, data, id=None):
-        if signal == 'Network':
-            ow.set_graph(data)
-        #if signal == 'Items':
-        #    ow.set_items(data)
+    def set_network(data, id=None):
+        ow.set_graph(data)
 
     import OWNxFile
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
-    owFile.send = setNetwork
+    owFile.Outputs.network.send = set_network
     owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
     #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'airtraffic.net'))
     #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
