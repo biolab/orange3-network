@@ -11,6 +11,7 @@ from AnyQt.QtCore import QLineF, QSize
 
 import Orange
 from Orange.widgets import gui, widget, settings
+from Orange.widgets.widget import Input, Output
 import orangecontrib.network as network
 
 import pyqtgraph as pg
@@ -34,10 +35,13 @@ class OWNxFromDistances(widget.OWWidget):
     icon = "icons/NetworkFromDistances.svg"
     priority = 6440
 
-    inputs = [("Distances", Orange.misc.DistMatrix, "setMatrix")]
-    outputs = [("Network", network.Graph),
-               ("Data", Orange.data.Table),
-               ("Distances", Orange.misc.DistMatrix)]
+    class Inputs:
+        distances = Input("Distances", Orange.misc.DistMatrix)
+
+    class Outputs:
+        network = Output("Network", network.Graph)
+        data = Output("Data", Orange.data.Table)
+        distances = Output("Distances", Orange.misc.DistMatrix)
 
     resizing_enabled = False
 
@@ -137,7 +141,8 @@ class OWNxFromDistances(widget.OWWidget):
         self.spinUpperThreshold = self.matrix_values[ind]
         self.generateGraph()
 
-    def setMatrix(self, data):
+    @Inputs.distances
+    def set_matrix(self, data):
         self.matrix = data
         if data is None:
             self.histogram.setValues([])
@@ -307,12 +312,12 @@ class OWNxFromDistances(widget.OWWidget):
                                max(1, float(self.matrix.dim))*100))])
 
     def sendSignals(self):
-        self.send("Network", self.graph)
-        self.send("Distances", self.graph_matrix)
-        if self.graph == None:
-            self.send("Data", None)
+        self.Outputs.network.send(self.graph)
+        self.Outputs.distances.send(self.graph_matrix)
+        if self.graph is None:
+            self.Outputs.data.send(None)
         else:
-            self.send("Data", self.graph.items())
+            self.Outputs.data.send(self.graph.items())
 
 
 pg_InfiniteLine = pg.InfiniteLine

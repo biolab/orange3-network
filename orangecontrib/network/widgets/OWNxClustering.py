@@ -1,6 +1,7 @@
 from AnyQt.QtCore import Qt
 
 from Orange.widgets import gui, widget, settings
+from Orange.widgets.widget import Input, Output
 import Orange
 from orangecontrib.network import Graph, community as cd
 
@@ -11,9 +12,12 @@ class OWNxClustering(widget.OWWidget):
     icon = "icons/NetworkClustering.svg"
     priority = 6430
 
-    inputs = [("Network", Graph, "setNetwork", widget.Default)]
-    outputs = [("Network", Graph),
-               ("Items", Orange.data.Table)]
+    class Inputs:
+        network = Input("Network", Graph, default=True)
+
+    class Outputs:
+        network = Output("Network", Graph)
+        items = Output("Items", Orange.data.Table)
 
     resizing_enabled = False
     want_main_area = False
@@ -48,7 +52,8 @@ class OWNxClustering(widget.OWWidget):
                         checkbox_label='Auto-commit', orientation=Qt.Horizontal)
         commit()
 
-    def setNetwork(self, net):
+    @Inputs.network
+    def set_network(self, net):
         self.net = net
         self.commit()
 
@@ -67,14 +72,14 @@ class OWNxClustering(widget.OWWidget):
                       'delta': self.hop_attenuation}
 
         if self.net is None:
-            self.send("Network", None)
+            self.Outputs.network.send(None)
             return
 
         labels = alg(self.net, **kwargs)
 
         self.info.setText('%d clusters found' % len(set(labels.values())))
-        self.send("Items", self.net.items())
-        self.send("Network", self.net)
+        self.Outputs.items.send(self.net.items())
+        self.Outputs.network.send(self.net)
 
 
 if __name__ == "__main__":
@@ -83,14 +88,14 @@ if __name__ == "__main__":
     ow = OWNxClustering()
     ow.show()
 
-    def setNetwork(signal, data, id=None):
+    def set_network(signal, data, id=None):
         if signal == 'Network':
-            ow.setNetwork(data)
+            ow.set_network(data)
 
     import OWNxFile
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
-    owFile.send = setNetwork
+    owFile.send = set_network
     owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
     a.exec_()

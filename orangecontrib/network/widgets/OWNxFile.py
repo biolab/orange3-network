@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
 import Orange
 from Orange.widgets import gui, settings
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Output
 import orangecontrib.network as network
 
 
@@ -18,8 +18,9 @@ class OWNxFile(OWWidget):
     icon = "icons/NetworkFile.svg"
     priority = 6410
 
-    outputs = [("Network", network.Graph),
-               ("Items", Orange.data.Table)]
+    class Outputs:
+        network = Output("Network", network.Graph)
+        items = Output("Items", Orange.data.Table)
 
     resizing_enabled = False
 
@@ -124,8 +125,8 @@ class OWNxFile(OWWidget):
 
     def readingFailed(self, message=''):
         self.graph = None
-        self.send("Network", None)
-        self.send("Items", None)
+        self.Outputs.network.send(None)
+        self.Outputs.items.send(None)
         self.info.setText('No data loaded.\n' + message)
 
     def openNetFile(self, filename):
@@ -174,8 +175,8 @@ class OWNxFile(OWWidget):
         else:
             self.data_index = len(self.recentDataFiles)
 
-        self.send("Network", G)
-        self.send("Items", G.items() if G else None)
+        self.Outputs.network.send(G)
+        self.Outputs.items.send(G.items() if G else None)
 
     def openDataFile(self, filename):
         self.Error.vertices_length_not_matching.clear()
@@ -189,8 +190,8 @@ class OWNxFile(OWWidget):
                                    "No vertices data file specified"))
         else:
             self.readDataFile(filename)
-        self.send("Network", self.graph)
-        self.send("Items", self.graph.items() if self.graph else None)
+        self.Outputs.network.send(self.graph)
+        self.Outputs.items.send(self.graph.items() if self.graph else None)
 
     def readDataFile(self, filename):
         if not self.graph:

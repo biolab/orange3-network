@@ -7,6 +7,7 @@ import networkx as nx
 
 import Orange
 from Orange.widgets import gui, widget, settings
+from Orange.widgets.widget import Output
 
 import orangecontrib.network as network
 
@@ -53,17 +54,14 @@ class GraphType:
            SCALEFREE, SHELL, STAR, WAXMAN, WHEEL)
 
 
-class Output:
-    NETWORK = 'Generated network'
-
-
 class OWNxGenerator(widget.OWWidget):
     name = "Network Generator"
     description = "Generate example graphs."
     icon = "icons/NetworkGenerator.svg"
     priority = 6420
 
-    outputs = [(Output.NETWORK, network.Graph),]
+    class Outputs:
+        network = Output("Generated network", network.Graph)
 
     graph_type = settings.Setting(0)
     n_nodes = settings.Setting(50)
@@ -96,7 +94,7 @@ class OWNxGenerator(widget.OWWidget):
     def commit(self):
         _, func = GraphType.all[self.graph_type]
         graph = network.readwrite._wrap(func(self.n_nodes))
-        self.send(Output.NETWORK, graph)
+        self.Outputs.network.send(graph)
 
 
 if __name__ == "__main__":
