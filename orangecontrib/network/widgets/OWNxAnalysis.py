@@ -9,6 +9,7 @@ import Orange
 from Orange.data import Table, Domain
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import Input, Output
 import orangecontrib.network as network
 
 
@@ -46,10 +47,13 @@ class OWNxAnalysis(widget.OWWidget):
 
     resizing_enabled = False
 
-    inputs = [("Network", network.Graph, 'set_graph'),
-              ("Items", Orange.data.Table, 'set_items')]
-    outputs = [("Network", network.Graph),
-               ("Items", Orange.data.Table)]
+    class Inputs:
+        network = Input("Network", network.Graph)
+        items = Input("Items", Orange.data.Table)
+
+    class Outputs:
+        network = Output("Network", network.Graph)
+        items = Output("Items", Orange.data.Table)
 
     want_main_area = False
     want_control_area = True
@@ -213,6 +217,7 @@ class OWNxAnalysis(widget.OWWidget):
         autobox.layout().insertSpacing(2, 10)
         cancel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
+    @Inputs.network
     def set_graph(self, graph):
         if graph is None:
             return
@@ -237,6 +242,7 @@ class OWNxAnalysis(widget.OWWidget):
 
         self.unconditional_analyze()
 
+    @Inputs.items
     def set_items(self, items):
         self.mutex.lock()
 
@@ -399,8 +405,8 @@ class OWNxAnalysis(widget.OWWidget):
                     table = Table.concatenate((table, self.items_analysis))
                 self.graph.set_items(table)
 
-            self.send("Network", self.graph)
-            self.send("Items", self.graph.items())
+            self.Outputs.network.send(self.graph)
+            self.Outputs.items.send(self.graph.items())
 
             self.clear_results()
 

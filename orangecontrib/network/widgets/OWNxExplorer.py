@@ -12,6 +12,7 @@ import Orange
 from Orange.util import scale
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
+from Orange.widgets.widget import Input, Output
 
 from Orange.data import Table, DiscreteVariable, StringVariable
 import orangecontrib.network as network
@@ -45,35 +46,25 @@ class SelectionMode:
     = range(9)  # FML
 
 
-class Output:
-    SUBGRAPH = 'Selected sub-network'
-    UNSELECTED_SUBGRAPH = 'Remaining sub-network'
-    DISTANCE = 'Distance matrix'
-    SELECTED = 'Selected items'
-    HIGHLIGHTED = 'Highlighted items'
-    REMAINING = 'Remaining items'
-    all = (SUBGRAPH, DISTANCE, SELECTED, HIGHLIGHTED, REMAINING)
-
-
 class OWNxExplorer(widget.OWWidget):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
     icon = "icons/NetworkExplorer.svg"
     priority = 6420
 
-    inputs = [
-        ("Network", network.Graph, "set_graph", widget.Default),
-        ("Node Subset", Table, 'set_marking_items'),
-        ("Node Data", Table, "set_items"),
-        ("Node Distances", Orange.misc.DistMatrix, "set_items_distance_matrix"),
-    ]
+    class Inputs:
+        network = Input("Network", network.Graph, default=True)
+        node_subset = Input("Node Subset", Table)
+        node_data = Input("Node Data", Table)
+        node_distances = Input("Node Distances", Orange.misc.DistMatrix)
 
-    outputs = [(Output.SUBGRAPH, network.Graph),
-               (Output.UNSELECTED_SUBGRAPH, network.Graph),
-               (Output.DISTANCE, Orange.misc.DistMatrix),
-               (Output.SELECTED, Table),
-               (Output.HIGHLIGHTED, Table),
-               (Output.REMAINING, Table)]
+    class Outputs:
+        subgraph = Output("Selected sub-network", network.Graph)
+        unselected_subgraph = Output("Remaining sub-network", network.Graph)
+        distances = Output("Distance matrix", Orange.misc.DistMatrix)
+        selected = Output("Selected items", Table)
+        highlighted = Output("Highlighted items", Table)
+        remaining = Output("Remaining items", Table)
 
     settingsList = ["lastVertexSizeColumn", "lastColorColumn",
                     "lastLabelColumns", "lastTooltipColumns",]
@@ -276,6 +267,7 @@ class OWNxExplorer(widget.OWWidget):
     def commit(self):
         self.send_data()
 
+    @Inputs.node_distances
     def set_items_distance_matrix(self, matrix):
         assert matrix is None or isinstance(matrix, Orange.misc.DistMatrix)
         self.items_matrix = matrix
@@ -390,27 +382,28 @@ class OWNxExplorer(widget.OWWidget):
 
     def send_data(self):
         if not self.graph:
-            for output in Output.all:
-                self.send(output, None)
+            for output in dir(self.Outputs):
+                if not output.startswith('__'):
+                    a.send(None)
             return
         selected = self.view.getSelected()
-        self.send(Output.SUBGRAPH,
-                  self.graph.subgraph(selected) if selected else None)
-        self.send(Output.UNSELECTED_SUBGRAPH,
+        self.Outputs.subgraph.send(self.graph.subgraph(selected) if selected else None)
+        self.Outputs.unselected_subgraph.send(
                   self.graph.subgraph(self.view.getUnselected()) if selected else self.graph)
-        self.send(Output.DISTANCE,
-                  self.items_matrix.submatrix(sorted(selected)) if self.items_matrix is not None and selected else None)
+        self.Outputs.distances.send(
+                  self.items_matrix.submatrix(sorted(selected))
+                  if self.items_matrix is not None and selected else None)
         items = self.graph.items()
         if not items:
-            self.send(Output.SELECTED, None)
-            self.send(Output.HIGHLIGHTED, None)
-            self.send(Output.REMAINING, None)
+            self.Outputs.selected.send(None)
+            self.Outputs.highlighted.send(None)
+            self.Outputs.remaining.send(None)
         else:
             highlighted = self.view.getHighlighted()
-            self.send(Output.SELECTED, items[sorted(selected), :] if selected else None)
-            self.send(Output.HIGHLIGHTED, items[sorted(highlighted), :] if highlighted else None)
+            self.Outputs.selected.send(items[sorted(selected), :] if selected else None)
+            self.Outputs.highlighted.send(items[sorted(highlighted), :] if highlighted else None)
             remaining = sorted(set(self.graph) - set(selected) - set(highlighted))
-            self.send(Output.REMAINING, items[remaining, :] if remaining else None)
+            self.Outputs.remaining.send(items[remaining, :] if remaining else None)
 
     def _set_combos(self):
         self._clear_combos()
@@ -477,6 +470,7 @@ class OWNxExplorer(widget.OWWidget):
         self.colorCombo.addItem('(none)', None)
         self.nodeSizeCombo.addItem("(uniform)")
 
+    @Inputs.network
     def set_graph_none(self):
         self.graph = None
         self.graph_base = None
@@ -524,6 +518,7 @@ class OWNxExplorer(widget.OWWidget):
         self.set_selection_mode()
         self.relayout()
 
+    @Inputs.node_data
     def set_items(self, items=None):
         self._items = items
         if items is None:
@@ -539,6 +534,7 @@ class OWNxExplorer(widget.OWWidget):
         self.graph.set_items(items)
         self._set_combos()
 
+    @Inputs.node_subset
     def set_marking_items(self, items):
         self.markInputRadioButton.setEnabled(False)
         self.markInputItems = items
