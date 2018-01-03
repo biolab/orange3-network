@@ -470,7 +470,6 @@ class OWNxExplorer(widget.OWWidget):
         self.colorCombo.addItem('(none)', None)
         self.nodeSizeCombo.addItem("(uniform)")
 
-    @Inputs.network
     def set_graph_none(self):
         self.graph = None
         self.graph_base = None
@@ -482,6 +481,7 @@ class OWNxExplorer(widget.OWWidget):
         self._items = None
         self.view.set_graph(None)
 
+    @Inputs.network
     def set_graph(self, graph):
         if not graph:
             return self.set_graph_none()
