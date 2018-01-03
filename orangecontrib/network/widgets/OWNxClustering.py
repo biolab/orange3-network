@@ -72,6 +72,7 @@ class OWNxClustering(widget.OWWidget):
                       'delta': self.hop_attenuation}
 
         if self.net is None:
+            self.Outputs.items.send(None)
             self.Outputs.network.send(None)
             return
 
