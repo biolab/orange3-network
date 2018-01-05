@@ -72,9 +72,10 @@ class OWNxExplorer(widget.OWWidget):
         highlighted = Output("Highlighted items", Table)
         remaining = Output("Remaining items", Table)
 
-    settingsList = ["lastVertexSizeColumn", "lastColorColumn",
-                    "lastLabelColumns", "lastTooltipColumns",]
+    settingsList = ["lastVertexSizeColumn", "lastColorColumn",]
     # TODO: set settings
+    attrs_label = Setting({})
+    attrs_tooltip = Setting({})
 
     UserAdviceMessages = [
         widget.Message('When selecting nodes on the Marking tab, '
@@ -141,8 +142,6 @@ class OWNxExplorer(widget.OWWidget):
 
         self.lastVertexSizeColumn = ''
         self.lastColorColumn = ''
-        self.lastLabelColumns = set()
-        self.lastTooltipColumns = set()
 
         self.items_matrix = None
         self.number_of_nodes_label = 0
@@ -414,8 +413,6 @@ class OWNxExplorer(widget.OWWidget):
     def _set_combos(self):
         self._clear_combos()
         self.graph_attrs = self.graph.items_vars()
-        lastLabelColumns = self.lastLabelColumns
-        lastTooltipColumns = self.lastTooltipColumns
 
         for var in self.graph_attrs:
             if var.is_discrete or var.is_continuous:
@@ -440,32 +437,21 @@ class OWNxExplorer(widget.OWWidget):
                 self.set_node_colors()
                 break
 
-        if lastLabelColumns:
-            selection = QItemSelection()
-            model = self.attListBox.model()
-            for i in range(self.attListBox.count()):
-                if str(self.attListBox.item(i).text()) in lastLabelColumns:
-                    selection.append(QItemSelectionRange(model.index(i, 0)))
-            selmodel = self.attListBox.selectionModel()
-            selmodel.select(selection, selmodel.Select | selmodel.Clear)
-        else:
-            self.attListBox.selectionModel().clearSelection()
+        for columns, box in ((self.attrs_label, self.attListBox),
+                             (self.attrs_tooltip, self.tooltipListBox)):
+            columns = [var.name for var in columns]
+            if columns:
+                selection = QItemSelection()
+                model = box.model()
+                for i in range(box.count()):
+                    if str(box.item(i).text()) in columns:
+                        selection.append(QItemSelectionRange(model.index(i, 0)))
+                selmodel = box.selectionModel()
+                selmodel.select(selection, selmodel.Select | selmodel.Clear)
+            else:
+                box.selectionModel().clearSelection()
         self._on_node_label_attrs_changed()
-
-        if lastTooltipColumns:
-            selection = QItemSelection()
-            model = self.tooltipListBox.model()
-            for i in range(self.tooltipListBox.count()):
-                if self.tooltipListBox.item(i).text() in lastTooltipColumns:
-                    selection.append(QItemSelectionRange(model.index(i, 0)))
-            selmodel = self.tooltipListBox.selectionModel()
-            selmodel.select(selection, selmodel.Select | selmodel.Clear)
-        else:
-            self.tooltipListBox.selectionModel().clearSelection()
         self._clicked_tooltip_lstbox()
-
-        self.lastLabelColumns = lastLabelColumns
-        self.lastTooltipColumns = lastTooltipColumns
 
     def _clear_combos(self):
         self.graph_attrs = []
@@ -583,7 +569,7 @@ class OWNxExplorer(widget.OWWidget):
 
     def _on_node_label_attrs_changed(self):
         if not self.graph: return
-        attributes = self.lastLabelColumns = [self.graph_attrs[i] for i in self.node_label_attrs]
+        attributes = self.attrs_label = [self.graph_attrs[i] for i in self.node_label_attrs]
         if attributes:
             table = self.graph.items()
             if not table: return
@@ -596,7 +582,7 @@ class OWNxExplorer(widget.OWWidget):
 
     def _clicked_tooltip_lstbox(self):
         if not self.graph: return
-        attributes = self.lastTooltipColumns = [self.graph_attrs[i] for i in self.tooltipAttributes]
+        attributes = self.attrs_tooltip = [self.graph_attrs[i] for i in self.tooltipAttributes]
         if attributes:
             table = self.graph.items()
             if not table: return
