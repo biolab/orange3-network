@@ -12,7 +12,8 @@ from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
 
 import Orange
 from Orange.util import scale
-from Orange.widgets import gui, widget, settings
+from Orange.widgets import gui, widget
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 from Orange.widgets.widget import Input, Output
 
@@ -91,18 +92,18 @@ class OWNxExplorer(widget.OWWidget):
                        widget.Message.Information),
     ]
 
-    do_auto_commit = settings.Setting(True)
-    maxNodeSize = settings.Setting(50)
-    minNodeSize = settings.Setting(8)
-    selectionMode = settings.Setting(SelectionMode.FROM_INPUT)
-    tabIndex = settings.Setting(0)
-    showEdgeWeights = settings.Setting(False)
-    relativeEdgeWidths = settings.Setting(False)
-    invertNodeSize = settings.Setting(False)
-    markDistance = settings.Setting(1)
-    markSearchString = settings.Setting("")
-    markNBest = settings.Setting(1)
-    markNConnections = settings.Setting(2)
+    do_auto_commit = Setting(True)
+    maxNodeSize = Setting(50)
+    minNodeSize = Setting(8)
+    selectionMode = Setting(SelectionMode.FROM_INPUT)
+    tabIndex = Setting(0)
+    showEdgeWeights = Setting(False)
+    relativeEdgeWidths = Setting(False)
+    invertNodeSize = Setting(False)
+    markDistance = Setting(1)
+    markSearchString = Setting("")
+    markNBest = Setting(1)
+    markNConnections = Setting(2)
 
     graph_name = 'view'
 
