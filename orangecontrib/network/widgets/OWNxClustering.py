@@ -89,14 +89,13 @@ if __name__ == "__main__":
     ow = OWNxClustering()
     ow.show()
 
-    def set_network(signal, data, id=None):
-        if signal == 'Network':
-            ow.set_network(data)
+    def set_network(data, id=None):
+        ow.set_network(data)
 
     import OWNxFile
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
-    owFile.send = set_network
+    owFile.Outputs.network.send = set_network
     owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
     a.exec_()
