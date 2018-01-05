@@ -13,8 +13,7 @@ from Orange.widgets.widget import Input, Output
 import orangecontrib.network as network
 
 
-NODELEVEL = 0
-GRAPHLEVEL = 1
+NODELEVEL, GRAPHLEVEL = range(2)
 
 
 METHODS = [
@@ -152,11 +151,9 @@ class OWNxAnalysis(widget.OWWidget):
         self.tabs.setCurrentIndex(self.tab_index)
         self.tabs.currentChanged.connect(lambda index: setattr(self, 'tab_index', index))
 
-        for name, default, label, type, algorithm in self.methods:
-            if type == NODELEVEL:
-                box = gui.widgetBox(self.nodeIndices, orientation="horizontal")
-            elif type == GRAPHLEVEL:
-                box = gui.widgetBox(self.graphIndices, orientation="horizontal")
+        a = {NODELEVEL: self.nodeIndices, GRAPHLEVEL: self.graphIndices}
+        for name, _, label, type, algorithm in self.methods:
+            box = gui.widgetBox(a[type], orientation="horizontal")
 
             gui.checkBox(box, self, name, label=label, callback=lambda n=name: self.method_clicked(n))
             box.layout().addStretch(1)
