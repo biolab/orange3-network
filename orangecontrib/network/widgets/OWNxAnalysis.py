@@ -17,6 +17,62 @@ NODELEVEL = 0
 GRAPHLEVEL = 1
 
 
+METHODS = [
+        ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
+        ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
+        ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.mean(list(dict(G.degree()).values()))),
+        ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
+        ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
+        ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),
+        ("density", True, "Density", GRAPHLEVEL, nx.density),
+        ("degree_assortativity_coefficient", False, \
+            "Degree assortativity coefficient", GRAPHLEVEL, \
+                nx.degree_assortativity_coefficient if \
+                hasattr(nx, "degree_assortativity_coefficient") else None),
+        ("degree_pearson_correlation_coefficient", False, \
+            "Degree pearson correlation coefficient", GRAPHLEVEL, \
+            nx.degree_pearson_correlation_coefficient if\
+            hasattr(nx, "degree_pearson_correlation_coefficient") else None),
+        ("estrada_index", False, "Estrada index", GRAPHLEVEL, \
+            nx.estrada_index if hasattr(nx, "estrada_index") else None),
+        ("graph_clique_number", False, "Graph clique number", GRAPHLEVEL, nx.graph_clique_number),
+        ("graph_number_of_cliques", False, "Graph number of cliques", GRAPHLEVEL, nx.graph_number_of_cliques),
+        ("transitivity", False, "Graph transitivity", GRAPHLEVEL, nx.transitivity),
+        ("average_clustering", False, "Average clustering coefficient", GRAPHLEVEL, nx.average_clustering),
+        ("number_connected_components", False, "Number of connected components", GRAPHLEVEL, nx.number_connected_components),
+        ("number_strongly_connected_components", False, "Number of strongly connected components", GRAPHLEVEL, nx.number_strongly_connected_components),
+        ("number_weakly_connected_components", False, "Number of weakly connected components", GRAPHLEVEL, nx.number_weakly_connected_components),
+        ("number_attracting_components", False, "Number of attracting components", GRAPHLEVEL, nx.number_attracting_components),
+
+        ("degree", False, "Degree", NODELEVEL, lambda G: dict(G.degree())),
+        ("in_degree", False, "In-degree", NODELEVEL, lambda G: dict(G.in_degree())),
+        ("out_degree", False, "Out-degree", NODELEVEL, lambda G: dict(G.out_degree())),
+        ("average_neighbor_degree", False, "Average neighbor degree", NODELEVEL, nx.average_neighbor_degree),
+        ("clustering", False, "Clustering coefficient", NODELEVEL, nx.clustering),
+        ("triangles", False, "Number of triangles", NODELEVEL, nx.triangles),
+        ("square_clustering", False, "Squares clustering coefficient", NODELEVEL, nx.square_clustering),
+        ("number_of_cliques", False, "Number of cliques", NODELEVEL, nx.number_of_cliques),
+        ("degree_centrality", False, "Degree centrality", NODELEVEL, nx.degree_centrality),
+        ("in_degree_centrality", False, "In-egree centrality", NODELEVEL, nx.in_degree_centrality),
+        ("out_degree_centrality", False, "Out-degree centrality", NODELEVEL, nx.out_degree_centrality),
+        ("closeness_centrality", False, "Closeness centrality", NODELEVEL, nx.closeness_centrality),
+        ("betweenness_centrality", False, "Betweenness centrality", NODELEVEL, nx.betweenness_centrality),
+        ("current_flow_closeness_centrality", False, "Information centrality", NODELEVEL, nx.current_flow_closeness_centrality),
+        ("current_flow_betweenness_centrality", False, "Random-walk betweenness centrality", NODELEVEL, nx.current_flow_betweenness_centrality),
+        ("approximate_current_flow_betweenness_centrality", False, \
+            "Approx. random-walk betweenness centrality", NODELEVEL, \
+            nx.approximate_current_flow_betweenness_centrality if \
+            hasattr(nx, "approximate_current_flow_betweenness_centrality") \
+                else None),
+        ("eigenvector_centrality", False, "Eigenvector centrality", NODELEVEL, nx.eigenvector_centrality),
+        ("eigenvector_centrality_numpy", False, "Eigenvector centrality (NumPy)", NODELEVEL, nx.eigenvector_centrality_numpy),
+        ("load_centrality", False, "Load centrality", NODELEVEL, nx.load_centrality),
+        ("core_number", False, "Core number", NODELEVEL, nx.core_number),
+        ("eccentricity", False, "Eccentricity", NODELEVEL, nx.eccentricity),
+        ("closeness_vitality", False, "Closeness vitality", NODELEVEL, nx.closeness_vitality),
+]
+
+
 class WorkerThread(QThread):
     def __init__(self, receiver, name, label, type, algorithm):
         super().__init__()
@@ -60,25 +116,8 @@ class OWNxAnalysis(widget.OWWidget):
 
     auto_commit = Setting(False)
 
-    settingsList = [
-        "auto_commit", "tab_index", "degree", "in_degree", "out_degree", "average_neighbor_degree",
-        "clustering", "triangles", "square_clustering", "number_of_cliques",
-        "degree_centrality", "in_degree_centrality", "out_degree_centrality",
-        "closeness_centrality", "betweenness_centrality",
-        "current_flow_closeness_centrality", "current_flow_betweenness_centrality",
-        "approximate_current_flow_betweenness_centrality",
-        "eigenvector_centrality", "eigenvector_centrality_numpy", "load_centrality",
-        "core_number", "eccentricity", "closeness_vitality",
-
-        "number_of_nodes", "number_of_edges", "average_degree", "density",
-        "degree_assortativity_coefficient", "degree_pearson_correlation_coefficient",
-        "degree_pearson_correlation_coefficient",
-        "estrada_index", "graph_clique_number", "graph_number_of_cliques",
-        "transitivity", "average_clustering", "number_connected_components",
-        "number_strongly_connected_components", "number_weakly_connected_components",
-        "number_attracting_components", "diameter", "radius", "average_shortest_path_length"
-    ]
-    # TODO: set settings
+    for name, default, _, _, _ in METHODS:
+        exec("{} = Setting({})".format(name, default))
 
     def __init__(self):
         super().__init__()
@@ -88,89 +127,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        self.methods = [
-            ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
-            ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
-            ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.mean(list(dict(G.degree()).values()))),
-            ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
-            ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
-            ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),
-            ("density", True, "Density", GRAPHLEVEL, nx.density),
-            ("degree_assortativity_coefficient", False, \
-                "Degree assortativity coefficient", GRAPHLEVEL, \
-                    nx.degree_assortativity_coefficient if \
-                    hasattr(nx, "degree_assortativity_coefficient") else None),
-            # additional attr needed
-            #("attribute_assortativity_coefficient", False, "Attribute assortativity coefficient", GRAPHLEVEL, nx.attribute_assortativity_coefficient),
-            #("numeric_assortativity_coefficient", False, "Numeric assortativity coefficient", GRAPHLEVEL, nx.numeric_assortativity_coefficient),
-            ("degree_pearson_correlation_coefficient", False, \
-                "Degree pearson correlation coefficient", GRAPHLEVEL, \
-                nx.degree_pearson_correlation_coefficient if\
-                hasattr(nx, "degree_pearson_correlation_coefficient") else None),
-            ("estrada_index", False, "Estrada index", GRAPHLEVEL, \
-                nx.estrada_index if hasattr(nx, "estrada_index") else None),
-            ("graph_clique_number", False, "Graph clique number", GRAPHLEVEL, nx.graph_clique_number),
-            ("graph_number_of_cliques", False, "Graph number of cliques", GRAPHLEVEL, nx.graph_number_of_cliques),
-            ("transitivity", False, "Graph transitivity", GRAPHLEVEL, nx.transitivity),
-            ("average_clustering", False, "Average clustering coefficient", GRAPHLEVEL, nx.average_clustering),
-            ("number_connected_components", False, "Number of connected components", GRAPHLEVEL, nx.number_connected_components),
-            ("number_strongly_connected_components", False, "Number of strongly connected components", GRAPHLEVEL, nx.number_strongly_connected_components),
-            ("number_weakly_connected_components", False, "Number of weakly connected components", GRAPHLEVEL, nx.number_weakly_connected_components),
-            ("number_attracting_components", False, "Number of attracting components", GRAPHLEVEL, nx.number_attracting_components),
-            # TODO: input parameters
-            #("max_flow", False, "Maximum flow", GRAPHLEVEL, nx.max_flow),
-            #("min_cut", False, "Minimum cut", GRAPHLEVEL, nx.min_cut),
-            #("ford_fulkerson", False, "Maximum single-commodity flow (Ford-Fulkerson)", GRAPHLEVEL, nx.ford_fulkerson),
-            #("min_cost_flow_cost", False, "min_cost_flow_cost", GRAPHLEVEL, nx.min_cost_flow_cost),
-            # returns dict of dict
-            #("shortest_path_length", False, "Shortest path length", GRAPHLEVEL, nx.shortest_path_length),
-
-            ("degree", False, "Degree", NODELEVEL, lambda G: dict(G.degree())),
-            ("in_degree", False, "In-degree", NODELEVEL, lambda G: dict(G.in_degree())),
-            ("out_degree", False, "Out-degree", NODELEVEL, lambda G: dict(G.out_degree())),
-            ("average_neighbor_degree", False, "Average neighbor degree", NODELEVEL, nx.average_neighbor_degree),
-            ("clustering", False, "Clustering coefficient", NODELEVEL, nx.clustering),
-            ("triangles", False, "Number of triangles", NODELEVEL, nx.triangles),
-            ("square_clustering", False, "Squares clustering coefficient", NODELEVEL, nx.square_clustering),
-            ("number_of_cliques", False, "Number of cliques", NODELEVEL, nx.number_of_cliques),
-            ("degree_centrality", False, "Degree centrality", NODELEVEL, nx.degree_centrality),
-            ("in_degree_centrality", False, "In-egree centrality", NODELEVEL, nx.in_degree_centrality),
-            ("out_degree_centrality", False, "Out-degree centrality", NODELEVEL, nx.out_degree_centrality),
-            ("closeness_centrality", False, "Closeness centrality", NODELEVEL, nx.closeness_centrality),
-            ("betweenness_centrality", False, "Betweenness centrality", NODELEVEL, nx.betweenness_centrality),
-            ("current_flow_closeness_centrality", False, "Information centrality", NODELEVEL, nx.current_flow_closeness_centrality),
-            ("current_flow_betweenness_centrality", False, "Random-walk betweenness centrality", NODELEVEL, nx.current_flow_betweenness_centrality),
-            ("approximate_current_flow_betweenness_centrality", False, \
-                "Approx. random-walk betweenness centrality", NODELEVEL, \
-                nx.approximate_current_flow_betweenness_centrality if \
-                hasattr(nx, "approximate_current_flow_betweenness_centrality") \
-                    else None),
-            ("eigenvector_centrality", False, "Eigenvector centrality", NODELEVEL, nx.eigenvector_centrality),
-            ("eigenvector_centrality_numpy", False, "Eigenvector centrality (NumPy)", NODELEVEL, nx.eigenvector_centrality_numpy),
-            ("load_centrality", False, "Load centrality", NODELEVEL, nx.load_centrality),
-            ("core_number", False, "Core number", NODELEVEL, nx.core_number),
-            ("eccentricity", False, "Eccentricity", NODELEVEL, nx.eccentricity),
-            ("closeness_vitality", False, "Closeness vitality", NODELEVEL, nx.closeness_vitality),
-        ]
-        """
-        TODO: add
-            average-degree_connectivity
-            is_bipartite
-            is_chordal
-            katz_centrality
-            katz_centrality_numpy
-            communicability
-            communicability_exp
-            communicability_centrality
-            communicability_centrality_exp
-            communicability_betweenness_centrality
-            average_node_connectivity
-            is_directed_acyclic_graph
-            center
-            ??
-        """
-
-        self.methods = [method for method in self.methods if method[-1] is not None]
+        self.methods = [method for method in METHODS if method[-1] is not None]
 
         self.tab_index = 0
         self.mutex = QMutex()
@@ -186,7 +143,6 @@ class OWNxAnalysis(widget.OWWidget):
         self.analdata = {}
 
         for method in self.methods:
-            setattr(self, method[0], method[1])
             setattr(self, "lbl_" + method[0], "")
 
         self.tabs = gui.tabWidget(self.controlArea)
