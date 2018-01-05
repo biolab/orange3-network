@@ -6,7 +6,7 @@ from xml.sax.saxutils import escape
 
 import numpy as np
 
-from AnyQt.QtCore import QTimer, QSize, Qt
+from AnyQt.QtCore import QTimer, QSize, Qt, QItemSelection, QItemSelectionRange
 from AnyQt.QtGui import QBrush, QColor
 from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
 
