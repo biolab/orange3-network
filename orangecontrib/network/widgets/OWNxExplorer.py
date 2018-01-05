@@ -13,9 +13,10 @@ from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
 import Orange
 from Orange.util import scale
 from Orange.widgets import gui, widget
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPaletteGenerator
 from Orange.widgets.widget import Input, Output
+from Orange.widgets.utils.itemmodels import VariableListModel
 
 from Orange.data import Table, DiscreteVariable, StringVariable
 from Orange.widgets.visualize.owdistributions import ScatterPlotItem
@@ -72,11 +73,6 @@ class OWNxExplorer(widget.OWWidget):
         highlighted = Output("Highlighted items", Table)
         remaining = Output("Remaining items", Table)
 
-    settingsList = ["lastVertexSizeColumn", "lastColorColumn",]
-    # TODO: set settings
-    attrs_label = Setting({})
-    attrs_tooltip = Setting({})
-
     UserAdviceMessages = [
         widget.Message('When selecting nodes on the Marking tab, '
                        'press <b><tt>Enter</tt></b> key to add '
@@ -93,6 +89,8 @@ class OWNxExplorer(widget.OWWidget):
                        widget.Message.Information),
     ]
 
+    settingsHandler = DomainContextHandler()
+
     do_auto_commit = Setting(True)
     maxNodeSize = Setting(50)
     minNodeSize = Setting(8)
@@ -106,6 +104,10 @@ class OWNxExplorer(widget.OWWidget):
     markNBest = Setting(1)
     markNConnections = Setting(2)
 
+    attr_size = ContextSetting(None)
+    attr_color = ContextSetting(None)
+    attrs_label = ContextSetting({})
+    attrs_tooltip = ContextSetting({})
     graph_name = 'view'
 
     class Warning(widget.OWWidget.Warning):
@@ -140,9 +142,6 @@ class OWNxExplorer(widget.OWWidget):
         self.verticesPerEdge = 0
         self.edgesPerVertex = 0
 
-        self.lastVertexSizeColumn = ''
-        self.lastColorColumn = ''
-
         self.items_matrix = None
         self.number_of_nodes_label = 0
         self.number_of_edges_label = 0
@@ -176,16 +175,18 @@ class OWNxExplorer(widget.OWWidget):
             self.progressbar.finish()
         self.view.animationFinished.connect(animationFinished)
 
-        self.colorCombo = gui.comboBox(
-            box, self, "node_color_attr", label='Color:',
-            orientation='horizontal', callback=self.set_node_colors)
+        self.color_model = VariableListModel(placeholder="(uniform)")
+        self.color_combo = gui.comboBox(
+            box, self, "attr_color", label='Color:',
+            orientation='horizontal', callback=self.set_node_colors,
+            model=self.color_model)
 
         self.invertNodeSizeCheck = self.maxNodeSizeSpin = QWidget()  # Forward declaration
-        self.nodeSizeCombo = gui.comboBox(
-            box, self, "node_size_attr",
-            label='Size:',
-            orientation='horizontal',
-            callback=self.set_node_sizes)
+        self.size_model = VariableListModel(placeholder="(none)")
+        self.size_combo = gui.comboBox(
+            box, self, "attr_size",
+            label='Size:', orientation='horizontal',
+            callback=self.set_node_sizes, model=self.size_model)
         hb = gui.widgetBox(box, orientation="horizontal")
         hb.layout().addStretch(1)
         self.minNodeSizeSpin = gui.spin(
@@ -414,28 +415,12 @@ class OWNxExplorer(widget.OWWidget):
         self._clear_combos()
         self.graph_attrs = self.graph.items_vars()
 
-        for var in self.graph_attrs:
-            if var.is_discrete or var.is_continuous:
-                self.colorCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
-
-            if var.is_continuous:
-                self.nodeSizeCombo.addItem(gui.attributeIconDict[gui.vartype(var)], var.name, var)
-
-        self.nodeSizeCombo.setDisabled(not self.graph_attrs)
-        self.colorCombo.setDisabled(not self.graph_attrs)
-
-        for i in range(self.nodeSizeCombo.count()):
-            if self.lastVertexSizeColumn == \
-                    self.nodeSizeCombo.itemText(i):
-                self.node_size_attr = i
-                self.set_node_sizes()
-                break
-
-        for i in range(self.colorCombo.count()):
-            if self.lastColorColumn == self.colorCombo.itemText(i):
-                self.node_color_attr = i
-                self.set_node_colors()
-                break
+        self.color_model[:] = [None] + [v for v in self.graph_attrs if v.is_primitive()]
+        self.size_model[:] = [None] + [v for v in self.graph_attrs if v.is_continuous]
+        self.size_combo.setDisabled(not self.graph_attrs)
+        self.color_combo.setDisabled(not self.graph_attrs)
+        self.set_node_sizes()
+        self.set_node_colors()
 
         for columns, box in ((self.attrs_label, self.attListBox),
                              (self.attrs_tooltip, self.tooltipListBox)):
@@ -455,12 +440,8 @@ class OWNxExplorer(widget.OWWidget):
 
     def _clear_combos(self):
         self.graph_attrs = []
-
-        self.colorCombo.clear()
-        self.nodeSizeCombo.clear()
-
-        self.colorCombo.addItem('(none)', None)
-        self.nodeSizeCombo.addItem("(uniform)")
+        self.color_combo.clear()
+        self.size_combo.clear()
 
     def set_graph_none(self):
         self.graph = None
@@ -486,6 +467,7 @@ class OWNxExplorer(widget.OWWidget):
             self.Error.network_too_large()
             return
         self.information()
+        self.closeContext()
 
         all_edges_equal = bool(1 == len(set(w for u,v,w in graph.edges(data='weight'))))
         self.checkbox_show_weights.setEnabled(not all_edges_equal)
@@ -505,6 +487,7 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesPerVertex = self.graph.number_of_edges() / max(1, self.graph.number_of_nodes())
 
         self._set_combos()
+        self.openContext(self.graph.items().domain)
         self.Error.clear()
 
         self.set_selection_mode()
@@ -606,8 +589,7 @@ class OWNxExplorer(widget.OWWidget):
 
     def set_node_colors(self):
         if not self.graph: return
-        self.lastColorColumn = self.colorCombo.currentText()
-        attribute = self.colorCombo.itemData(self.colorCombo.currentIndex())
+        attribute = self.attr_color
         assert not attribute or isinstance(attribute, Orange.data.Variable)
         if self.view.legend is not None:
             self.view.scene().removeItem(self.view.legend)
@@ -649,10 +631,9 @@ class OWNxExplorer(widget.OWWidget):
         self.view.legend.geometry_changed()
 
     def set_node_sizes(self):
-        attribute = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
         depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
         for w in depending_widgets:
-            w.setDisabled(not attribute)
+            w.setDisabled(not self.attr_size)
 
         if not self.graph:
             return
@@ -661,7 +642,7 @@ class OWNxExplorer(widget.OWWidget):
             return
 
         try:
-            values = table.get_column_view(attribute)[0]
+            values = table.get_column_view(self.attr_size)[0]
         except Exception:
             for node in self.view.nodes:
                 node.setSize(self.minNodeSize)
