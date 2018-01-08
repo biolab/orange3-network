@@ -114,9 +114,7 @@ class OWNxAnalysis(widget.OWWidget):
     want_control_area = True
 
     auto_commit = Setting(False)
-
-    for name, default, _, _, _ in METHODS:
-        exec("{} = Setting({})".format(name, default))
+    enabled_methods = Setting(set(m[0] for m in METHODS if m[1]))  # contains method names
 
     def __init__(self):
         super().__init__()
@@ -142,6 +140,7 @@ class OWNxAnalysis(widget.OWWidget):
         self.analdata = {}
 
         for method in self.methods:
+            setattr(self, method[0], method[0] in self.enabled_methods)
             setattr(self, "lbl_" + method[0], "")
 
         self.tabs = gui.tabWidget(self.controlArea)
@@ -367,6 +366,11 @@ class OWNxAnalysis(widget.OWWidget):
         self.analyze()
 
     def method_clicked(self, name):
+        if getattr(self, name):
+            self.enabled_methods.add(name)
+        else:
+            if name in self.enabled_methods:
+                self.enabled_methods.remove(name)
         self.mutex.lock()
         if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
             self.mutex.unlock()
