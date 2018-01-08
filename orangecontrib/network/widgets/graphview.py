@@ -11,6 +11,7 @@ from AnyQt.QtWidgets import qApp, QStyle, QGraphicsLineItem, QGraphicsEllipseIte
 
 from orangecontrib.network._fr_layout import fruchterman_reingold_layout
 
+from Orange.widgets.visualize.owdistributions import LegendItem as DistributionsLegendItem
 # Expose OpenGL rendering for large graphs, if available
 HAVE_OPENGL = True
 try: from AnyQt import QtOpenGL
@@ -20,6 +21,42 @@ FR_ITERATIONS = 250
 
 IS_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 4000
 IS_VERY_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 10000
+
+
+class LegendItem(DistributionsLegendItem):
+    def __init__(self):
+        super().__init__()
+        self.parent = None
+        self.x = None
+        self.y = None
+
+    def set_parent(self, parent):
+        self.parent = parent
+        parent.scene().changed.connect(self.geometry_changed)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            event.accept()
+            if self.parent is not None:
+                new_pos = self.pos() + (event.pos() - event.lastPos())
+                self.setPos(new_pos)
+                new_pos = self.parent.mapFromScene(new_pos)
+                self.x = new_pos.x()
+                self.y = new_pos.y()
+        else:
+            event.ignore()
+
+    def geometry_changed(self):
+        a = self.parent.frameRect()
+        x = a.width() - self.width()
+        y = a.height() - self.height()
+        if None in [self.x, self.y]:
+            self.x = x
+            self.y = 0
+        inside = lambda x, min_x, max_x: max(min(max_x, x), min_x)
+        self.x = inside(self.x, 0, x)
+        self.y = inside(self.y, 0, y)
+        self.setPos(self.parent.mapToScene(self.x, self.y))
 
 
 class QGraphicsEdge(QGraphicsLineItem):
@@ -192,6 +229,7 @@ class GraphView(QGraphicsView):
         self._selection = []
         self._clicked_node = None
         self.is_animating = False
+        self.legend = None
 
         scene = QGraphicsScene(self)
         scene.setItemIndexMethod(scene.BspTreeIndex)
@@ -310,6 +348,7 @@ class GraphView(QGraphicsView):
     def clear(self):
         self.scene().clear()
         self.scene().setSceneRect(QRectF())
+        self.legend = None
         self.nodes.clear()
         self.edges.clear()
 

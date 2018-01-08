@@ -2,10 +2,12 @@ import os
 from functools import wraps
 from itertools import chain
 from threading import Lock
+from xml.sax.saxutils import escape
 
 import numpy as np
 
 from AnyQt.QtCore import QTimer, QSize, Qt
+from AnyQt.QtGui import QBrush, QColor
 from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
 
 import Orange
@@ -15,8 +17,11 @@ from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, GradientPal
 from Orange.widgets.widget import Input, Output
 
 from Orange.data import Table, DiscreteVariable, StringVariable
+from Orange.widgets.visualize.owdistributions import ScatterPlotItem
+from Orange.widgets.visualize.owscatterplotgraph import PaletteItemSample, DiscretizedScale
+
 import orangecontrib.network as network
-from orangecontrib.network.widgets.graphview import GraphView, Node, FR_ITERATIONS
+from orangecontrib.network.widgets.graphview import GraphView, Node, FR_ITERATIONS, LegendItem
 
 
 def non_reentrant(func):
@@ -617,6 +622,12 @@ class OWNxExplorer(widget.OWWidget):
         self.lastColorColumn = self.colorCombo.currentText()
         attribute = self.colorCombo.itemData(self.colorCombo.currentIndex())
         assert not attribute or isinstance(attribute, Orange.data.Variable)
+        if self.view.legend is not None:
+            self.view.scene().removeItem(self.view.legend)
+            self.view.legend.clear()
+        else:
+            self.view.legend = LegendItem()
+            self.view.legend.set_parent(self.view)
         if not attribute:
             for node in self.view.nodes:
                 node.setColor(None)
@@ -634,11 +645,21 @@ class OWNxExplorer(widget.OWWidget):
         else: raise RuntimeError("Shouldn't be able to select this column")
         if attribute.is_continuous:
             colors = CONTINUOUS_PALETTE[scale(values)]
+            label = PaletteItemSample(CONTINUOUS_PALETTE,
+                                      DiscretizedScale(np.nanmin(values), np.nanmax(values)))
+            self.view.legend.addItem(label, "")
+            self.view.legend.setGeometry(label.boundingRect())
         elif attribute.is_discrete:
             DISCRETE_PALETTE = ColorPaletteGenerator(len(attribute.values))
             colors = DISCRETE_PALETTE[values]
+            for value, color in zip(attribute.values, DISCRETE_PALETTE):
+                self.view.legend.addItem(
+                    ScatterPlotItem(pen=Node.Pen.DEFAULT, brush=QBrush(QColor(color)), size=10,
+                                    symbol="o"), escape(value))
         for node, color in zip(self.view.nodes, colors):
             node.setColor(color)
+        self.view.scene().addItem(self.view.legend)
+        self.view.legend.geometry_changed()
 
     def set_node_sizes(self):
         attribute = self.nodeSizeCombo.itemData(self.nodeSizeCombo.currentIndex())
