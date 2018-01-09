@@ -38,6 +38,8 @@ def non_reentrant(func):
 
 
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#00ffff', '#550066')
+MIN_NODE_SIZE = 1
+MAX_NODE_SIZE = 10
 
 
 class SelectionMode:
@@ -92,8 +94,6 @@ class OWNxExplorer(widget.OWWidget):
     settingsHandler = DomainContextHandler()
 
     do_auto_commit = Setting(True)
-    maxNodeSize = Setting(50)
-    minNodeSize = Setting(8)
     selectionMode = Setting(SelectionMode.FROM_INPUT)
     tabIndex = Setting(0)
     showEdgeWeights = Setting(False)
@@ -104,6 +104,7 @@ class OWNxExplorer(widget.OWWidget):
     markNBest = Setting(1)
     markNConnections = Setting(2)
 
+    point_width = Setting(10)
     attr_size = ContextSetting(None)
     attr_color = ContextSetting(None)
     attrs_label = ContextSetting({})
@@ -181,24 +182,16 @@ class OWNxExplorer(widget.OWWidget):
             orientation='horizontal', callback=self.set_node_colors,
             model=self.color_model)
 
-        self.invertNodeSizeCheck = self.maxNodeSizeSpin = QWidget()  # Forward declaration
         self.size_model = VariableListModel(placeholder="(Same size)")
         self.size_combo = gui.comboBox(
             box, self, "attr_size",
             label='Size:', orientation='horizontal',
             callback=self.set_node_sizes, model=self.size_model)
+        gui.hSlider(box, self, 'point_width', label="Symbol size:   ", minValue=1,
+                    maxValue=10, step=1, createLabel=False,
+                    callback=self.set_node_sizes)
         hb = gui.widgetBox(box, orientation="horizontal")
         hb.layout().addStretch(1)
-        self.minNodeSizeSpin = gui.spin(
-            hb, self, "minNodeSize", 1, 50, step=1, label="Min:",
-            callback=self.set_node_sizes)
-        self.minNodeSizeSpin.setValue(8)
-        gui.separator(hb)
-        self.maxNodeSizeSpin = gui.spin(
-            hb, self, "maxNodeSize", 10, 200, step=5, label="Max:",
-            callback=self.set_node_sizes)
-        self.maxNodeSizeSpin.setValue(50)
-        gui.separator(hb)
         self.invertNodeSizeCheck = gui.checkBox(
             hb, self, "invertNodeSize", "Invert",
             callback=self.set_node_sizes)
@@ -631,9 +624,7 @@ class OWNxExplorer(widget.OWWidget):
         self.view.legend.geometry_changed()
 
     def set_node_sizes(self):
-        depending_widgets = (self.invertNodeSizeCheck, self.maxNodeSizeSpin)
-        for w in depending_widgets:
-            w.setDisabled(not self.attr_size)
+        self.invertNodeSizeCheck.setDisabled(not self.attr_size)
 
         if not self.graph:
             return
@@ -642,10 +633,11 @@ class OWNxExplorer(widget.OWWidget):
             return
 
         try:
-            values = table.get_column_view(self.attr_size)[0]
+            a = table.get_column_view(self.attr_size)[0]
+            values = a.copy()
         except Exception:
             for node in self.view.nodes:
-                node.setSize(self.minNodeSize)
+                node.setSize(MIN_NODE_SIZE * self.point_width)
             return
 
         if self.invertNodeSize:
@@ -654,14 +646,14 @@ class OWNxExplorer(widget.OWWidget):
         nodemin, nodemax = np.nanmin(values), np.nanmax(values)
         if nodemin == nodemax:
             # np.polyfit borks on this condition
-            sizes = (self.minNodeSize for i in range(len(self.view.nodes)))
+            sizes = (MIN_NODE_SIZE for _ in range(len(self.view.nodes)))
         else:
             k, n = np.polyfit([nodemin, nodemax],
-                              [self.minNodeSize, self.maxNodeSize], 1)
+                              [MIN_NODE_SIZE, MAX_NODE_SIZE], 1)
             sizes = values * k + n
             sizes[np.isnan(sizes)] = np.nanmean(sizes)
         for node, size in zip(self.view.nodes, sizes):
-            node.setSize(size)
+            node.setSize(size * self.point_width)
 
     def set_edge_sizes(self):
         if not self.graph: return
