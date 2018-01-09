@@ -175,14 +175,14 @@ class OWNxExplorer(widget.OWWidget):
             self.progressbar.finish()
         self.view.animationFinished.connect(animationFinished)
 
-        self.color_model = VariableListModel(placeholder="(uniform)")
+        self.color_model = VariableListModel(placeholder="(Same color)")
         self.color_combo = gui.comboBox(
             box, self, "attr_color", label='Color:',
             orientation='horizontal', callback=self.set_node_colors,
             model=self.color_model)
 
         self.invertNodeSizeCheck = self.maxNodeSizeSpin = QWidget()  # Forward declaration
-        self.size_model = VariableListModel(placeholder="(none)")
+        self.size_model = VariableListModel(placeholder="(Same size)")
         self.size_combo = gui.comboBox(
             box, self, "attr_size",
             label='Size:', orientation='horizontal',
