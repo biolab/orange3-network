@@ -487,7 +487,8 @@ class OWNxExplorer(widget.OWWidget):
         self.edgesPerVertex = self.graph.number_of_edges() / max(1, self.graph.number_of_nodes())
 
         self._set_combos()
-        self.openContext(self.graph.items().domain)
+        if self.graph.items():
+            self.openContext(self.graph.items().domain)
         self.Error.clear()
 
         self.set_selection_mode()
