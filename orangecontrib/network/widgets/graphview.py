@@ -230,6 +230,7 @@ class GraphView(QGraphicsView):
         self._clicked_node = None
         self.is_animating = False
         self.legend = None
+        self.callback_rate = 0.25
 
         scene = QGraphicsScene(self)
         scene.setItemIndexMethod(scene.BspTreeIndex)
@@ -251,6 +252,9 @@ class GraphView(QGraphicsView):
 
         self.positionsChanged.connect(self._update_positions, type=Qt.BlockingQueuedConnection)
         self.animationFinished.connect(self.finish)
+
+    def set_callback_rate(self, callback_rate):
+        self.callback_rate = 1. / callback_rate if callback_rate is not None else None
 
     def finish(self):
         self.is_animating = False
@@ -417,11 +421,12 @@ class GraphView(QGraphicsView):
                                for node in self.nodes)]
 
         class AnimationThread(Thread):
-            def __init__(self, iterations, callback):
+            def __init__(self, iterations, callback, callback_rate=0.25):
                 super().__init__()
                 self.daemon = True
                 self.iterations = iterations
                 self.callback = callback
+                self.callback_rate = callback_rate
             def run(self):
                 newpos = fruchterman_reingold_layout(graphview.graph,
                                                      pos=pos,
@@ -429,15 +434,17 @@ class GraphView(QGraphicsView):
                                                      iterations=self.iterations,
                                                      sample_ratio=0.1,
                                                      callback=self.callback,
-                                                     callback_rate=0.25)
+                                                     callback_rate=self.callback_rate)
                 graphview.update_positions(newpos)
                 graphview.animationFinished.emit()
 
-        iterations, callback = FR_ITERATIONS, self.update_positions
-        if IS_VERY_LARGE_GRAPH(self.graph):
-            # Don't animate very large graphs
-            iterations, callback = 5, None
-        AnimationThread(iterations, callback).start()
+        is_very_large_graph = IS_VERY_LARGE_GRAPH(self.graph) # Don't animate very large graphs
+        AnimationThread(
+            iterations=5 if is_very_large_graph else FR_ITERATIONS,
+            callback=None if is_very_large_graph or self.callback_rate is None
+            else self.update_positions,
+            callback_rate=self.callback_rate if self.callback_rate is not None else 0.25
+        ).start()
 
     def update_positions(self, positions, progress=1.0):
         self.positionsChanged.emit(positions, progress)
