@@ -56,12 +56,12 @@ class GraphType:
 
 class OWNxGenerator(widget.OWWidget):
     name = "Network Generator"
-    description = "Generate example graphs."
+    description = "Construct example graphs."
     icon = "icons/NetworkGenerator.svg"
     priority = 6420
 
     class Outputs:
-        network = Output("Generated network", network.Graph)
+        network = Output("Network", network.Graph)
 
     graph_type = settings.Setting(0)
     n_nodes = settings.Setting(50)
@@ -73,18 +73,18 @@ class OWNxGenerator(widget.OWWidget):
     def __init__(self):
         super().__init__()
         gui.comboBox(self.controlArea, self, 'graph_type',
-                     label='Generate graph:',
+                     label='Network type:',
                      items=GraphType.all,
                      orientation='horizontal',
                      callback=self.generate)
         gui.spin(self.controlArea, self, 'n_nodes',
-                 10, 500, 10,
+                 10, 99999, 10,
                  label='Approx. number of nodes:',
                  orientation='horizontal',
                  callbackOnReturn=True,
                  callback=self.generate)
         gui.auto_commit(self.controlArea, self, 'auto_commit',
-                        label='Generate graph',
+                        label='Generate network',
                         checkbox_label='Auto-generate')
         self.commit()
 
