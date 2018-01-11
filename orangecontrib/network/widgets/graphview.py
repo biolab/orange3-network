@@ -419,6 +419,7 @@ class GraphView(QGraphicsView):
         class AnimationThread(Thread):
             def __init__(self, iterations, callback):
                 super().__init__()
+                self.daemon = True
                 self.iterations = iterations
                 self.callback = callback
             def run(self):
