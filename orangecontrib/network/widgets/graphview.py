@@ -188,6 +188,7 @@ class Node(QGraphicsNode):
 
     def isHighlighted(self):
         return self._is_highlighted
+
     def setHighlighted(self, highlight):
         self._is_highlighted = highlight
         if not self.isSelected():
@@ -207,8 +208,10 @@ class Node(QGraphicsNode):
     def setTooltip(self, callback):
         assert not callback or callable(callback)
         self._tooltip = callback or Node._TOOLTIP
+
     def hoverEnterEvent(self, event):
         self.setToolTip(self._tooltip())
+
     def hoverLeaveEvent(self, event):
         self.setToolTip('');
 
@@ -288,10 +291,12 @@ class GraphView(QGraphicsView):
         super().mousePressEvent(event)
         # Reselect the selection that had just been discarded
         for node in self._selection: node.setSelected(True)
+
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         if not self._clicked_node:
             for node in self._selection: node.setSelected(True)
+
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         if self.dragMode() == self.RubberBandDrag:
@@ -312,10 +317,12 @@ class GraphView(QGraphicsView):
         text.setTextOption(option)
         scene = self.scene()
         scene.invalidate(layers=scene.BackgroundLayer)
+
     def drawForeground(self, painter, rect):
         painter.resetTransform()
         painter.drawStaticText(10, 10, self._text)
         super().drawForeground(painter, rect)
+
     def scrollContentsBy(self, dx, dy):
         scene = self.scene()
         scene.invalidate(layers=scene.BackgroundLayer)
@@ -331,17 +338,22 @@ class GraphView(QGraphicsView):
             for node in self.nodes:
                 getattr(node, state_setter)(node.id in nodes)
         self.selectionChanged.emit()
+
     def getSelected(self):
         return [node.id for node in self.scene().selectedItems()]
+
     def getUnselected(self):
         return [node.id
                 for node in (set(self.scene().items()) - set(self.scene().selectedItems()))
                 if isinstance(node, Node)]
+
     def setSelected(self, nodes, extend=False):
         self._setState(nodes, extend, 'setSelected')
+
     def getHighlighted(self):
         return [node.id for node in self.nodes
                 if node.isHighlighted() and not node.isSelected()]
+
     def setHighlighted(self, nodes):
         self._setState(nodes, False, 'setHighlighted')
 
@@ -390,6 +402,7 @@ class GraphView(QGraphicsView):
     def wheelEvent(self, event):
         if event.angleDelta().x() != 0: return
         self.scaleView(2**(event.angleDelta().y() / 240))
+
     def scaleView(self, factor):
         magnitude = self.transform().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
         if 0.2 < magnitude < 30:
@@ -402,10 +415,12 @@ class GraphView(QGraphicsView):
     @property
     def is_animating(self):
         return self._is_animating
+
     @is_animating.setter
     def is_animating(self, value):
         self.setCursor(Qt.ForbiddenCursor if value else Qt.ArrowCursor)
         self._is_animating = value
+
     def relayout(self, randomize=True, weight=None):
         if self.is_animating: return
         self.is_animating = True
@@ -442,7 +457,8 @@ class GraphView(QGraphicsView):
     def update_positions(self, positions, progress=1.0):
         self.positionsChanged.emit(positions, progress)
         return self._is_animating
-    def _update_positions(self, positions, progress):
+
+    def _update_positions(self, positions, _):
         for node, pos in zip(self.nodes, positions*300):
             node.setPos(*pos)
         qApp.processEvents()
