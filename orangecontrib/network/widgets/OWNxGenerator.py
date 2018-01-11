@@ -13,9 +13,35 @@ import orangecontrib.network as network
 
 
 def _balanced_tree(n):
-    b = max(np.log(n) / 2, 2)
-    h = np.log((n * (b - 1)) + 1)/np.log(b) - 1
-    return nx.balanced_tree(int(b), int(h))
+    """
+    This function generates a balanced tree with approximately n nodes.
+    Each node of this tree has r children. Number of nodes cannot
+    be equal to n because real number of nodes is a sum of series
+    1 + r + r^2 + ... + r^h and we do not want to generate a trivial network
+    with one node and its n-1 children. Therefore this algorithm
+    finds a closest possible match. Number of children is also determined
+    by a logarithmic cost function.
+
+    Args:
+        n (int): number of nodes
+
+    Returns:
+        network x graph
+    """
+    series = lambda r, h: sum([r**x for x in range(h + 1)])
+    h, r = 1, 2
+    off = n
+    for r_ in range(2, 10):
+        last = series(r_, h)
+        for h_ in range(1, 15):
+            new = series(r_, h_)
+            if abs(new - n) * np.log2(r_) < off:
+                off = abs(new - n)
+                r, h = r_, h_
+            if abs(n - new) > abs(n - last):
+                break
+            last = new
+    return nx.balanced_tree(int(r), int(h))
 
 
 def _hypercube(n):
