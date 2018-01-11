@@ -25,7 +25,7 @@ import networkx.readwrite.pajek as rwpajek
 import networkx.readwrite.gml as rwgml
 import networkx.readwrite.gpickle as rwgpickle
 
-import Orange
+from Orange.data import Table
 
 from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
@@ -43,11 +43,13 @@ def _wrap(g):
             return g if isinstance(g, new) else new(g, name=g.name)
     return g
 
+
 def _add_doc(myclass, nxclass):
     tmp = nxclass.__doc__.replace('nx.write', 'Orange.network.readwrite.write')
     tmp = tmp.replace('nx.read', 'Orange.network.readwrite.read')
     tmp = tmp.replace('nx', 'Orange.network.nx')
     myclass.__doc__ += tmp
+
 
 def _is_string_like(obj): # from John Hunter, types-free version
     """Check if obj is string."""
@@ -56,6 +58,7 @@ def _is_string_like(obj): # from John Hunter, types-free version
     except (TypeError, ValueError):
         return False
     return True
+
 
 def _get_fh(path, mode='r'):
     """Return a file handle for given path.
@@ -80,10 +83,12 @@ def _get_fh(path, mode='r'):
         raise ValueError('path must be a string or file handle')
     return fh
 
+
 def _make_str(t):
     """Return the string representation of t."""
     if _is_string_like(t): return t
     return str(t)
+
 
 def _check_network_dir(p):
     if type(p) == str:
@@ -91,6 +96,7 @@ def _check_network_dir(p):
             raise OSError('File %s does not exist.' % p)
 
     return p
+
 
 def graph_to_table(G):
     """Builds a Data Table from node values."""
@@ -102,10 +108,11 @@ def graph_to_table(G):
         fp = tempfile.NamedTemporaryFile('wt', suffix='.tab', delete=False)
         fp.write('\n'.join('\t'.join(line) for line in [features] + data))
         fp.close()
-        table = Orange.data.Table(fp.name)
+        table = Table(fp.name)
         os.unlink(fp.name)
 
     return table
+
 
 def read(path, encoding='UTF-8', auto_table=0):
     """Read graph in any of the supported file formats (.gpickle, .net, .gml).
@@ -115,9 +122,8 @@ def read(path, encoding='UTF-8', auto_table=0):
     :type path: string
 
     Return the network of type :obj:`Orange.network.Graph`,
-    :obj:`Orange.network.DiGraph`, :obj:`Orange.network.Graph` or
-    :obj:`Orange.network.DiGraph`.
-
+    :obj:`orangecontrib.network.DiGraph`, :obj:`Orange.network.Graph` or
+    :obj:`orangecontrib.network.DiGraph`.
     """
     path = _check_network_dir(path)
     _, ext = os.path.splitext(path.lower())
@@ -139,6 +145,7 @@ def read(path, encoding='UTF-8', auto_table=0):
     if ext == '.gz' and path[-6:] == 'txt.gz':
         return read_txtgz(path)
 
+
 def write(G, path, encoding='UTF-8'):
     """Write graph in any of the supported file formats (.gpickle, .net, .gml).
     The file format is chosen based on the file extension.
@@ -148,7 +155,6 @@ def write(G, path, encoding='UTF-8'):
 
     :param path: File or filename to write.
     :type path: string
-
     """
     _, ext = os.path.splitext(path.lower())
     if not ext in SUPPORTED_WRITE_EXTENSIONS:
@@ -186,9 +192,7 @@ def write_edgelist(G, path):
 
 def read_gpickle(path, auto_table=False):
     """NetworkX read_gpickle method and wrap graph to Orange network.
-
     """
-
     path = _check_network_dir(path)
 
     G = _wrap(rwgpickle.read_gpickle(path))
@@ -196,14 +200,12 @@ def read_gpickle(path, auto_table=False):
         G.set_items(graph_to_table(G))
     return G
 
-#~ _add_doc(read_gpickle, rwgpickle.read_gpickle)
 
 def write_gpickle(G, path):
     """NetworkX write_gpickle method.
-
     """
-
     rwgpickle.write_gpickle(G, path)
+
 
 _add_doc(write_gpickle, rwgpickle.write_gpickle)
 
@@ -234,21 +236,19 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
 
     Examples
 
-    >>> G=Orange.network.nx.path_graph(4)
-    >>> Orange.network.readwrite.write_pajek(G, "test.net")
-    >>> G=Orange.network.readwrite.read_pajek("test.net")
+    >>> G = orangecontrib..network.nx.path_graph(4)
+    >>> orangecontrib..network.readwrite.write_pajek(G, "test.net")
+    >>> G = orangecontrib.network.readwrite.read_pajek("test.net")
 
     To create a Graph instead of a MultiGraph use
 
-    >>> G1=Orange.network.Graph(G)
+    >>> G1 = orangecontrib.network.Graph(G)
 
     References
 
     See http://vlado.fmf.uni-lj.si/pub/networks/pajek/doc/draweps.htm
     for format information.
-
     """
-
     path = _check_network_dir(path)
     G = _wrap(rwpajek.read_pajek(path))
 
@@ -283,7 +283,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
             remapping[label] = i
             nvertices -= 1
             if not nvertices: break
-    from Orange.data import Domain, Table, ContinuousVariable, StringVariable
+    from Orange.data import Domain, ContinuousVariable, StringVariable
     # Construct x-y-label table (added in OWNxFile.readDataFile())
     table = None
     vars = [ContinuousVariable('x'), ContinuousVariable('y')] if rows else []
@@ -305,27 +305,27 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
                        "Please update your NetworkX installation.")
     return G
 
+
 def write_pajek(G, path, encoding='UTF-8'):
     """A copy & paste of NetworkX's function with some bugs fixed (call the new
     generate_pajek).
-
     """
 
-    fh=_get_fh(path, 'wb')
+    fh = _get_fh(path, 'wb')
     for line in generate_pajek(G):
-        line+='\n'
+        line += '\n'
         fh.write(line.encode(encoding))
 
+
 _add_doc(write_pajek, rwpajek.write_pajek)
+
 
 def parse_pajek(lines):
     """Parse string in Pajek file format. See read_pajek for usage examples.
 
     :param lines: a string of network data in Pajek file format.
     :type lines: string
-
     """
-
     return read_pajek(lines)
 
 
@@ -343,29 +343,27 @@ def generate_pajek(G):
 
     See http://vlado.fmf.uni-lj.si/pub/networks/pajek/doc/draweps.htm
     for format information.
-
     """
-
-    if G.name=='':
-        name='NetworkX'
+    if G.name == '':
+        name = 'NetworkX'
     else:
-        name=G.name
+        name = G.name
     yield '*network %s'%name
 
     # write nodes with attributes
     yield '*vertices %s'%(G.order())
     nodes = G.nodes()
     # make dictionary mapping nodes to integers
-    nodenumber=dict(zip(nodes,range(1,len(nodes)+1)))
+    nodenumber = dict(zip(nodes,range(1,len(nodes)+1)))
     for n in nodes:
-        na=G.node.get(n,{})
-        x=na.get('x',0.0)
-        y=na.get('y',0.0)
-        id=int(na.get('id',nodenumber[n]))
-        nodenumber[n]=id
+        na = G.node.get(n,{})
+        x = na.get('x',0.0)
+        y = na.get('y',0.0)
+        id = int(na.get('id',nodenumber[n]))
+        nodenumber[n] = id
         shape=na.get('shape','ellipse')
         s = ' '.join(map(_make_str,(id,n,x,y,shape)))
-        for k,v in na.items():
+        for k, v in na.items():
             if k != 'x' and k != 'y':
                 s += ' %s %s'%(k,v)
         yield s
@@ -375,27 +373,23 @@ def generate_pajek(G):
         yield '*arcs'
     else:
         yield '*edges'
-    for u,v,edgedata in G.edges(data=True):
-        d=edgedata.copy()
-        value=d.pop('weight',1.0) # use 1 as default edge value
+    for u, v, edgedata in G.edges(data=True):
+        d = edgedata.copy()
+        value = d.pop('weight',1.0) # use 1 as default edge value
         s = ' '.join(map(_make_str,(nodenumber[u],nodenumber[v],value)))
-        for k,v in d.items():
+        for k, v in d.items():
             if not _is_string_like(v):
                 v = repr(v)
             # add quotes to any values with a blank space
             if " " in v:
-                v="\"%s\"" % v.replace('"', r'\"')
+                v = "\"%s\"" % v.replace('"', r'\"')
             s += ' %s %s'%(k,v)
         yield s
 
 
-#_add_doc(generate_pajek, rwpajek.generate_pajek)
-
 def read_gml(path, encoding='latin-1', relabel=False, auto_table=False):
     """NetworkX read_gml method and wrap graph to Orange network.
-
     """
-
     path = _check_network_dir(path)
 
     G = _wrap(rwgml.read_gml(path, encoding, relabel))
@@ -403,14 +397,15 @@ def read_gml(path, encoding='latin-1', relabel=False, auto_table=False):
         G.set_items(graph_to_table(G))
     return G
 
+
 _add_doc(read_gml, rwgml.read_gml)
+
 
 def write_gml(G, path):
     """NetworkX write_gml method.
-
     """
-
     rwgml.write_gml(G, path)
+
 
 def read_txtgz(path):
     f = gzip.open(path, 'rb')
@@ -431,5 +426,6 @@ def read_txtgz(path):
                       if len(coors.strip().split(b'\t')) == 2)
 
     return G
+
 
 _add_doc(write_gml, rwgml.write_gml)

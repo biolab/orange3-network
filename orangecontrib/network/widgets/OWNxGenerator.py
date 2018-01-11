@@ -1,11 +1,6 @@
-
-from AnyQt.QtGui import *
-from AnyQt.QtCore import *
-
 import numpy as np
 import networkx as nx
 
-import Orange
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Output
 

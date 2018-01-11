@@ -3,7 +3,7 @@ from itertools import chain, product
 
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
-import Orange
+from Orange.data import Table
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget, Msg, Output
 import orangecontrib.network as network
@@ -20,7 +20,7 @@ class OWNxFile(OWWidget):
 
     class Outputs:
         network = Output("Network", network.Graph)
-        items = Output("Items", Orange.data.Table)
+        items = Output("Items", Table)
 
     resizing_enabled = False
 
@@ -203,7 +203,7 @@ class OWNxFile(OWWidget):
             self.Warning.no_network_file()
             return
 
-        table = Orange.data.Table.from_file(filename)
+        table = Table.from_file(filename)
 
         if len(table) != self.graph.number_of_nodes():
             self.Error.vertices_length_not_matching()
@@ -217,7 +217,7 @@ class OWNxFile(OWWidget):
                                        items.domain.metas)
                       if v.name not in table.domain]
             if domain:
-                table = Orange.data.Table.concatenate([table, items[:, domain]])
+                table = Table.concatenate([table, items[:, domain]])
 
         self.graph.set_items(table)
         self.info.setText(self.info.text().rpartition('\n')[0] + '\n' +

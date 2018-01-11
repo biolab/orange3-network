@@ -10,9 +10,9 @@ Community Detection in Graphs
 
 """
 
-import re
 import random
 import itertools
+
 import networkx as nx
 
 from Orange.data import Domain, Table, DiscreteVariable
@@ -44,13 +44,13 @@ def add_results_to_items(G, labels):
 
 
 class CommunityDetection(object):
-
     def __init__(self, algorithm, **kwargs):
         self.algorithm = algorithm
         self.kwargs = kwargs
 
     def __call__(self, G):
         return self.algorithm(G, **self.kwargs)
+
 
 def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
                                       delta=0.1, node_degree_preference=0):
@@ -132,9 +132,7 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
 
     :param iterations: The maximum number of iterations if there is no convergence.
     :type iterations: int
-
     """
-
     if seed is not None:
         random.seed(seed)
 
@@ -187,6 +185,7 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
         add_results_to_items(G, labels)
 
     return labels
+
 
 def remap_labels(labels):
     unique_labels = sorted(set(labels.values()))

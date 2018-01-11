@@ -1,12 +1,10 @@
+import numpy as np
+import networkx as nx
+
 from AnyQt.QtCore import QThread, QMutex
 from AnyQt.QtWidgets import QApplication, QSizePolicy, QWidget, QGridLayout
 
-import numpy as np
-import networkx as nx
-import sys
-
-import Orange
-from Orange.data import Table, Domain
+from Orange.data import ContinuousVariable, Table, Domain
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.widget import Input, Output
@@ -104,11 +102,11 @@ class OWNxAnalysis(widget.OWWidget):
 
     class Inputs:
         network = Input("Network", network.Graph)
-        items = Input("Items", Orange.data.Table)
+        items = Input("Items", Table)
 
     class Outputs:
         network = Output("Network", network.Graph)
-        items = Output("Items", Orange.data.Table)
+        items = Output("Items", Table)
 
     want_main_area = False
     want_control_area = True
@@ -254,7 +252,7 @@ class OWNxAnalysis(widget.OWWidget):
             if job.name in self.analdata:
                 if job.type == NODELEVEL:
                     self.analfeatures.append((job.name, \
-                                Orange.data.ContinuousVariable(job.label)))
+                                ContinuousVariable(job.label)))
                     setattr(self, "lbl_" + job.name, "  finished")
 
                 elif job.type == GRAPHLEVEL:
@@ -290,7 +288,7 @@ class OWNxAnalysis(widget.OWWidget):
 
             elif job.result is not None:
                 if job.type == NODELEVEL:
-                    self.analfeatures.append((job.name, Orange.data.ContinuousVariable(job.label)))
+                    self.analfeatures.append((job.name, ContinuousVariable(job.label)))
                     self.analdata[job.name] = [job.result[node] for node in sorted(job.result.keys())]
 
                 elif job.type == GRAPHLEVEL:
@@ -410,8 +408,8 @@ class OWNxAnalysis(widget.OWWidget):
 
 
 if __name__ == "__main__":
-    a=QApplication(sys.argv)
-    ow=OWNxAnalysis()
+    a = QApplication([])
+    ow = OWNxAnalysis()
     ow.show()
     def setNetwork(signal, data, id=None):
         if signal == 'Network':

@@ -3,13 +3,13 @@
 #
 # the base for network histograms
 
-import math
 from itertools import chain
 import numpy as np
 
 from AnyQt.QtCore import QLineF, QSize
 
-import Orange
+from Orange.data import Domain, StringVariable, Table
+from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output
 import orangecontrib.network as network
@@ -36,12 +36,12 @@ class OWNxFromDistances(widget.OWWidget):
     priority = 6440
 
     class Inputs:
-        distances = Input("Distances", Orange.misc.DistMatrix)
+        distances = Input("Distances", DistMatrix)
 
     class Outputs:
         network = Output("Network", network.Graph)
-        data = Output("Data", Orange.data.Table)
-        distances = Output("Distances", Orange.misc.DistMatrix)
+        data = Output("Data", Table)
+        distances = Output("Distances", DistMatrix)
 
     resizing_enabled = False
 
@@ -211,11 +211,11 @@ class OWNxFromDistances(widget.OWWidget):
             matrix = self.matrix
 
             if matrix is not None and matrix.row_items is not None:
-                if isinstance(self.matrix.row_items, Orange.data.Table):
+                if isinstance(self.matrix.row_items, Table):
                     graph.set_items(self.matrix.row_items)
                 else:
                     data = [[str(x)] for x in self.matrix.row_items]
-                    items = Orange.data.Table(Orange.data.Domain([], metas=[Orange.data.StringVariable('label')]), data)
+                    items = Table(Domain([], metas=[StringVariable('label')]), data)
                     graph.set_items(items)
 
             # set the threshold
@@ -321,6 +321,7 @@ class OWNxFromDistances(widget.OWWidget):
 
 
 pg_InfiniteLine = pg.InfiniteLine
+
 
 class InfiniteLine(pg_InfiniteLine):
     def paint(self, p, *args):
