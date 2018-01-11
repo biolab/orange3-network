@@ -40,6 +40,7 @@ def non_reentrant(func):
 CONTINUOUS_PALETTE = GradientPaletteGenerator('#00ffff', '#550066')
 MIN_NODE_SIZE = 1
 MAX_NODE_SIZE = 10
+CALLBACK_RATE = [1, 2, 4, 8, 16, None]
 
 
 class SelectionMode:
@@ -103,6 +104,7 @@ class OWNxExplorer(widget.OWWidget):
     markSearchString = Setting("")
     markNBest = Setting(1)
     markNConnections = Setting(2)
+    callback_rate = Setting(4)
 
     point_width = Setting(10)
     attr_size = ContextSetting(None)
@@ -165,17 +167,23 @@ class OWNxExplorer(widget.OWWidget):
         gui.label(ib, self, "Nodes: %(number_of_nodes_label)i (%(verticesPerEdge).2f per edge)")
         gui.label(ib, self, "Edges: %(number_of_edges_label)i (%(edgesPerVertex).2f per node)")
 
-        box = gui.widgetBox(self.displayTab, "Nodes")
-
+        box = gui.widgetBox(self.displayTab, "Layout")
+        self.callback_rate_slider = gui.valueSlider(
+            widget=box, master=self, value='callback_rate', label="Display ",
+            values=CALLBACK_RATE, callback=None,
+            labelFormat=lambda x: "only last iteration" if x is None
+            else "every iteration" if x == 1 else "every {} iterations".format(x))
         self.relayout_button = gui.button(box, self, 'Re-layout',
                                           callback=self.relayout, autoDefault=False)
         self.view.positionsChanged.connect(lambda positions, progress:
                                            self.progressbar.widget.progressBarSet(int(round(100 * progress))))
         def animationFinished():
-            self.relayout_button.setEnabled(True)
+            for w in (self.relayout_button, self.callback_rate_slider):
+                w.setEnabled(True)
             self.progressbar.finish()
         self.view.animationFinished.connect(animationFinished)
 
+        box = gui.widgetBox(self.displayTab, "Nodes")
         self.color_model = VariableListModel(placeholder="(Same color)")
         self.color_combo = gui.comboBox(
             box, self, "attr_color", label='Color:',
@@ -531,6 +539,7 @@ class OWNxExplorer(widget.OWWidget):
         self.view.selectionChanged.emit()
 
     def relayout(self):
+        self.view.set_callback_rate(self.callback_rate)
         if self.graph is None or self.graph.number_of_nodes() <= 1:
             return
         self.progressbar = gui.ProgressBar(self, FR_ITERATIONS)
@@ -541,7 +550,8 @@ class OWNxExplorer(widget.OWWidget):
             distmatrix = None
         self.Warning.distance_matrix_size.clear()
 
-        self.relayout_button.setDisabled(True)
+        for w in (self.relayout_button, self.callback_rate_slider):
+            w.setDisabled(True)
         self.view.relayout(randomize=False, weight=distmatrix)
 
     def _on_node_label_attrs_changed(self):
