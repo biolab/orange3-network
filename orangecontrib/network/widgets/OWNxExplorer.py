@@ -263,6 +263,9 @@ class OWNxExplorer(widget.OWWidget):
         self.set_graph(None)
         self.set_selection_mode()
 
+    def sizeHint(self):
+        return QSize(800, 600)
+
     def commit(self):
         self.send_data()
 
