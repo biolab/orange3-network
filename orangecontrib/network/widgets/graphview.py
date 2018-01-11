@@ -233,6 +233,7 @@ class GraphView(QGraphicsView):
         self._clicked_node = None
         self.is_animating = False
         self.legend = None
+        self._pressed = False
 
         scene = QGraphicsScene(self)
         scene.setItemIndexMethod(scene.BspTreeIndex)
@@ -276,6 +277,9 @@ class GraphView(QGraphicsView):
                 return
             # Save the current selection and restore it on mouse{Move,Release}
             self._clicked_node = self.itemAt(event.pos())
+            self._pressed = True
+            if self._clicked_node:
+                self.setCursor(Qt.ClosedHandCursor)
             if event.modifiers() & Qt.ShiftModifier:
                 self._selection = self.scene().selectedItems()
         # On right mouse button, switch to pan mode
@@ -296,14 +300,18 @@ class GraphView(QGraphicsView):
         super().mouseMoveEvent(event)
         if not self._clicked_node:
             for node in self._selection: node.setSelected(True)
+        if not self._pressed:
+            self.setCursor(Qt.OpenHandCursor if self.itemAt(event.pos()) else Qt.ArrowCursor)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
+        self._pressed = False
         if self.dragMode() == self.RubberBandDrag:
             for node in self._selection: node.setSelected(True)
             self.selectionChanged.emit()
         if self._clicked_node:
             self.selectionChanged.emit()
+            self.setCursor(Qt.OpenHandCursor)
         # The following line is required (QTBUG-48443)
         self.setDragMode(self.NoDrag)
         # Restore default drag mode
