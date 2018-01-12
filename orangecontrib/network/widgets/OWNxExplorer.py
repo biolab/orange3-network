@@ -8,7 +8,7 @@ import numpy as np
 
 from AnyQt.QtCore import QTimer, QSize, Qt, QItemSelection, QItemSelectionRange
 from AnyQt.QtGui import QBrush, QColor
-from AnyQt.QtWidgets import QWidget, QListWidget, QFileDialog
+from AnyQt.QtWidgets import QListWidget, QFileDialog
 
 import Orange
 from Orange.util import scale
@@ -702,10 +702,6 @@ if __name__ == "__main__":
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
     owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-    #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'airtraffic.net'))
-    #~ owFile.openFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
-    #~ owFile.show()
-    #~ owFile.selectNetFile(0)
 
     a.exec_()
     ow.saveSettings()
