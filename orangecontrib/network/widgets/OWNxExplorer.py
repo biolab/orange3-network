@@ -512,6 +512,10 @@ class OWNxExplorer(widget.OWWidget):
 
         self.Warning.clear()
 
+        if self.selectionMode == SelectionMode.FROM_INPUT and \
+                (items is None or self.graph is None or self.graph.items() is None):
+            self.selectionMode = SelectionMode.NONE
+
         if items is None:
             self.view.selectionChanged.emit()
             return
