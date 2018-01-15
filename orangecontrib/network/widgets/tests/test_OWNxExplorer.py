@@ -20,3 +20,11 @@ class TestOWGradientDescent(WidgetTest):
         func = lambda n: nx.barbell_graph(int(n * .4), int(n * .3))
         graph = readwrite._wrap(func(5))
         self.send_signal(w.Inputs.network, graph)
+
+    def test_show_edge_weights(self):
+        """
+        Do not crash when there is no graph and
+        one click on Show edge weights.
+        GH-68
+        """
+        self.widget.checkbox_show_weights.click()
