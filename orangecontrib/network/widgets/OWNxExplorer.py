@@ -577,6 +577,8 @@ class OWNxExplorer(widget.OWWidget):
                 node.setTooltip(None)
 
     def set_edge_labels(self):
+        if not self.graph:
+            return
         if self.showEdgeWeights:
             weights = (str(w or '') for u, v, w in self.graph.edges(data='weight'))
         else:
