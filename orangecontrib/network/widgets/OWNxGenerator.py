@@ -87,7 +87,7 @@ class OWNxGenerator(widget.OWWidget):
     priority = 6420
 
     class Outputs:
-        network = Output("Network", network.Graph)
+        network = Output("Network", network.Graph, replaces=["Generated network"])
 
     graph_type = settings.Setting(0)
     n_nodes = settings.Setting(50)
