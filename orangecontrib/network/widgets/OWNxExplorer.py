@@ -1,6 +1,5 @@
 import os
 from functools import wraps
-from itertools import chain
 from threading import Lock
 from xml.sax.saxutils import escape
 
@@ -513,6 +512,10 @@ class OWNxExplorer(widget.OWWidget):
 
         self.Warning.clear()
 
+        if self.selectionMode == SelectionMode.FROM_INPUT and \
+                (items is None or self.graph is None or self.graph.items() is None):
+            self.selectionMode = SelectionMode.NONE
+
         if items is None:
             self.view.selectionChanged.emit()
             return
@@ -521,15 +524,7 @@ class OWNxExplorer(widget.OWWidget):
             self.Warning.no_graph_or_items()
             return
 
-        graph_items = self.graph.items()
-        domain = graph_items.domain
-
         if len(items) > 0:
-            commonVars = (set(x.name for x in chain(items.domain.variables,
-                                                    items.domain.metas))
-                          & set(x.name for x in chain(domain.variables,
-                                                      domain.metas)))
-
             self.markInputRadioButton.setEnabled(True)
         self.view.selectionChanged.emit()
 
