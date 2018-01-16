@@ -66,7 +66,7 @@ class GraphType:
     LOBSTER = ('Lobster', lambda n: nx.random_lobster(int(n / (1 + .7 + .7*.5)), .7, .5))
     LOLLIPOP = ('Lollipop', lambda n: nx.lollipop_graph(int(n/2), int(n/2)))
     PATH = ('Path', lambda n: nx.path_graph(int(n)))
-    REGULAR = ('Regular', lambda n: nx.random_regular_graph(np.random.randint(10)*2, n))
+    REGULAR = ('Regular', lambda n: nx.random_regular_graph(min(np.random.randint(10)*2, n - 1), n))
     SCALEFREE = ('Scale-free', lambda n: nx.scale_free_graph(int(n)))
     SHELL = ('Shell', lambda n: nx.random_shell_graph([(int(n*.1), int(n*.1), .2),
                                                        (int(n*.3), int(n*.3), .8),
