@@ -251,7 +251,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     # (Consult OWNxFile.readDataFile(), orangeom.GraphLayout.readPajek(), and the Pajek format spec)
     import shlex, numpy as np
     rows, metas, remapping = [], [], {}
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             if line.lower().startswith('*vertices'):
                 nvertices = int(line.split()[1])
