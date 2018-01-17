@@ -278,7 +278,7 @@ class GraphView(QGraphicsView):
             # Save the current selection and restore it on mouse{Move,Release}
             self._clicked_node = self.itemAt(event.pos())
             self._pressed = True
-            if self._clicked_node:
+            if self._clicked_node and isinstance(self._clicked_node, Node):
                 self.setCursor(Qt.ClosedHandCursor)
             if event.modifiers() & Qt.ShiftModifier:
                 self._selection = self.scene().selectedItems()
@@ -301,7 +301,8 @@ class GraphView(QGraphicsView):
         if not self._clicked_node:
             for node in self._selection: node.setSelected(True)
         if not self._pressed:
-            self.setCursor(Qt.OpenHandCursor if self.itemAt(event.pos()) else Qt.ArrowCursor)
+            self.setCursor(
+                Qt.OpenHandCursor if isinstance(self.itemAt(event.pos()), Node) else Qt.ArrowCursor)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -309,7 +310,7 @@ class GraphView(QGraphicsView):
         if self.dragMode() == self.RubberBandDrag:
             for node in self._selection: node.setSelected(True)
             self.selectionChanged.emit()
-        if self._clicked_node:
+        if self._clicked_node and isinstance(self._clicked_node, Node):
             self.selectionChanged.emit()
             self.setCursor(Qt.OpenHandCursor)
         # The following line is required (QTBUG-48443)
