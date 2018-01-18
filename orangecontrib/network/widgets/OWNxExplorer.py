@@ -104,6 +104,7 @@ class OWNxExplorer(widget.OWWidget):
     markNConnections = Setting(2)
 
     point_width = Setting(10)
+    edge_width = Setting(1)
     attr_size = ContextSetting(None)
     attr_color = ContextSetting(None)
     attrs_label = ContextSetting({})
@@ -212,6 +213,9 @@ class OWNxExplorer(widget.OWWidget):
         self.checkbox_relative_edges = gui.checkBox(
             eb, self, 'relativeEdgeWidths', 'Relative edge widths',
             callback=self.set_edge_sizes)
+        gui.hSlider(eb, self, 'edge_width', label="Edge width: ", minValue=1,
+                    maxValue=10, step=1, createLabel=False,
+                    callback=self.set_edge_sizes)
         self.checkbox_show_weights = gui.checkBox(
             eb, self, 'showEdgeWeights', 'Show edge weights',
             callback=self.set_edge_labels)
@@ -416,6 +420,7 @@ class OWNxExplorer(widget.OWWidget):
         self.color_combo.setDisabled(not self.graph_attrs)
         self.set_node_sizes()
         self.set_node_colors()
+        self.set_edge_sizes()
 
         for columns, box in ((self.attrs_label, self.attListBox),
                              (self.attrs_tooltip, self.tooltipListBox)):
@@ -661,9 +666,9 @@ class OWNxExplorer(widget.OWWidget):
         if self.relativeEdgeWidths:
             widths = [self.graph.adj[u][v].get('weight', 1)
                       for u, v in self.graph.edges()]
-            widths = scale(widths, .7, 8)
+            widths = scale(widths, .7, 8) * np.log2(self.edge_width/4 + 1)
         else:
-            widths = (.7 for i in range(self.graph.number_of_edges()))
+            widths = (.7 * self.edge_width for _ in range(self.graph.number_of_edges()))
         for edge, width in zip(self.view.edges, widths):
             edge.setSize(width)
 
