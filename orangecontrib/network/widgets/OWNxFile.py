@@ -135,6 +135,7 @@ class OWNxFile(OWWidget):
         if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
+        G = None
         try:
             G = network.readwrite.read(filename, auto_table=self.auto_table)
         except OSError:
@@ -146,7 +147,7 @@ class OWNxFile(OWWidget):
             self.Error.file_not_found.clear()
             self.Error.pajek_bug.clear()
         if G is None:
-            self.Error.error_reading_file(''.format(filename))
+            self.Error.error_reading_file(filename)
             return self.readingFailed('Error reading file "{}"'.format(filename))
         self.Error.error_reading_file.clear()
 
