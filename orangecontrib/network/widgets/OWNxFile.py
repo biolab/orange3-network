@@ -7,7 +7,7 @@ import Orange
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget, Msg, Output
 import orangecontrib.network as network
-
+from orangecontrib.network.readwrite import PajekBug
 
 NONE = "(none)"
 
@@ -35,6 +35,7 @@ class OWNxFile(OWWidget):
         file_not_found = Msg('File not found: "{}"')
         vertices_length_not_matching = Msg('Vertices data length does not match the number of vertices')
         error_reading_file = Msg('Error reading file "{}"')
+        pajek_bug = Msg("{}")
     
     want_main_area = False
 
@@ -134,15 +135,19 @@ class OWNxFile(OWWidget):
         if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
+        G = None
         try:
             G = network.readwrite.read(filename, auto_table=self.auto_table)
         except OSError:
             self.Error.file_not_found(''.format(filename))
             return self.readingFailed('Network file not found')
+        except PajekBug as ex:
+            self.Error.pajek_bug(str(ex))
         else:
             self.Error.file_not_found.clear()
+            self.Error.pajek_bug.clear()
         if G is None:
-            self.Error.error_reading_file(''.format(filename))
+            self.Error.error_reading_file(filename)
             return self.readingFailed('Error reading file "{}"'.format(filename))
         self.Error.error_reading_file.clear()
 

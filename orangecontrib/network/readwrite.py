@@ -207,6 +207,11 @@ def write_gpickle(G, path):
 
 _add_doc(write_gpickle, rwgpickle.write_gpickle)
 
+
+class PajekBug(Exception):
+    pass
+
+
 def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     """Reimplemented method for reading Pajek files; written in
     C++ for maximum performance.
@@ -295,7 +300,9 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     for node in G.node:
         G.node[node]['label'] = node
     nx.relabel_nodes(G, remapping, copy=False)
-    assert not table or len(table) == G.number_of_nodes(), 'There was a bug in NetworkX. Please update to git if need be'
+    if not table or len(table) == G.number_of_nodes():
+        raise PajekBug("There is a bug in your version of NetworkX reading Pajek files. "
+                       "Please update your NetworkX installation.")
     return G
 
 def write_pajek(G, path, encoding='UTF-8'):
