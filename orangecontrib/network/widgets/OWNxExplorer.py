@@ -691,8 +691,7 @@ class OWNxExplorer(widget.OWWidget):
 
 if __name__ == "__main__":
     from AnyQt.QtWidgets import QApplication
-    import sys
-    a = QApplication(sys.argv)
+    a = QApplication([])
     ow = OWNxExplorer()
     ow.show()
 

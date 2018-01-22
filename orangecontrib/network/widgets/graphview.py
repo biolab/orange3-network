@@ -7,15 +7,17 @@ from AnyQt import QtCore, QtGui
 from AnyQt.QtCore import QLineF, QRectF, Qt
 from AnyQt.QtGui import QBrush, QPen, QColor
 from AnyQt.QtWidgets import qApp, QStyle, QGraphicsLineItem, QGraphicsEllipseItem, \
-    QGraphicsView, QGraphicsScene, QWidget, QGraphicsSimpleTextItem, QApplication
+    QGraphicsView, QGraphicsScene, QWidget, QGraphicsSimpleTextItem
 
 from orangecontrib.network._fr_layout import fruchterman_reingold_layout
 
 from Orange.widgets.visualize.owdistributions import LegendItem as DistributionsLegendItem
 # Expose OpenGL rendering for large graphs, if available
 HAVE_OPENGL = True
-try: from AnyQt import QtOpenGL
-except: HAVE_OPENGL = False
+try:
+    from AnyQt import QtOpenGL
+except:
+    HAVE_OPENGL = False
 
 FR_ITERATIONS = 250
 
@@ -403,6 +405,7 @@ class GraphView(QGraphicsView):
         assert isinstance(node, Node)
         self.nodes.append(node)
         self.scene().addItem(node)
+
     def addEdge(self, edge):
         assert isinstance(edge, Edge)
         self.edges.append(edge)
@@ -475,10 +478,10 @@ class GraphView(QGraphicsView):
 
 if __name__ == '__main__':
     import sys
+    from AnyQt.QtWidgets import QApplication
     app = QApplication(sys.argv)
     widget = GraphView()
     widget.show()
-    import networkx as nx
     G = nx.scale_free_graph(int(sys.argv[1]) if len(sys.argv) > 1 else 100, seed=0)
 
     widget.set_graph(G)

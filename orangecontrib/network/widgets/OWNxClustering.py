@@ -1,8 +1,8 @@
 from AnyQt.QtCore import Qt
 
+from Orange.data import Table
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output
-import Orange
 from orangecontrib.network import Graph, community as cd
 
 
@@ -17,7 +17,7 @@ class OWNxClustering(widget.OWWidget):
 
     class Outputs:
         network = Output("Network", Graph)
-        items = Output("Items", Orange.data.Table)
+        items = Output("Items", Table)
 
     resizing_enabled = False
     want_main_area = False
