@@ -97,6 +97,7 @@ class OWNxExplorer(widget.OWWidget):
     tabIndex = Setting(0)
     showEdgeWeights = Setting(False)
     relativeEdgeWidths = Setting(False)
+    randomizePositions = Setting(True)
     invertNodeSize = Setting(False)
     markDistance = Setting(1)
     markSearchString = Setting("")
@@ -169,6 +170,7 @@ class OWNxExplorer(widget.OWWidget):
 
         self.relayout_button = gui.button(box, self, 'Re-layout',
                                           callback=self.relayout, autoDefault=False)
+        self.randomize_cb = gui.checkBox(box, self, "randomizePositions", "Randomize positions")
         self.view.positionsChanged.connect(lambda positions, progress:
                                            self.progressbar.widget.progressBarSet(int(round(100 * progress))))
         def animationFinished():
@@ -492,6 +494,7 @@ class OWNxExplorer(widget.OWWidget):
         self.Error.clear()
 
         self.set_selection_mode()
+        self.randomizePositions = True
         self.relayout()
 
     @Inputs.node_data
@@ -545,7 +548,7 @@ class OWNxExplorer(widget.OWWidget):
         self.Warning.distance_matrix_size.clear()
 
         self.relayout_button.setDisabled(True)
-        self.view.relayout(randomize=False, weight=distmatrix)
+        self.view.relayout(randomize=self.randomizePositions, weight=distmatrix)
 
     def _on_node_label_attrs_changed(self):
         if not self.graph: return

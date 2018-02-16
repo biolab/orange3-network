@@ -242,6 +242,7 @@ class GraphView(QGraphicsView):
         scene.setBspTreeDepth(2)
         self.setScene(scene)
         self.setSceneRect(-1e5, -1e5, 2e5, 2e5)
+        self.scaleFactor = 300
         self.setText('')
 
         self.setCacheMode(self.CacheBackground)
@@ -439,9 +440,8 @@ class GraphView(QGraphicsView):
         if weight is None: weight = 'weight'
         pos, graphview = None, self
         if not randomize:
-            pos = [[pos.x(), pos.y()]
-                   for pos in (node.pos()
-                               for node in self.nodes)]
+            pos = np.array([[pos.x(), pos.y()]
+                            for pos in (node.pos()/self.scaleFactor for node in self.nodes)])
 
         class AnimationThread(Thread):
             def __init__(self, iterations, callback):
@@ -471,7 +471,7 @@ class GraphView(QGraphicsView):
         return self._is_animating
 
     def _update_positions(self, positions, _):
-        for node, pos in zip(self.nodes, positions*300):
+        for node, pos in zip(self.nodes, positions*self.scaleFactor):
             node.setPos(*pos)
         qApp.processEvents()
 
