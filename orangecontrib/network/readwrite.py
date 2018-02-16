@@ -300,7 +300,7 @@ def read_pajek(path, encoding='UTF-8', project=False, auto_table=False):
     for node in G.node:
         G.node[node]['label'] = node
     nx.relabel_nodes(G, remapping, copy=False)
-    if not table or len(table) == G.number_of_nodes():
+    if table is not None and len(table) != G.number_of_nodes():
         raise PajekBug("There is a bug in your version of NetworkX reading Pajek files. "
                        "Please update your NetworkX installation.")
     return G
