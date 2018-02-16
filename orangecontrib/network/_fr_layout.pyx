@@ -149,7 +149,7 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                                     double callback_rate):
     cdef:
         double GRAVITY = 20
-        arr_f1_t temperature = np.linspace(.4, .05, iterations)
+        arr_f1_t temperature = np.linspace(.05, .001, iterations)
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
         double mag, adj, weight, temp
@@ -162,7 +162,6 @@ cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
         arr_i1_t sample = np.zeros(sample_size, dtype=np.int32)
         int callback_freq = int(round(1/callback_rate))
     with nogil:
-        temperature[:6] = .8
         for iteration in range(iterations):
             temp = temperature[iteration]
             disp[:, :] = 0
