@@ -18,23 +18,20 @@ import networkx as nx
 from Orange.data import Domain, Table, DiscreteVariable
 
 
-CLUSTERING_LABEL = 'Cluster'
-
-
-def add_results_to_items(G, labels):
+def add_results_to_items(G, labels, var_name):
     items = G.items()
-    if items is not None and CLUSTERING_LABEL in items.domain:
+    if items is not None and var_name in items.domain:
         domain = Domain([a for a in items.domain.attributes
-                         if a.name != CLUSTERING_LABEL],
+                         if a.name != var_name],
                         items.domain.class_vars,
                         items.domain.metas)
         items = Table.from_table(domain, items)
 
     attrs = [DiscreteVariable(
-        CLUSTERING_LABEL,
+        var_name,
         values=["C%d" % (x + 1) for x in set(labels.values())])]
 
-    domain = Domain(attrs)
+    domain = Domain([], metas=attrs)
     data = Table(domain, [[l] for l in labels.values()])
 
     if items is None:
@@ -52,16 +49,12 @@ class CommunityDetection(object):
         return self.algorithm(G, **self.kwargs)
 
 
-def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
+def label_propagation_hop_attenuation(G, iterations=1000,
                                       delta=0.1, node_degree_preference=0):
     """Label propagation for community detection, Leung et al., 2009
 
     :param G: A Orange graph.
     :type G: Orange.network.Graph
-
-    :param results2items: Append a new feature result to items
-        (Orange.data.Table).
-    :type results2items: bool
 
     :param iterations: The max. number of iterations if no convergence.
     :type iterations: int
@@ -114,21 +107,14 @@ def label_propagation_hop_attenuation(G, results2items=0, iterations=1000,
 
     labels = remap_labels(labels)
 
-    if results2items:
-        add_results_to_items(G, labels)
-
     return labels
 
 
-def label_propagation(G, results2items=0, iterations=1000, seed=None):
+def label_propagation(G, iterations=1000, seed=None):
     """Label propagation for community detection, Raghavan et al., 2007
 
     :param G: A Orange graph.
     :type G: Orange.network.Graph
-
-    :param results2items: Append a new feature result to items
-        (Orange.data.Table).
-    :type results2items: bool
 
     :param iterations: The maximum number of iterations if there is no convergence.
     :type iterations: int
@@ -180,9 +166,6 @@ def label_propagation(G, results2items=0, iterations=1000, seed=None):
                 break
 
     labels = remap_labels(labels)
-
-    if results2items:
-        add_results_to_items(G, labels)
 
     return labels
 
