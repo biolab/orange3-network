@@ -2,6 +2,7 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.widgets import gui, widget, settings
+from Orange.widgets.utils.annotated_data import get_next_name
 from Orange.widgets.widget import Input, Output
 from orangecontrib.network import Graph, community as cd
 
@@ -62,13 +63,11 @@ class OWNxClustering(widget.OWWidget):
 
         if self.method == 0:
             alg = cd.label_propagation
-            kwargs = {'results2items': 1,
-                      'iterations': self.iterations}
+            kwargs = {'iterations': self.iterations}
 
         elif self.method == 1:
             alg = cd.label_propagation_hop_attenuation
-            kwargs = {'results2items': 1,
-                      'iterations': self.iterations,
+            kwargs = {'iterations': self.iterations,
                       'delta': self.hop_attenuation}
 
         if self.net is None:
@@ -77,6 +76,8 @@ class OWNxClustering(widget.OWWidget):
             return
 
         labels = alg(self.net, **kwargs)
+        domain = self.net.items().domain
+        cd.add_results_to_items(self.net, labels, get_next_name(domain, 'Cluster'))
 
         self.info.setText('%d clusters found' % len(set(labels.values())))
         self.Outputs.items.send(self.net.items())
