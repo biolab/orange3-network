@@ -13,12 +13,12 @@ from numpy.distutils.core import setup
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 AUTHOR = 'Laboratory of Bioinformatics, FRI UL'
-AUTHOR_EMAIL = 'miha.stajdohar@gmail.com'
+AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'https://github.com/biolab/orange3-network'
 LICENSE = 'GPLv3'
 
