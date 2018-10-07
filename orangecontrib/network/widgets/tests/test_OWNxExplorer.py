@@ -32,7 +32,7 @@ class TestOWNxExplorer(WidgetTest):
         self.send_signal(w.Inputs.network, self._create_graph())
         table = Table("iris")
         self.send_signal(w.Inputs.node_subset, table)
-        w.set_selection_mode()
+        w.set_mark_mode()
 
     def test_show_edge_weights(self):
         """

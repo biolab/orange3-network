@@ -95,10 +95,10 @@ def fruchterman_reingold_layout(G,
     # Optimal distance between nodes
     k = k or 1 / sqrt(pos_arr.shape[0])
     # Run...
-    pos = np.asarray(_fruchterman_reingold(Edata, Erow, Ecol,
-                                           k, pos_arr, fixed,
-                                           iterations, sample_ratio,
-                                           callback, callback_rate))
+    pos = np.asarray(fruchterman_reingold(Edata, Erow, Ecol,
+                                          k, pos_arr, fixed,
+                                          iterations, sample_ratio,
+                                          callback, callback_rate))
     return pos
 
 
@@ -137,16 +137,16 @@ cdef inline double _Fa(double k, double x) nogil:
     return x*x / k
 
 
-cdef arr_f2_t _fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
-                                    arr_i1_t Erow,   #
-                                    arr_i1_t Ecol,   #
-                                    double k,
-                                    arr_f2_t pos,
-                                    arr_i1_t fixed,
-                                    int iterations,
-                                    double sample_ratio,
-                                    callback,
-                                    double callback_rate):
+def fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
+						arr_i1_t Erow,   #
+						arr_i1_t Ecol,   #
+						double k,
+						arr_f2_t pos,
+						arr_i1_t fixed,
+						int iterations,
+						double sample_ratio,
+						callback,
+								double callback_rate):
     cdef:
         double GRAVITY = 20
         arr_f1_t temperature = np.linspace(.05, .001, iterations)
