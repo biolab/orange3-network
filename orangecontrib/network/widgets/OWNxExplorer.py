@@ -491,6 +491,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             network.readwrite.write(self.network, filename)
 
     def send_data(self):
+        return
         super().send_data()
 
         Outputs = self.Outputs
@@ -540,7 +541,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
-            Simplifications.SameEdgeWidth
+            #Simplifications.SameEdgeWidth
             + Simplifications.NoDensity
             + Simplifications.NoLabels * (self.graph.labels is not None
                                           and len(self.graph.labels) > 20)
@@ -612,8 +613,8 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-    # owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
+    # owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()

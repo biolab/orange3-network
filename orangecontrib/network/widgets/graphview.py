@@ -2,9 +2,43 @@ import numpy as np
 import pyqtgraph as pg
 import time
 
+from AnyQt.QtCore import QLineF
+from AnyQt.QtGui import QPen, QBrush
+
 from Orange.util import scale
 from Orange.widgets.settings import Setting
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+
+
+class PlotVarWidthCurveItem(pg.PlotCurveItem):
+    def __init__(self, *args, **kwargs):
+        self.widths = kwargs.pop("widths", None)
+        self.setPen(kwargs.pop("pen", None))
+        super().__init__(*args, **kwargs)
+
+    def setWidths(self, widths):
+        self.widths = widths
+        self.update()
+
+    def setPen(self, pen):
+        self.pen = QPen(pen)
+        self.pen.setCosmetic(True)
+
+    def setData(self, *args, **kwargs):
+        self.widths = kwargs.pop("widths", self.widths)
+        super().setData(*args, **kwargs)
+
+    def paint(self, p, opt, widget):
+        if self.xData is None or len(self.xData) == 0 or self.widths is None:
+            return
+        p.setRenderHint(p.Antialiasing, True)
+        p.setCompositionMode(p.CompositionMode_SourceOver)
+        for x0, y0, x1, y1, w in zip(self.xData[::2], self.yData[::2],
+                                     self.xData[1::2], self.yData[1::2],
+                                     self.widths):
+            self.pen.setWidth(w)
+            p.setPen(self.pen)
+            p.drawLine(QLineF(x0, y0, x1, y1))
 
 
 class GraphView(OWScatterPlotBase):
@@ -32,7 +66,6 @@ class GraphView(OWScatterPlotBase):
     def _reset_attributes(self):
         self.paired_indices = None
         self.edge_curve = None
-        self.edge_curves = []
         self.scatterplot_marked = None
         self.last_click = (-1, None)
 
@@ -67,67 +100,34 @@ class GraphView(OWScatterPlotBase):
         if not self.scatterplot_item \
                 or self.simplify & self.Simplifications.NoEdges:
             return
-        if self.relative_edge_widths \
-                and not self.simplify & self.Simplifications.SameEdgeWidth:
-            self.update_edges_relative()
-        else:
-            self.update_edges_uniform()
-
-    def update_edges_uniform(self):
-        if self.edge_curves:
-            for edge in self.edge_curves:
-                self.plot_widget.removeItem(edge)
-            self.edge_curves.clear()
-
-        x, y = self.get_coordinates()
-        if x is None:
-            return
+        x, y = self.scatterplot_item.getData()
+        edges = self.master.get_edges()
+        srcs, dests, weights = edges.row, edges.col, edges.data
         if self.edge_curve is None:
-            edges = self.master.get_edges()
-            srcs, dests = edges.row, edges.col
-            n_edges = len(srcs)
-            self.paired_indices = np.empty((2 * n_edges, ), dtype=int)
+            self.paired_indices = np.empty((2 * len(srcs), ), dtype=int)
             self.paired_indices[::2] = srcs
             self.paired_indices[1::2] = dests
-            self.edge_curve = pg.PlotCurveItem(
-                x[self.paired_indices], y[self.paired_indices],
-                pen=self._edge_curve_pen(),
-                connect="pairs", antialias=True)
+
+        kwargs = dict(x=x[self.paired_indices], y=y[self.paired_indices],
+                      pen=self._edge_curve_pen(), antialias=True)
+        if self.relative_edge_widths \
+                and not self.simplify & self.Simplifications.SameEdgeWidth:
+            cls = PlotVarWidthCurveItem
+            kwargs['widths'] = \
+                scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
+        else:
+            cls = pg.PlotCurveItem
+            kwargs['connect'] = 'pairs'
+
+        if type(self.edge_curve) != cls:  # Check for exact type
+            self.plot_widget.removeItem(self.edge_curve)
+            self.edge_curve = None
+        if self.edge_curve is None:
+            self.edge_curve = cls(**kwargs)
             self.plot_widget.addItem(self.edge_curve)
             self._put_nodes_on_top()
         else:
-            self.edge_curve.setData(
-                x[self.paired_indices], y[self.paired_indices],
-                pen=self._edge_curve_pen(),
-                connect="pairs", antialias=True)
-
-    def update_edges_relative(self):
-        if self.edge_curve:
-            self.plot_widget.removeItem(self.edge_curve)
-            self.edge_curve = None
-
-        x, y = self.get_coordinates()
-        if x is None:
-            return
-        edges = self.master.get_edges()
-        weights, srcs, dests = edges.data, edges.row, edges.col
-        widths = scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
-        color = self._edge_pen_color()
-        if not self.edge_curves:
-            for w, f, t in zip(widths, srcs, dests):
-                edge = pg.PlotCurveItem(
-                    [x[f], x[t]], [y[f], y[t]],
-                    pen=pg.mkPen(color, width=w, cosmetic=True),
-                    antialias=True)
-                self.plot_widget.addItem(edge)
-                self.edge_curves.append(edge)
-            self._put_nodes_on_top()
-        else:
-            for edge, w, f, t in zip(self.edge_curves, widths, srcs, dests):
-                edge.setData(
-                    [x[f], x[t]], [y[f], y[t]],
-                    pen=pg.mkPen(color, width=w, cosmetic=True),
-                    antialias=True)
+            self.edge_curve.setData(**kwargs)
 
     def _put_nodes_on_top(self):
         if self.scatterplot_item:
@@ -139,24 +139,17 @@ class GraphView(OWScatterPlotBase):
     def set_edge_pen(self):
         if self.edge_curve:
             self.edge_curve.setPen(self._edge_curve_pen())
-        elif self.edge_curves:
-            self.update_edges_relative()
-
-    def _edge_pen_color(self):
-        return 0.5 if self.class_density else 0.8
 
     def _edge_curve_pen(self):
         return pg.mkPen(
-            self._edge_pen_color(), width=self.edge_width, cosmetic=True)
+            0.5 if self.class_density else 0.8,
+            width=self.edge_width,
+            cosmetic=True)
 
     def set_edge_labels(self):
         pass
 
     def _remove_edges(self):
-        if self.edge_curves:
-            for edge in self.edge_curves:
-                self.plot_widget.removeItem(edge)
-            self.edge_curves.clear()
         if self.edge_curve:
             self.plot_widget.removeItem(self.edge_curve)
             self.edge_curve = None
