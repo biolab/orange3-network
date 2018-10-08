@@ -10,6 +10,7 @@ from AnyQt.QtCore import QTimer, QSize, Qt
 from AnyQt.QtWidgets import QFileDialog
 
 import Orange
+from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.widget import Input, Output
@@ -41,12 +42,11 @@ class OWNxExplorer(OWDataProjectionWidget):
     icon = "icons/NetworkExplorer.svg"
     priority = 6420
 
-    class Inputs(OWDataProjectionWidget.Inputs):
+    class Inputs:
+        node_data = Input("Node Data", Table)
+        node_subset = Input("Node Subset", Table)
         network = Input("Network", network.Graph, default=True)
         node_distances = Input("Node Distances", Orange.misc.DistMatrix)
-        #node_data = OWDataProjectionWidget.Inputs.data
-        #node_subset = OWDataProjectionWidget.Inputs.data_subset
-        #data = data_subset = None
 
     class Outputs(OWDataProjectionWidget.Outputs):
         subgraph = Output("Selected sub-network", network.Graph)
@@ -93,6 +93,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         super().__init__()
 
         self.network = None
+        self.node_data = None
         self.distance_matrix = None
         self.edges = None
         self.positions = None
@@ -117,6 +118,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.controlArea, self, "auto_commit",
             "Send Selection", "Send Automatically")
         self._mark_box()
+        self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
     def _info_box(self):
         info = gui.vBox(self.controlArea, True)
@@ -143,15 +145,14 @@ class OWNxExplorer(OWDataProjectionWidget):
                 None, self, 'graph.edge_width', minValue=1, maxValue=10, step=1,
                 callback=self.graph.update_edges
             ), 3, 1)
-        box2 = gui.hBox(None, False)
-        effects_layout.addWidget(box2, 4, 1)
-        self.checkbox_relative_edges = gui.checkBox(
-            box2, self, 'graph.relative_edge_widths', 'Relative widths',
+        cb = self.checkbox_relative_edges = gui.checkBox(
+            None, self, 'graph.relative_edge_widths', 'Scale widths to weights',
             callback=self.graph.update_edges)
-        gui.rubber(box2)
-        self.checkbox_show_weights = gui.checkBox(
-            box2, self, 'graph.show_edge_weights', 'Show weights',
+        effects_layout.addWidget(cb, 4, 1)
+        cb = self.checkbox_show_weights = gui.checkBox(
+            None, self, 'graph.show_edge_weights', 'Show weights',
             callback=self.graph.set_edge_labels)
+        effects_layout.addWidget(cb, 5, 1)
 
     def _mark_box(self):
         hbox = gui.hBox(None, box=True)
@@ -346,15 +347,24 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def select_marked(self):
         self.graph.selection_select(self.marked_nodes)
-        self.set_mark_mode(0)
 
     def select_add_marked(self):
         self.graph.selection_append(self.marked_nodes)
-        self.set_mark_mode(0)
 
     def select_as_group(self):
         self.graph.selection_new_group(self.marked_nodes)
-        self.set_mark_mode(0)
+
+    def on_change_label_attr(self):
+        if self.mark_mode in (1, 2):
+            self.update_marks()
+
+    @Inputs.node_data
+    def set_node_data(self, data):
+        self.node_data = data
+
+    @Inputs.node_subset
+    def set_node_subset(self, data):
+        super().set_subset_data(data)
 
     @Inputs.node_distances
     def set_items_distance_matrix(self, matrix):
@@ -371,23 +381,21 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.number_of_nodes = self.edges_per_node = 0
             self.number_of_edges = self.nodes_per_edge = 0
 
-        def compute_labels():
+        def compute_stats():
             self.number_of_nodes = graph.number_of_nodes()
             self.number_of_edges = graph.number_of_edges()
             self.edges_per_node = self.number_of_edges / self.number_of_nodes
             self.nodes_per_edge = \
                 self.number_of_nodes / max(1, self.number_of_edges)
 
-        if not graph:
+        if not graph or graph.number_of_nodes == 0:
             return set_graph_none()
-        if graph.number_of_nodes() < 2:
-            return set_graph_none(self.Error.single_node_graph)
         if graph.number_of_nodes() + graph.number_of_edges() > 30000:
             return set_graph_none(self.Error.network_too_large)
         self.Error.clear()
 
         self.network = graph
-        compute_labels()
+        compute_stats()
         self.positions = None
 
     def handleNewSignals(self):
@@ -398,19 +406,23 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.Warning.no_graph_found.clear()
             self._invalid_data = False
             if network is None:
-                if self.data is not None:
+                if self.node_data is not None:
                     self.Warning.no_graph_found()
                 return
-            if self.data is None:
-                # Replicate the necessary parts of set_data
+            if self.node_data is not None:
+                if len(self.node_data) != self.number_of_nodes:
+                    self.Error.data_size_mismatch()
+                    self._invalid_data = True
+                    self.data = None
+                else:
+                    self.data = self.node_data
+            if self.node_data is None:
                 self.data = network.items()
+            if self.data is not None:
+                # Replicate the necessary parts of set_data
                 self.init_attr_values()
                 self.openContext(self.data)
                 self.cb_class_density.setEnabled(self.can_draw_density())
-            else:
-                if len(self.data) != self.number_of_nodes:
-                    self.Error.data_size_mismatch()
-                    self._invalid_data = True
 
         def set_actual_edges():
             def set_checkboxes(value):
@@ -424,8 +436,12 @@ class OWNxExplorer(OWDataProjectionWidget):
                 return set_checkboxes(False)
 
             set_checkboxes(True)
-            row, col, data = zip(*network.edges(data='weight'))
-            self.edges = sp.coo_matrix((data, (row, col)))
+            edges = network.edges(data='weight')
+            if edges:
+                row, col, data = zip(*edges)
+                self.edges = sp.coo_matrix((data, (row, col)))
+            else:
+                self.edges = sp.coo_matrix((0, 3))
             if self.distance_matrix is not None:
                 if len(self.distance_matrix) != self.number_of_nodes:
                     self.Warning.distance_matrix_mismatch()
@@ -491,38 +507,38 @@ class OWNxExplorer(OWDataProjectionWidget):
             network.readwrite.write(self.network, filename)
 
     def send_data(self):
-        return
         super().send_data()
 
         Outputs = self.Outputs
-        if self.network is None:
-            Outputs.subgraph.send(None)
-            Outputs.unselected_subgraph.send(None)
-            Outputs.distances.send(None)
-            return
-
-        selection = self.graph.get_selection()
-        if selection is None:
+        selected_indices = self.graph.get_selection()
+        if selected_indices is None or len(selected_indices) == 0:
             Outputs.subgraph.send(None)
             Outputs.unselected_subgraph.send(self.network)
             Outputs.distances.send(None)
             return
 
-        sel_indices = np.nonzero(selection)
-        unsel_indices = np.nonzero(selection == 0)
-        Outputs.subgraph.send(self.network.subgraph(sel_indices))
-        Outputs.unselected_subgraph.send(self.network.subgraph(unsel_indices))
+        selection = self.graph.selection
+        subgraph = self.network.subgraph(selected_indices)
+        sub_data = \
+            self._get_selected_data(self.data, selected_indices, selection)
+        subgraph.set_items(sub_data)
+        Outputs.subgraph.send(subgraph)
+        Outputs.unselected_subgraph.send(
+            self.network.subgraph(np.flatnonzero(selection == 0)))
         distances = self.distance_matrix
         if distances is None:
             Outputs.distances.send(None)
         else:
-            Outputs.distances.send(distances.submatrix(sorted(sel_indices)))
+            Outputs.distances.send(distances.submatrix(sorted(selected_indices)))
 
     def get_coordinates_data(self):
         if self.positions is not None:
             return self.positions.T
         else:
             return None, None
+
+    def get_embedding(self):
+        return self.positions
 
     def get_edges(self):
         return self.edges

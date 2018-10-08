@@ -49,7 +49,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
 
 class GraphView(OWScatterPlotBase):
     show_edge_weights = Setting(False)
-    relative_edge_widths = Setting(False)
+    relative_edge_widths = Setting(True)
     edge_width = Setting(2)
 
     COLOR_NOT_SUBSET = (255, 255, 255, 255)
@@ -187,6 +187,7 @@ class GraphView(OWScatterPlotBase):
         if self.scatterplot_marked is None:
             self.scatterplot_marked = pg.ScatterPlotItem([], [])
             self.plot_widget.addItem(self.scatterplot_marked)
+            self._put_nodes_on_top()
 
         marked = self.master.get_marked_nodes()
         if marked is None:
@@ -203,7 +204,7 @@ class GraphView(OWScatterPlotBase):
         # Poor man's double click
         indices = [p.data() for p in points]
         last_time, last_indices = self.last_click
-        if time.time() - last_time < 0.25 and indices == last_indices:
+        if time.time() - last_time < 0.5 and indices == last_indices:
             indices = self.master.get_reachable(indices)
         self.last_click = (time.time(), indices)
         self.select_by_indices(indices)
