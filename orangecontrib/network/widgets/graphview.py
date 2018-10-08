@@ -3,7 +3,7 @@ import pyqtgraph as pg
 import time
 
 from AnyQt.QtCore import QLineF
-from AnyQt.QtGui import QPen, QBrush
+from AnyQt.QtGui import QPen
 
 from Orange.util import scale
 from Orange.widgets.settings import Setting
@@ -21,24 +21,30 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         self.update()
 
     def setPen(self, pen):
-        self.pen = QPen(pen)
-        self.pen.setCosmetic(True)
+        self.pen = pen
 
     def setData(self, *args, **kwargs):
-        self.widths = kwargs.pop("widths", self.widths)
+        self.widths = kwargs.pop("widths", None)
         super().setData(*args, **kwargs)
 
     def paint(self, p, opt, widget):
-        if self.xData is None or len(self.xData) == 0 or self.widths is None:
+        if self.xData is None or len(self.xData) == 0:
             return
         p.setRenderHint(p.Antialiasing, True)
         p.setCompositionMode(p.CompositionMode_SourceOver)
-        for x0, y0, x1, y1, w in zip(self.xData[::2], self.yData[::2],
-                                     self.xData[1::2], self.yData[1::2],
-                                     self.widths):
-            self.pen.setWidth(w)
+        if self.widths is None:
             p.setPen(self.pen)
-            p.drawLine(QLineF(x0, y0, x1, y1))
+            for x0, y0, x1, y1 in zip(self.xData[::2], self.yData[::2],
+                                         self.xData[1::2], self.yData[1::2]):
+                p.drawLine(QLineF(x0, y0, x1, y1))
+        else:
+            pen = QPen(self.pen)
+            for x0, y0, x1, y1, w in zip(self.xData[::2], self.yData[::2],
+                                         self.xData[1::2], self.yData[1::2],
+                                         self.widths):
+                pen.setWidth(w)
+                p.setPen(pen)
+                p.drawLine(QLineF(x0, y0, x1, y1))
 
 
 class GraphView(OWScatterPlotBase):
@@ -51,7 +57,7 @@ class GraphView(OWScatterPlotBase):
     COLOR_DEFAULT = (255, 255, 255, 0)
 
     class Simplifications:
-        SameEdgeWidth, NoEdges, NoDensity, NoLabels = 1, 2, 4, 8
+        NoEdges, NoDensity, NoLabels = 1, 2, 4
         NoSimplifications, All = 0, 255
 
     def __init__(self, master, parent=None):
@@ -77,12 +83,6 @@ class GraphView(OWScatterPlotBase):
     def set_simplifications(self, simplifications):
         S = self.Simplifications
         self.plot_widget.setUpdatesEnabled(False)
-        if (self.simplify ^ simplifications) & S.SameEdgeWidth:
-            self.simplify ^= S.SameEdgeWidth
-            self._remove_edges()
-            if not self.simplify & simplifications & S.NoEdges \
-                    and not self.simplify & S.SameEdgeWidth:
-                self.update_edges()
         for flag, remove, update in (
                 (S.NoDensity, self._remove_density, self.update_density),
                 (S.NoLabels, self._remove_labels, self.update_labels),
@@ -108,26 +108,20 @@ class GraphView(OWScatterPlotBase):
             self.paired_indices[::2] = srcs
             self.paired_indices[1::2] = dests
 
-        kwargs = dict(x=x[self.paired_indices], y=y[self.paired_indices],
+        data = dict(x=x[self.paired_indices], y=y[self.paired_indices],
                       pen=self._edge_curve_pen(), antialias=True)
-        if self.relative_edge_widths \
-                and not self.simplify & self.Simplifications.SameEdgeWidth:
-            cls = PlotVarWidthCurveItem
-            kwargs['widths'] = \
+        if self.relative_edge_widths:
+            data['widths'] = \
                 scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
         else:
-            cls = pg.PlotCurveItem
-            kwargs['connect'] = 'pairs'
+            data['widths'] = None
 
-        if type(self.edge_curve) != cls:  # Check for exact type
-            self.plot_widget.removeItem(self.edge_curve)
-            self.edge_curve = None
         if self.edge_curve is None:
-            self.edge_curve = cls(**kwargs)
+            self.edge_curve = PlotVarWidthCurveItem(**data)
             self.plot_widget.addItem(self.edge_curve)
             self._put_nodes_on_top()
         else:
-            self.edge_curve.setData(**kwargs)
+            self.edge_curve.setData(**data)
 
     def _put_nodes_on_top(self):
         if self.scatterplot_item:

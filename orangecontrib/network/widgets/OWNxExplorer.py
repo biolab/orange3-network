@@ -541,8 +541,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
-            #Simplifications.SameEdgeWidth
-            + Simplifications.NoDensity
+            Simplifications.NoDensity
             + Simplifications.NoLabels * (self.graph.labels is not None
                                           and len(self.graph.labels) > 20)
             + Simplifications.NoEdges * (self.number_of_edges > 1000))
