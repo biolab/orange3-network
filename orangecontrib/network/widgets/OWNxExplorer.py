@@ -21,8 +21,6 @@ from orangecontrib.network._fr_layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
 FR_ITERATIONS = 250
-IS_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 4000
-IS_VERY_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 10000
 
 def non_reentrant(func):
     """Prevent the function from reentry."""
@@ -100,7 +98,6 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.positions = None
 
         self.marked_nodes = None
-        self._is_animating = False
         self.searchStringTimer = QTimer(self)
         self.searchStringTimer.timeout.connect(self.update_marks)
         self.set_mark_mode()
@@ -149,12 +146,12 @@ class OWNxExplorer(OWDataProjectionWidget):
         box2 = gui.hBox(None, False)
         effects_layout.addWidget(box2, 4, 1)
         self.checkbox_relative_edges = gui.checkBox(
-            box2, self, 'graph.relativeEdgeWidths', 'Relative widths',
+            box2, self, 'graph.relative_edge_widths', 'Relative widths',
             callback=self.graph.update_edges)
         gui.rubber(box2)
         self.checkbox_show_weights = gui.checkBox(
-            box2, self, 'graph.showEdgeWeights', 'Show weights',
-            callback=self.set_edge_labels)
+            box2, self, 'graph.show_edge_weights', 'Show weights',
+            callback=self.graph.set_edge_labels)
 
     def _mark_box(self):
         hbox = gui.hBox(None, box=True)
@@ -239,53 +236,50 @@ class OWNxExplorer(OWDataProjectionWidget):
             return degrees[degrees[:, 1] >= min_degree, 0]
 
         self.mark_criteria = [
-            ("(none)", None, lambda: []),
-            ("whose label starts with", text_line(), mark_label_starts),
-            ("whose label contains", text_line(), mark_label_contains),
-            ("whose data that contains", text_line(), mark_text),
-            ("reachable from selected", None, mark_reachable),
+            ("(Select criteria for marking)", None, lambda: []),
+            ("Mark nodes whose label starts with", text_line(), mark_label_starts),
+            ("Mark nodes whose label contains", text_line(), mark_label_contains),
+            ("Mark nodes whose data that contains", text_line(), mark_text),
+            ("Mark nodes reachable from selected", None, mark_reachable),
 
-            ("close to selected",
+            ("Mark nodes in vicinity of selection",
              spin("mark_hops", "Number of hops:", 1, 20),
              mark_close),
 
-            ("from the Node subset signal", None, mark_from_input),
+            ("Mark node from subset signal", None, mark_from_input),
 
-            ("with few connections",
+            ("Mark nodes with few connections",
              spin("mark_max_conn", "Max. connections:", 0, 1000),
              lambda: [node for node, degree in self.network.degree()
                       if degree <= self.mark_max_conn]),
 
-            ("with many connections",
+            ("Mark nodes with many connections",
              spin("mark_min_conn", "Min. connections:", 1, 1000),
              lambda: [node for node, degree in self.network.degree()
                       if degree >= self.mark_min_conn]),
 
-            ("with most connections",
+            ("Mark nodes with most connections",
              spin("mark_most_conn", "Number of marked:", 1, 1000),
              mark_most_connections),
 
-            ("connected better than any neighbour", None,
+            ("Mark nodes with more connections than any neighbour", None,
              lambda: [node for node, degree in self.network.degree()
                       if degree > max((deg for _, deg in
                                        self.network.degree(
                                            self.network[node])),
                                       default=0)]),
 
-            ("connected better than average neighbour", None,
+            ("Mark nodes with more connections than average neighbour", None,
              lambda: [node for node, degree in self.network.degree()
                       if degree > np.mean([deg for _, deg in
                                            self.network.degree(
                                                self.network[node])] or [
                                               0])])
         ]
-
         cb = gui.comboBox(
-            None, self, "mark_mode", label="Mark nodes",
-            orientation=Qt.Horizontal,
+            None, self, "mark_mode", label=".", orientation=Qt.Horizontal,
             items=[item for item, *_ in self.mark_criteria],
-            callback=self.set_mark_mode)
-        cb.setSizeAdjustPolicy(cb.AdjustToContents)
+            maximumContentsLength=-1, callback=self.set_mark_mode)
         vbox.layout().insertWidget(0, cb.box)
 
         gui.rubber(hbox)
@@ -319,6 +313,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         else:
             self.marked_nodes = np.asarray(to_mark)
         self.graph.update_marks()
+        if self.graph.label_only_selected:
+            self.graph.update_labels()
         self.update_selection_buttons()
 
     def update_selection_buttons(self):
@@ -495,39 +491,31 @@ class OWNxExplorer(OWDataProjectionWidget):
             network.readwrite.write(self.network, filename)
 
     def send_data(self):
-        return
-        if not self.network:
-            for output in dir(self.Outputs):
-                if not output.startswith('__'):
-                    getattr(self.Outputs, output).send(None)
+        super().send_data()
+
+        Outputs = self.Outputs
+        if self.network is None:
+            Outputs.subgraph.send(None)
+            Outputs.unselected_subgraph.send(None)
+            Outputs.distances.send(None)
             return
-        selected = self.view.getSelected()
-        self.Outputs.subgraph.send(self.network.subgraph(selected) if selected else None)
-        self.Outputs.unselected_subgraph.send(
-                  self.network.subgraph(self.view.getUnselected()) if selected else self.network)
-        self.Outputs.distances.send(
-                  self.items_matrix.submatrix(sorted(selected))
-                  if self.items_matrix is not None and selected else None)
-        items = self.network.items()
-        if not items:
-            self.Outputs.selected.send(None)
-            self.Outputs.highlighted.send(None)
-            self.Outputs.remaining.send(None)
+
+        selection = self.graph.get_selection()
+        if selection is None:
+            Outputs.subgraph.send(None)
+            Outputs.unselected_subgraph.send(self.network)
+            Outputs.distances.send(None)
+            return
+
+        sel_indices = np.nonzero(selection)
+        unsel_indices = np.nonzero(selection == 0)
+        Outputs.subgraph.send(self.network.subgraph(sel_indices))
+        Outputs.unselected_subgraph.send(self.network.subgraph(unsel_indices))
+        distances = self.distance_matrix
+        if distances is None:
+            Outputs.distances.send(None)
         else:
-            highlighted = self.view.getHighlighted()
-            self.Outputs.selected.send(items[sorted(selected), :] if selected else None)
-            self.Outputs.highlighted.send(items[sorted(highlighted), :] if highlighted else None)
-            remaining = sorted(set(self.network) - set(selected) - set(highlighted))
-            self.Outputs.remaining.send(items[remaining, :] if remaining else None)
-
-    @property
-    def is_animating(self):
-        return self._is_animating
-
-    @is_animating.setter
-    def is_animating(self, value):
-        #        self.setCursor(Qt.ForbiddenCursor if value else Qt.ArrowCursor)
-        self._is_animating = value
+            Outputs.distances.send(distances.submatrix(sorted(sel_indices)))
 
     def get_coordinates_data(self):
         if self.positions is not None:
@@ -541,80 +529,59 @@ class OWNxExplorer(OWDataProjectionWidget):
     def get_marked_nodes(self):
         return self.marked_nodes
 
+    # TODO: Stop relayout if new data is received
     def relayout(self):
-        if self.edges is None or self.is_animating:
+        if self.edges is None:
             return
         if self.randomizePositions:
             self.set_random_positions()
-        self.is_animating = True
         self.progressbar = gui.ProgressBar(self, FR_ITERATIONS)
         self.relayout_button.setDisabled(True)
-        widget = self
 
-        class AnimationThread(Thread):
-            def __init__(self, widget, iterations, callback):
-                super().__init__()
-                self.daemon = True
-                self.widget = widget
-                self.iterations = iterations
-                self.callback = callback
+        Simplifications = self.graph.Simplifications
+        self.graph.set_simplifications(
+            Simplifications.SameEdgeWidth
+            + Simplifications.NoDensity
+            + Simplifications.NoLabels * (self.graph.labels is not None
+                                          and len(self.graph.labels) > 20)
+            + Simplifications.NoEdges * (self.number_of_edges > 1000))
 
-            def run(self):
-                edges = widget.edges
-                widget.positions = np.array(fruchterman_reingold(
-                    edges.data, edges.row, edges.col,
-                    1 / sqrt(self.widget.number_of_nodes),  # k
-                    widget.positions,
-                    np.array([], dtype=np.int32),  # fixed
-                    self.iterations,
-                    1,  # sample ratio
-                    self.callback, 0.25))
-                widget.graph.update_coordinates()
-                widget.is_animating = False
-                widget.relayout_button.setDisabled(False)
-                widget.progressbar.finish()
-
-        def callback(positions, progress):
-            widget.progressbar.advance(progress)
-            self.positions = np.array(positions)
-            self.graph.update_coordinates()
-            return True
-
-        if IS_VERY_LARGE_GRAPH(self.network):
-            iterations, callback = 5, None
+        if self.number_of_nodes + self.number_of_edges > 20000:
+            iterations = 5
+            callback = None
         else:
             iterations = FR_ITERATIONS
-        AnimationThread(self, iterations, callback).start()
 
-    def set_edge_labels(self):
-        if not self.network:
-            return
-        if self.showEdgeWeights:
-            weights = (str(w or '') for u, v, w in self.network.edges(data='weight'))
-        else:
-            weights = ('' for i in range(self.network.number_of_edges()))
-        for edge, weight in zip(self.view.edges, weights):
-            edge.setText(weight)
+            def callback(positions, progress):
+                self.progressbar.advance(progress)
+                self.positions = np.array(positions)
+                self.graph.update_coordinates()
+                return True
 
-        """ Invert node sizes checkbox?
-        MIN_NODE_SIZE = 1
-        MAX_NODE_SIZE = 10
-        
-        if self.invertNodeSize:
-            values += np.nanmin(values) + 1
-            values = 1/values
-        nodemin, nodemax = np.nanmin(values), np.nanmax(values)
-        if nodemin == nodemax:
-            # np.polyfit borks on this condition
-            sizes = (MIN_NODE_SIZE for _ in range(len(self.view.nodes)))
-        else:
-            k, n = np.polyfit([nodemin, nodemax],
-                              [MIN_NODE_SIZE, MAX_NODE_SIZE], 1)
-            sizes = values * k + n
-            sizes[np.isnan(sizes)] = np.nanmean(sizes)
-        for node, size in zip(self.view.nodes, sizes):
-            node.setSize(size * self.point_width)
-        """
+        def done():
+            self.graph.set_simplifications(Simplifications.NoSimplifications)
+            self.graph.update_coordinates()
+            self.relayout_button.setDisabled(False)
+            self.progressbar.finish()
+
+        class AnimationThread(Thread):
+            def __init__(self):
+                super().__init__()
+                self.daemon = True
+
+            def run(_):
+                edges = self.edges
+                self.positions = np.array(fruchterman_reingold(
+                    edges.data, edges.row, edges.col,
+                    1 / sqrt(self.number_of_nodes),  # k
+                    self.positions,
+                    np.array([], dtype=np.int32),  # fixed
+                    iterations,
+                    0.1,  # sample ratio
+                    callback, 0.5))
+                done()
+
+        AnimationThread().start()
 
     def send_report(self):
         self.report_data("Data", self.network.items())
@@ -627,7 +594,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         if self.node_color_attr or self.node_size_attr or self.node_label_attrs:
             self.report_items("Visual settings", [
                 ("Vertex color", self.colorCombo.currentText()),
-                ("Vertex size", str(self.nodeSizeCombo.currentText()) + " (inverted)" if self.invertNodeSize else ""),
+                ("Vertex size", str(self.nodeSizeCombo.currentText())),
             ])
         self.report_plot("Graph", self.view)
 
@@ -646,6 +613,7 @@ if __name__ == "__main__":
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
     owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    # owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()
