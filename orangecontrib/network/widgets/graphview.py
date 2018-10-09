@@ -110,7 +110,7 @@ class GraphView(OWScatterPlotBase):
 
         data = dict(x=x[self.paired_indices], y=y[self.paired_indices],
                       pen=self._edge_curve_pen(), antialias=True)
-        if self.relative_edge_widths:
+        if self.relative_edge_widths and len(set(weights)) > 1:
             data['widths'] = \
                 scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
         else:

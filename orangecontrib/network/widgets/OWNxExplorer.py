@@ -62,11 +62,12 @@ class OWNxExplorer(OWDataProjectionWidget):
     graph = SettingProvider(GraphView)
 
     randomizePositions = Setting(True)
-    mark_text = Setting("")
     mark_hops = Setting(1)
-    mark_min_conn = Setting(1)
+    mark_min_conn = Setting(5)
     mark_max_conn = Setting(5)
     mark_most_conn = Setting(1)
+
+    alpha_value = 255  # Override the setting from parent
 
     class Warning(widget.OWWidget.Warning):
         distance_matrix_mismatch = widget.Msg(
@@ -88,7 +89,9 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.nSelected = 0
         self.nodes_per_edge = 0
         self.edges_per_node = 0
+
         self.mark_mode = 0
+        self.mark_text = ""
 
         super().__init__()
 
@@ -136,9 +139,12 @@ class OWNxExplorer(OWDataProjectionWidget):
             lbox, self, "randomizePositions", "Randomize positions")
 
     def _effects_box(self):
+        # TODO: Do we really need opacity in this plot? Maybe just set it to 255
         effects_layout = self.graph.gui.effects_box(self.controlArea).layout()
         effects_layout.itemAtPosition(3, 0).widget().hide()  # hide jitter
         effects_layout.itemAtPosition(3, 1).widget().hide()
+        effects_layout.itemAtPosition(2, 0).widget().hide()  # hide opacity
+        effects_layout.itemAtPosition(2, 1).widget().hide()
         effects_layout.addWidget(gui.widgetLabel(None, "Edge width:"), 3, 0)
         effects_layout.addWidget(
             gui.hSlider(
@@ -172,7 +178,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
             return gui.lineEdit(
                 gui.hBox(vbox), self, "mark_text", label="Text: ",
-                orientation=Qt.Horizontal,
+                orientation=Qt.Horizontal, minimumWidth=50,
                 callback=set_search_string_timer, callbackOnType=True).box
 
         def mark_label_starts():
@@ -278,10 +284,10 @@ class OWNxExplorer(OWDataProjectionWidget):
                                               0])])
         ]
         cb = gui.comboBox(
-            None, self, "mark_mode", label=".", orientation=Qt.Horizontal,
+            hbox, self, "mark_mode",
             items=[item for item, *_ in self.mark_criteria],
             maximumContentsLength=-1, callback=self.set_mark_mode)
-        vbox.layout().insertWidget(0, cb.box)
+        hbox.layout().insertWidget(0, cb)
 
         gui.rubber(hbox)
         self.btselect = gui.button(
@@ -394,6 +400,8 @@ class OWNxExplorer(OWDataProjectionWidget):
             return set_graph_none(self.Error.network_too_large)
         self.Error.clear()
 
+        self.mark_text = ""
+        self.set_mark_mode(0)
         self.network = graph
         compute_stats()
         self.positions = None
@@ -478,7 +486,6 @@ class OWNxExplorer(OWDataProjectionWidget):
         return list(reachable)
 
     def save_network(self):
-        # TODO: this was never reviewed since Orange2
         if self.view is None or self.network is None:
             return
 
@@ -628,8 +635,9 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    # owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
+    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()
