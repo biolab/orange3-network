@@ -1,12 +1,12 @@
 import os
 from math import sqrt
 from functools import wraps
-from threading import Lock, Thread
+from threading import Lock
 
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QTimer, QSize, Qt
+from AnyQt.QtCore import QTimer, QSize, Qt, Signal, QObject, QThread
 from AnyQt.QtWidgets import QFileDialog
 
 import Orange
@@ -101,6 +101,9 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.distance_matrix = None
         self.edges = None
         self.positions = None
+
+        self._optimizer = None
+        self._animation_thread = None
 
         self.marked_nodes = None
         self.searchStringTimer = QTimer(self)
@@ -589,32 +592,48 @@ class OWNxExplorer(OWDataProjectionWidget):
                 self.graph.update_coordinates()
                 return True
 
-        def done():
-            self.graph.set_simplifications(Simplifications.NoSimplifications)
-            self.graph.update_coordinates()
-            self.relayout_button.setDisabled(False)
-            self.progressbar.finish()
+        class LayoutOptimizer(QObject):
+            done = Signal(np.ndarray)
+            stopped = Signal()
 
-        class AnimationThread(Thread):
-            def __init__(self):
+            def __init__(self, widget):
                 super().__init__()
-                self.daemon = True
+                self.widget = widget
 
-            # Keep self from the closure
-            # pylint: disable=no-self-argument
-            def run(_):
-                edges = self.edges
-                self.positions = np.array(fruchterman_reingold(
+            def run(self):
+                widget = self.widget
+                edges = widget.edges
+                positions = np.array(fruchterman_reingold(
                     edges.data, edges.row, edges.col,
-                    1 / sqrt(self.number_of_nodes),  # k
-                    self.positions,
+                    1 / sqrt(widget.number_of_nodes),  # k
+                    widget.positions,
                     np.array([], dtype=np.int32),  # fixed
                     iterations,
                     0.1,  # sample ratio
                     callback, 0.5))
-                done()
+                self.done.emit(positions)
+                self.stopped.emit()
 
-        AnimationThread().start()
+        def done(positions):
+            self.positions = positions
+            self.relayout_button.setDisabled(False)
+            self.graph.set_simplifications(
+                self.graph.Simplifications.NoSimplifications)
+            self.graph.update_coordinates()
+            self.progressbar.finish()
+
+        def thread_finished():
+            self._optimizer = None
+            self._animation_thread = None
+
+        self._optimizer = LayoutOptimizer(self)
+        self._animation_thread = QThread()
+        self._optimizer.done.connect(done)
+        self._optimizer.stopped.connect(self._animation_thread.quit)
+        self._optimizer.moveToThread(self._animation_thread)
+        self._animation_thread.started.connect(self._optimizer.run)
+        self._animation_thread.finished.connect(thread_finished)
+        self._animation_thread.start()
 
     def send_report(self):
         self.report_data("Data", self.network.items())

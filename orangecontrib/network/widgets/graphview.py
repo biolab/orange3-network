@@ -102,6 +102,7 @@ class GraphView(OWScatterPlotBase):
         self.scatterplot_marked = None
         self.last_click = (-1, None)
 
+    @updates_disabled('plot_widget')
     def update_coordinates(self):
         super().update_coordinates()
         self.update_marks()
