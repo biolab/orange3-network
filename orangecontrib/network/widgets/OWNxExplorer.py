@@ -33,6 +33,7 @@ def non_reentrant(func):
                 return func(*args, **kwargs)
             finally:
                 lock.release()
+        return None
     return locker
 
 
@@ -220,7 +221,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         def mark_close():
             selected = self.graph.get_selection()
             if selected is None:
-                return
+                return None
             neighbours = set(selected)
             last_round = list(neighbours)
             for _ in range(self.mark_hops):
@@ -284,8 +285,7 @@ class OWNxExplorer(OWDataProjectionWidget):
              lambda: [node for node, degree in self.network.degree()
                       if degree > np.mean([deg for _, deg in
                                            self.network.degree(
-                                               self.network[node])] or [
-                                              0])])
+                                               self.network[node])] or [0])])
         ]
         cb = gui.comboBox(
             hbox, self, "mark_mode",
@@ -399,9 +399,11 @@ class OWNxExplorer(OWDataProjectionWidget):
                 self.number_of_nodes / max(1, self.number_of_edges)
 
         if not graph or graph.number_of_nodes == 0:
-            return set_graph_none()
+            set_graph_none()
+            return
         if graph.number_of_nodes() + graph.number_of_edges() > 30000:
-            return set_graph_none(self.Error.network_too_large)
+            set_graph_none(self.Error.network_too_large)
+            return
         self.Error.clear()
 
         self.mark_text = ""
@@ -445,7 +447,8 @@ class OWNxExplorer(OWDataProjectionWidget):
 
             if self.network is None:
                 self.edges = None
-                return set_checkboxes(False)
+                set_checkboxes(False)
+                return
 
             set_checkboxes(True)
             edges = network.edges(data='weight')
@@ -598,6 +601,8 @@ class OWNxExplorer(OWDataProjectionWidget):
                 super().__init__()
                 self.daemon = True
 
+            # Keep self from the closure
+            # pylint: disable=no-self-argument
             def run(_):
                 edges = self.edges
                 self.positions = np.array(fruchterman_reingold(
@@ -628,7 +633,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.report_plot("Graph", self.view)
 
 
-if __name__ == "__main__":
+def main():
+    import OWNxFile
     from AnyQt.QtWidgets import QApplication
     a = QApplication([])
     ow = OWNxExplorer()
@@ -637,7 +643,6 @@ if __name__ == "__main__":
     def set_network(data, id=None):
         ow.set_graph(data)
 
-    import OWNxFile
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
@@ -648,3 +653,7 @@ if __name__ == "__main__":
     a.exec_()
     ow.saveSettings()
     owFile.saveSettings()
+
+
+if __name__ == "__main__":
+    main()

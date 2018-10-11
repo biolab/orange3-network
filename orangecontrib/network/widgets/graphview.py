@@ -1,6 +1,7 @@
+import time
+
 import numpy as np
 import pyqtgraph as pg
-import time
 
 from AnyQt.QtCore import QLineF
 from AnyQt.QtGui import QPen
@@ -13,6 +14,9 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 # TODO: Move this to canvas.gui.utils
 # `updates_disables` exists as a context manager there; here we extend it to a
 # decorator
+
+# Serves as a decorator and context manager, hence a function-like name
+# pylint: disable=invalid-name
 class updates_disabled:
     def __init__(self, widget):
         self.widget = widget
@@ -56,7 +60,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         if self.widths is None:
             p.setPen(self.pen)
             for x0, y0, x1, y1 in zip(self.xData[::2], self.yData[::2],
-                                         self.xData[1::2], self.yData[1::2]):
+                                      self.xData[1::2], self.yData[1::2]):
                 p.drawLine(QLineF(x0, y0, x1, y1))
         else:
             pen = QPen(self.pen)
@@ -133,7 +137,7 @@ class GraphView(OWScatterPlotBase):
             self.paired_indices[1::2] = dests
 
         data = dict(x=x[self.paired_indices], y=y[self.paired_indices],
-                      pen=self._edge_curve_pen(), antialias=True)
+                    pen=self._edge_curve_pen(), antialias=True)
         if self.relative_edge_widths and len(set(weights)) > 1:
             data['widths'] = \
                 scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
@@ -207,6 +211,7 @@ class GraphView(OWScatterPlotBase):
             super().update_density()
             self.set_edge_pen()
 
+    # pylint: disable=access-member-before-definition
     def _remove_density(self):
         if self.density_img:
             self.plot_widget.removeItem(self.density_img)
@@ -226,6 +231,7 @@ class GraphView(OWScatterPlotBase):
             return
         # This is not nice, but let's not add methods to the parent just
         # to support this specific needs of network explorer
+        # pylint: disable=access-member-before-definition
         saved_selection = self.selection
         if self.label_only_selected and self.scatterplot_item:
             marked = self.master.get_marked_nodes()
@@ -235,6 +241,7 @@ class GraphView(OWScatterPlotBase):
         self.selection = saved_selection
 
     def _remove_labels(self):
+        # pylint: disable=access-member-before-definition
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
