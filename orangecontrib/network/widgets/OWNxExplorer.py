@@ -1,17 +1,13 @@
-import os
-
 import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import QTimer, QSize, Qt, Signal, QObject, QThread
-from AnyQt.QtWidgets import QFileDialog
 
 import Orange
 from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.widget import Input, Output
-
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 
 import orangecontrib.network as network
@@ -19,6 +15,7 @@ from orangecontrib.network._fr_layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
 FR_ITERATIONS = 250
+
 
 class OWNxExplorer(OWDataProjectionWidget):
     name = "Network Explorer"
@@ -98,19 +95,19 @@ class OWNxExplorer(OWDataProjectionWidget):
         return QSize(800, 600)
 
     def _add_controls(self):
-        self._info_box()
+        self._add_info_box()
         self.graph.gui.point_properties_box(self.controlArea)
-        self._effects_box()
+        self._add_effects_box()
         self.graph.gui.plot_properties_box(self.controlArea)
         gui.rubber(self.controlArea)
         self.graph.box_zoom_select(self.controlArea)
         gui.auto_commit(
             self.controlArea, self, "auto_commit",
             "Send Selection", "Send Automatically")
-        self._mark_box()
+        self._add_mark_box()
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
-    def _info_box(self):
+    def _add_info_box(self):
         info = gui.vBox(self.controlArea, True)
         gui.label(
             info, self,
@@ -125,7 +122,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.randomize_cb = gui.checkBox(
             lbox, self, "randomizePositions", "Randomize positions")
 
-    def _effects_box(self):
+    def _add_effects_box(self):
         gbox = self.graph.gui.create_gridbox(self.controlArea, True)
         self.graph.gui.add_widget(self.graph.gui.PointSize, gbox)
         gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
@@ -150,7 +147,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             'Label only edges of selected nodes',
             callback=self.graph.update_edge_labels)
 
-    def _mark_box(self):
+    def _add_mark_box(self):
         hbox = gui.hBox(None, box=True)
         self.mainArea.layout().addWidget(hbox)
         vbox = gui.hBox(hbox)
@@ -229,6 +226,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             if n >= self.number_of_nodes:
                 return np.arange(self.number_of_nodes)
             degrees = np.array(self.network.degree())
+            # pylint: disable=invalid-unary-operand-type
             min_degree = np.partition(degrees[:, 1].flatten(), -n)[-n]
             return degrees[degrees[:, 1] >= min_degree, 0]
 
@@ -477,34 +475,6 @@ class OWNxExplorer(OWDataProjectionWidget):
             reachable |= new_checks
         return list(reachable)
 
-    def save_network(self):
-        if self.view is None or self.network is None:
-            return
-
-        filename = QFileDialog.getSaveFileName(
-            self, 'Save Network', '',
-            'NetworkX graph as Python pickle (*.gpickle)\n'
-            'NetworkX edge list (*.edgelist)\n'
-            'Pajek network (*.net *.pajek)\n'
-            'GML network (*.gml)')
-        if filename:
-            _, ext = os.path.splitext(filename)
-            if not ext: filename += ".net"
-            items = self.network.items()
-            for i in range(self.network.number_of_nodes()):
-                graph_node = self.network.node[i]
-                plot_node = self.networkCanvas.networkCurve.nodes()[i]
-
-                if items is not None:
-                    ex = items[i]
-                    if 'x' in ex.domain: ex['x'] = plot_node.x()
-                    if 'y' in ex.domain: ex['y'] = plot_node.y()
-
-                graph_node['x'] = plot_node.x()
-                graph_node['y'] = plot_node.y()
-
-            network.readwrite.write(self.network, filename)
-
     def send_data(self):
         super().send_data()
 
@@ -617,19 +587,22 @@ class OWNxExplorer(OWDataProjectionWidget):
         self._animation_thread.start()
 
     def send_report(self):
-        self.report_data("Data", self.network.items())
         self.report_items('Graph info', [
             ("Number of vertices", self.network.number_of_nodes()),
             ("Number of edges", self.network.number_of_edges()),
-            ("Vertices per edge", "%.3f" % self.nodes_per_edge),
-            ("Edges per vertex", "%.3f" % self.edges_per_node),
+            ("Vertices per edge", round(self.nodes_per_edge, 3)),
+            ("Edges per vertex", round(self.edges_per_node, 3)),
         ])
-        if self.node_color_attr or self.node_size_attr or self.node_label_attrs:
-            self.report_items("Visual settings", [
-                ("Vertex color", self.colorCombo.currentText()),
-                ("Vertex size", str(self.nodeSizeCombo.currentText())),
-            ])
-        self.report_plot("Graph", self.view)
+        self.report_data("Data", self.network.items())
+        if any((self.attr_color, self.attr_shape,
+                self.attr_size, self.attr_label)):
+            self.report_items(
+                "Visual settings",
+                [("Color", self._get_caption_var_name(self.attr_color)),
+                 ("Label", self._get_caption_var_name(self.attr_label)),
+                 ("Shape", self._get_caption_var_name(self.attr_shape)),
+                 ("Size", self._get_caption_var_name(self.attr_size))])
+        self.report_plot()
 
 
 def main():
