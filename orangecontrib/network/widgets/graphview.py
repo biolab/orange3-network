@@ -10,6 +10,27 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 
 
+# TODO: Move this to canvas.gui.utils
+# `updates_disables` exists as a context manager there; here we extend it to a
+# decorator
+class updates_disabled:
+    def __init__(self, widget):
+        self.widget = widget
+
+    def __enter__(self):
+        self.old_state = self.widget.updatesEnabled()
+        self.widget.setUpdatesEnabled(False)
+
+    def __exit__(self, *exc):
+        self.widget.setUpdatesEnabled(self.old_state)
+
+    def __call__(self, method):
+        def f(widget, *args, **kwargs):
+            with updates_disabled(getattr(widget, self.widget)):
+                method(widget, *args, **kwargs)
+        return f
+
+
 class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, *args, **kwargs):
         self.widths = kwargs.pop("widths", None)
@@ -51,13 +72,14 @@ class GraphView(OWScatterPlotBase):
     show_edge_weights = Setting(False)
     relative_edge_widths = Setting(True)
     edge_width = Setting(2)
+    label_selected_edges = Setting(True)
 
     COLOR_NOT_SUBSET = (255, 255, 255, 255)
     COLOR_SUBSET = (0, 0, 0, 255)
     COLOR_DEFAULT = (255, 255, 255, 0)
 
     class Simplifications:
-        NoEdges, NoDensity, NoLabels = 1, 2, 4
+        NoLabels, NoEdges, NoEdgeLabels, NoDensity, = 1, 2, 4, 8
         NoSimplifications, All = 0, 255
 
     def __init__(self, master, parent=None):
@@ -72,6 +94,7 @@ class GraphView(OWScatterPlotBase):
     def _reset_attributes(self):
         self.paired_indices = None
         self.edge_curve = None
+        self.edge_labels = []
         self.scatterplot_marked = None
         self.last_click = (-1, None)
 
@@ -80,13 +103,15 @@ class GraphView(OWScatterPlotBase):
         self.update_marks()
         self.update_edges()
 
+    @updates_disabled('plot_widget')
     def set_simplifications(self, simplifications):
         S = self.Simplifications
-        self.plot_widget.setUpdatesEnabled(False)
         for flag, remove, update in (
                 (S.NoDensity, self._remove_density, self.update_density),
                 (S.NoLabels, self._remove_labels, self.update_labels),
-                (S.NoEdges, self._remove_edges, self.update_edges)):
+                (S.NoEdges, self._remove_edges, self.update_edges),
+                (S.NoEdgeLabels,
+                 self._remove_edge_labels, self.update_edge_labels)):
             if simplifications & flag != self.simplify & flag:
                 if simplifications & flag:
                     self.simplify += flag
@@ -94,7 +119,6 @@ class GraphView(OWScatterPlotBase):
                 else:
                     self.simplify -= flag
                     update()
-        self.plot_widget.setUpdatesEnabled(True)
 
     def update_edges(self):
         if not self.scatterplot_item \
@@ -118,17 +142,11 @@ class GraphView(OWScatterPlotBase):
 
         if self.edge_curve is None:
             self.edge_curve = PlotVarWidthCurveItem(**data)
+            self.edge_curve.setZValue(-10)
             self.plot_widget.addItem(self.edge_curve)
-            self._put_nodes_on_top()
         else:
             self.edge_curve.setData(**data)
-
-    def _put_nodes_on_top(self):
-        if self.scatterplot_item:
-            self.plot_widget.removeItem(self.scatterplot_item_sel)
-            self.plot_widget.removeItem(self.scatterplot_item)
-            self.plot_widget.addItem(self.scatterplot_item_sel)
-            self.plot_widget.addItem(self.scatterplot_item)
+        self.update_edge_labels()
 
     def set_edge_pen(self):
         if self.edge_curve:
@@ -140,13 +158,49 @@ class GraphView(OWScatterPlotBase):
             width=self.edge_width,
             cosmetic=True)
 
-    def set_edge_labels(self):
-        pass
+    @updates_disabled('plot_widget')
+    def update_edge_labels(self):
+        for label in self.edge_labels:
+            self.plot_widget.removeItem(label)
+        self.edge_labels = []
+        if self.scatterplot_item is None \
+                or not self.show_edge_weights \
+                or self.simplify & self.Simplifications.NoEdgeLabels:
+            return
+        edges = self.master.get_edges()
+        if edges is None:
+            return
+        srcs, dests, weights = edges.row, edges.col, edges.data
+        if self.label_selected_edges:
+            selected = self._selected_and_marked()
+            selected_edges = selected[srcs] | selected[dests]
+            srcs = srcs[selected_edges]
+            dests = dests[selected_edges]
+            weights = weights[selected_edges]
+        if np.allclose(weights, np.round(weights)):
+            labels = [str(x) for x in weights.astype(np.int)]
+        else:
+            labels = ["{:.02}".format(x) for x in weights]
+        x, y = self.scatterplot_item.getData()
+        xs = (x[srcs.astype(np.int64)] + x[dests.astype(np.int64)]) / 2
+        ys = (y[srcs.astype(np.int64)] + y[dests.astype(np.int64)]) / 2
+        black = pg.mkColor(0, 0, 0)
+        for label, x, y in zip(labels, xs, ys):
+            ti = pg.TextItem(label, black)
+            ti.setPos(x, y)
+            self.plot_widget.addItem(ti)
+            self.edge_labels.append(ti)
 
     def _remove_edges(self):
         if self.edge_curve:
             self.plot_widget.removeItem(self.edge_curve)
             self.edge_curve = None
+        self._remove_edge_labels()
+
+    def _remove_edge_labels(self):
+        for label in self.edge_labels:
+            self.plot_widget.removeItem(label)
+        self.edge_labels = []
 
     def update_density(self):
         if not self.simplify & self.Simplifications.NoDensity:
@@ -158,25 +212,27 @@ class GraphView(OWScatterPlotBase):
             self.plot_widget.removeItem(self.density_img)
             self.density_img = None
 
+    def _selected_and_marked(self):
+        if self.selection is None:
+            return np.zeros(len(self.scatterplot_item.data), dtype=bool)
+        selection = np.array(self.selection, dtype=np.bool)
+        marked = self.master.get_marked_nodes()
+        if marked is not None:
+            selection[marked] = 1
+        return selection
+
     def update_labels(self):
         if self.simplify & self.Simplifications.NoLabels:
             return
-        # This is not nice, but let's add methods to the parent just
-        # to support this specific case
+        # This is not nice, but let's not add methods to the parent just
+        # to support this specific needs of network explorer
+        saved_selection = self.selection
         if self.label_only_selected and self.scatterplot_item:
             marked = self.master.get_marked_nodes()
             if marked is not None and len(marked):
-                if self.selection is None:
-                    selection = None
-                    self.selection = \
-                        np.zeros(len(self.scatterplot_item.data), dtype=bool)
-                else:
-                    selection = np.array(self.selection)
-                self.selection[self.master.get_marked_nodes()] = 1
-                super().update_labels()
-                self.selection = selection
-                return
+                self.selection = self._selected_and_marked()
         super().update_labels()
+        self.selection = saved_selection
 
     def _remove_labels(self):
         for label in self.labels:
@@ -186,8 +242,8 @@ class GraphView(OWScatterPlotBase):
     def update_marks(self):
         if self.scatterplot_marked is None:
             self.scatterplot_marked = pg.ScatterPlotItem([], [])
+            self.scatterplot_marked.setZValue(-5)
             self.plot_widget.addItem(self.scatterplot_marked)
-            self._put_nodes_on_top()
 
         marked = self.master.get_marked_nodes()
         if marked is None:
@@ -208,3 +264,13 @@ class GraphView(OWScatterPlotBase):
             indices = self.master.get_reachable(indices)
         self.last_click = (time.time(), indices)
         self.select_by_indices(indices)
+
+    def unselect_all(self):
+        super().unselect_all()
+        if self.label_selected_edges:
+            self.update_edge_labels()
+
+    def _update_after_selection(self):
+        if self.label_selected_edges:
+            self.update_edge_labels()
+        super()._update_after_selection()

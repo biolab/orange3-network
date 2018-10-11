@@ -151,18 +151,22 @@ class OWNxExplorer(OWDataProjectionWidget):
                 None, self, 'graph.edge_width', minValue=1, maxValue=10, step=1,
                 callback=self.graph.update_edges
             ), 3, 1)
-        cb = self.checkbox_relative_edges = gui.checkBox(
-            None, self, 'graph.relative_edge_widths', 'Scale widths to weights',
+        box = gui.vBox(None)
+        effects_layout.addWidget(box, 4, 0, 1, 2)
+        gui.separator(box)
+        self.checkbox_relative_edges = gui.checkBox(
+            box, self, 'graph.relative_edge_widths', 'Scale widths to weights',
             callback=self.graph.update_edges)
-        effects_layout.addWidget(cb, 4, 1)
-        cb = self.checkbox_show_weights = gui.checkBox(
-            None, self, 'graph.show_edge_weights', 'Show weights',
-            callback=self.graph.set_edge_labels)
-        effects_layout.addWidget(cb, 5, 1)
+        self.checkbox_show_weights = gui.checkBox(
+            box, self, 'graph.show_edge_weights', 'Show weights',
+            callback=self.graph.update_edge_labels)
+        self.checkbox_show_weights = gui.checkBox(
+            box, self, 'graph.label_selected_edges', 'Label only selected',
+            callback=self.graph.update_edge_labels)
 
     def _mark_box(self):
         hbox = gui.hBox(None, box=True)
-        self.mainArea.layout().insertWidget(0, hbox)
+        self.mainArea.layout().addWidget(hbox)
         vbox = gui.hBox(hbox)
 
         def spin(value, label, minv, maxv):
@@ -462,6 +466,8 @@ class OWNxExplorer(OWDataProjectionWidget):
             if np.allclose(self.edges.data, 0):
                 self.edges.data[:] = 1
                 set_checkboxes(False)
+            elif len(set(self.edges.data)) == 1:
+                set_checkboxes(False)
 
         set_actual_data()
         if self.positions is None:
@@ -565,8 +571,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
             Simplifications.NoDensity
-            + Simplifications.NoLabels * (self.graph.labels is not None
-                                          and len(self.graph.labels) > 20)
+            + Simplifications.NoLabels * (len(self.graph.labels) > 20)
+            + Simplifications.NoEdgeLabels * (len(self.graph.edge_labels) > 20)
             + Simplifications.NoEdges * (self.number_of_edges > 1000))
 
         if self.number_of_nodes + self.number_of_edges > 20000:
@@ -635,9 +641,9 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
     #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
+    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()
