@@ -1,7 +1,4 @@
 import os
-from math import sqrt
-from functools import wraps
-from threading import Lock
 
 import numpy as np
 import scipy.sparse as sp
@@ -22,20 +19,6 @@ from orangecontrib.network._fr_layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
 FR_ITERATIONS = 250
-
-def non_reentrant(func):
-    """Prevent the function from reentry."""
-    lock = Lock()
-    @wraps(func)
-    def locker(*args, **kwargs):
-        if lock.acquire(False):
-            try:
-                return func(*args, **kwargs)
-            finally:
-                lock.release()
-        return None
-    return locker
-
 
 class OWNxExplorer(OWDataProjectionWidget):
     name = "Network Explorer"
@@ -303,7 +286,6 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.btgroup = gui.button(
             hbox, self, "Add New Group", callback=self.select_as_group)
 
-    @non_reentrant
     def set_mark_mode(self, mode=None):
         if mode is not None:
             self.mark_mode = mode
@@ -316,7 +298,6 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.searchStringTimer.stop()
         self.update_marks()
 
-    @non_reentrant
     def update_marks(self):
         if self.network is None:
             return
@@ -605,7 +586,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                 edges = widget.edges
                 positions = np.array(fruchterman_reingold(
                     edges.data, edges.row, edges.col,
-                    1 / sqrt(widget.number_of_nodes),  # k
+                    1 / np.sqrt(widget.number_of_nodes),  # k
                     widget.positions,
                     np.array([], dtype=np.int32),  # fixed
                     iterations,
