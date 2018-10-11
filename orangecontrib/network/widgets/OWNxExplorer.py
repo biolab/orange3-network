@@ -140,29 +140,28 @@ class OWNxExplorer(OWDataProjectionWidget):
             lbox, self, "randomizePositions", "Randomize positions")
 
     def _effects_box(self):
-        # TODO: Do we really need opacity in this plot? Maybe just set it to 255
-        effects_layout = self.graph.gui.effects_box(self.controlArea).layout()
-        effects_layout.itemAtPosition(3, 0).widget().hide()  # hide jitter
-        effects_layout.itemAtPosition(3, 1).widget().hide()
-        effects_layout.itemAtPosition(2, 0).widget().hide()  # hide opacity
-        effects_layout.itemAtPosition(2, 1).widget().hide()
-        effects_layout.addWidget(gui.widgetLabel(None, "Edge width:"), 3, 0)
-        effects_layout.addWidget(
-            gui.hSlider(
-                None, self, 'graph.edge_width', minValue=1, maxValue=10, step=1,
-                callback=self.graph.update_edges
-            ), 3, 1)
+        gbox = self.graph.gui.create_gridbox(self.controlArea, True)
+        self.graph.gui.add_widget(self.graph.gui.PointSize, gbox)
+        gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
+        self.graph.gui.add_control(
+            gbox, gui.hSlider, "Edge width:",
+            master=self, value='graph.edge_width',
+            minValue=1, maxValue=10, step=1,
+            callback=self.graph.update_edges)
         box = gui.vBox(None)
-        effects_layout.addWidget(box, 4, 0, 1, 2)
+        gbox.layout().addWidget(box, 3, 0, 1, 2)
         gui.separator(box)
         self.checkbox_relative_edges = gui.checkBox(
-            box, self, 'graph.relative_edge_widths', 'Scale widths to weights',
+            box, self, 'graph.relative_edge_widths',
+            'Scale edge widths to weights',
             callback=self.graph.update_edges)
         self.checkbox_show_weights = gui.checkBox(
-            box, self, 'graph.show_edge_weights', 'Show weights',
+            box, self, 'graph.show_edge_weights',
+            'Show edge weights',
             callback=self.graph.update_edge_labels)
         self.checkbox_show_weights = gui.checkBox(
-            box, self, 'graph.label_selected_edges', 'Label only selected',
+            box, self, 'graph.label_selected_edges',
+            'Label only edges of selected nodes',
             callback=self.graph.update_edge_labels)
 
     def _mark_box(self):
