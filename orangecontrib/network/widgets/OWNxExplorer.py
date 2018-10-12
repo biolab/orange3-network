@@ -84,6 +84,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         self._optimizer = None
         self._animation_thread = None
+        self._stop_optimization = False
 
         self.marked_nodes = None
         self.searchStringTimer = QTimer(self)
@@ -119,6 +120,9 @@ class OWNxExplorer(OWDataProjectionWidget):
         lbox = gui.hBox(info)
         self.relayout_button = gui.button(
             lbox, self, 'Re-layout', callback=self.relayout, autoDefault=False)
+        self.stop_button = gui.button(
+            lbox, self, 'Stop', callback=self.stop_relayout, autoDefault=False,
+            hidden=True)
         self.randomize_cb = gui.checkBox(
             lbox, self, "randomizePositions", "Randomize positions")
 
@@ -515,6 +519,14 @@ class OWNxExplorer(OWDataProjectionWidget):
     def get_marked_nodes(self):
         return self.marked_nodes
 
+    def set_buttons(self, running):
+        self.stop_button.setHidden(not running)
+        self.relayout_button.setHidden(running)
+
+    def stop_relayout(self):
+        self._stop_optimization = True
+        self.set_buttons(running=False)
+
     # TODO: Stop relayout if new data is received
     def relayout(self):
         if self.edges is None:
@@ -522,7 +534,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         if self.randomizePositions:
             self.set_random_positions()
         self.progressbar = gui.ProgressBar(self, FR_ITERATIONS)
-        self.relayout_button.setDisabled(True)
+        self.set_buttons(running=True)
+        self._stop_optimization = False
 
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
@@ -541,7 +554,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                 self.progressbar.advance(progress)
                 self.positions = np.array(positions)
                 self.graph.update_coordinates()
-                return True
+                return not self._stop_optimization
 
         class LayoutOptimizer(QObject):
             done = Signal(np.ndarray)
@@ -567,7 +580,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         def done(positions):
             self.positions = positions
-            self.relayout_button.setDisabled(False)
+            self.set_buttons(running=False)
             self.graph.set_simplifications(
                 self.graph.Simplifications.NoSimplifications)
             self.graph.update_coordinates()
@@ -585,6 +598,11 @@ class OWNxExplorer(OWDataProjectionWidget):
         self._animation_thread.started.connect(self._optimizer.run)
         self._animation_thread.finished.connect(thread_finished)
         self._animation_thread.start()
+
+    def onDeleteWidget(self):
+        self._stop_optimization = True
+        self._animation_thread.quit()
+        self._animation_thread.wait()
 
     def send_report(self):
         self.report_items('Graph info', [
