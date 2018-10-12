@@ -457,6 +457,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             elif len(set(self.edges.data)) == 1:
                 set_checkboxes(False)
 
+        self.stop_optimization_and_wait()
         set_actual_data()
         if self.positions is None:
             set_actual_edges()
@@ -599,10 +600,16 @@ class OWNxExplorer(OWDataProjectionWidget):
         self._animation_thread.finished.connect(thread_finished)
         self._animation_thread.start()
 
+    def stop_optimization_and_wait(self):
+        if self._animation_thread is not None:
+            self._stop_optimization = True
+            self._animation_thread.quit()
+            self._animation_thread.wait()
+            self._animation_thread = None
+
     def onDeleteWidget(self):
-        self._stop_optimization = True
-        self._animation_thread.quit()
-        self._animation_thread.wait()
+        self.stop_optimization_and_wait()
+        super().onDeleteWidget()
 
     def send_report(self):
         self.report_items('Graph info', [
