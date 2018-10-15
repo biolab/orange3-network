@@ -545,25 +545,22 @@ class OWNxExplorer(OWDataProjectionWidget):
             + Simplifications.NoEdgeLabels * (len(self.graph.edge_labels) > 20)
             + Simplifications.NoEdges * (self.number_of_edges > 1000))
 
-        if self.number_of_nodes + self.number_of_edges > 20000:
-            iterations = 5
-            callback = None
-        else:
-            iterations = FR_ITERATIONS
-
-            def callback(positions, progress):
-                self.progressbar.advance(progress)
-                self.positions = np.array(positions)
-                self.graph.update_coordinates()
-                return not self._stop_optimization
+        large_graph = self.number_of_nodes + self.number_of_edges > 20000
+        iterations = 5 if large_graph else FR_ITERATIONS
 
         class LayoutOptimizer(QObject):
+            update = Signal(np.ndarray, float)
             done = Signal(np.ndarray)
             stopped = Signal()
 
             def __init__(self, widget):
                 super().__init__()
                 self.widget = widget
+
+            def send_update(self, positions, progress):
+                if not large_graph:
+                    self.update.emit(np.array(positions), progress)
+                return not self.widget._stop_optimization
 
             def run(self):
                 widget = self.widget
@@ -575,9 +572,14 @@ class OWNxExplorer(OWDataProjectionWidget):
                     np.array([], dtype=np.int32),  # fixed
                     iterations,
                     0.1,  # sample ratio
-                    callback, 0.5))
+                    self.send_update, 0.25))
                 self.done.emit(positions)
                 self.stopped.emit()
+
+        def update(positions, progress):
+            self.progressbar.advance(progress)
+            self.positions = positions
+            self.graph.update_coordinates()
 
         def done(positions):
             self.positions = positions
@@ -593,6 +595,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         self._optimizer = LayoutOptimizer(self)
         self._animation_thread = QThread()
+        self._optimizer.update.connect(update)
         self._optimizer.done.connect(done)
         self._optimizer.stopped.connect(self._animation_thread.quit)
         self._optimizer.moveToThread(self._animation_thread)

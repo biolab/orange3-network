@@ -11,30 +11,6 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 
 
-# TODO: Move this to canvas.gui.utils
-# `updates_disables` exists as a context manager there; here we extend it to a
-# decorator
-
-# Serves as a decorator and context manager, hence a function-like name
-# pylint: disable=invalid-name
-class updates_disabled:
-    def __init__(self, widget):
-        self.widget = widget
-
-    def __enter__(self):
-        self.old_state = self.widget.updatesEnabled()
-        self.widget.setUpdatesEnabled(False)
-
-    def __exit__(self, *exc):
-        self.widget.setUpdatesEnabled(self.old_state)
-
-    def __call__(self, method):
-        def f(widget, *args, **kwargs):
-            with updates_disabled(getattr(widget, self.widget)):
-                method(widget, *args, **kwargs)
-        return f
-
-
 class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, *args, **kwargs):
         self.widths = kwargs.pop("widths", None)
@@ -102,13 +78,11 @@ class GraphView(OWScatterPlotBase):
         self.scatterplot_marked = None
         self.last_click = (-1, None)
 
-    @updates_disabled('plot_widget')
     def update_coordinates(self):
         super().update_coordinates()
         self.update_marks()
         self.update_edges()
 
-    @updates_disabled('plot_widget')
     def set_simplifications(self, simplifications):
         S = self.Simplifications
         for flag, remove, update in (
@@ -163,7 +137,6 @@ class GraphView(OWScatterPlotBase):
             width=self.edge_width,
             cosmetic=True)
 
-    @updates_disabled('plot_widget')
     def update_edge_labels(self):
         for label in self.edge_labels:
             self.plot_widget.removeItem(label)
