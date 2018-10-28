@@ -151,6 +151,11 @@ class OWNxExplorer(OWDataProjectionWidget):
             'Label only edges of selected nodes',
             callback=self.graph.update_edge_labels)
 
+        # This is ugly: create a slider that controls alpha_value so that
+        # parent can enable and disable it - although it's never added to any
+        # layout and visible to the user
+        gui.hSlider(None, self, "graph.alpha_value")
+
     def _add_mark_box(self):
         hbox = gui.hBox(None, box=True)
         self.mainArea.layout().addWidget(hbox)
@@ -245,7 +250,7 @@ class OWNxExplorer(OWDataProjectionWidget):
              spin("mark_hops", "Number of hops:", 1, 20),
              mark_close),
 
-            ("Mark node from subset signal", None, mark_from_input),
+            ("Mark nodes from subset signal", None, mark_from_input),
 
             ("Mark nodes with few connections",
              spin("mark_max_conn", "Max. connections:", 0, 1000),
@@ -401,6 +406,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         network = self.network
 
         def set_actual_data():
+            self.closeContext()
             self.Error.data_size_mismatch.clear()
             self.Warning.no_graph_found.clear()
             self._invalid_data = False
@@ -419,6 +425,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                 self.data = network.items()
             if self.data is not None:
                 # Replicate the necessary parts of set_data
+                self.valid_data = np.full(len(self.data), True, dtype=np.bool)
                 self.init_attr_values()
                 self.openContext(self.data)
                 self.cb_class_density.setEnabled(self.can_draw_density())
@@ -439,6 +446,8 @@ class OWNxExplorer(OWDataProjectionWidget):
             edges = network.edges(data='weight')
             if edges:
                 row, col, data = zip(*edges)
+                if all(w is None for w in data):
+                    data = np.ones((len(data), ), dtype=float)
                 self.edges = sp.coo_matrix((data, (row, col)))
             else:
                 self.edges = sp.coo_matrix((0, 3))
@@ -466,6 +475,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.relayout()
         else:
             self.graph.update_point_props()
+        self.update_marks()
         self.update_selection_buttons()
 
     def set_random_positions(self):
@@ -513,6 +523,11 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def get_embedding(self):
         return self.positions
+
+    def get_subset_mask(self):
+        if self.data is None:
+            return None
+        return super().get_subset_mask()
 
     def get_edges(self):
         return self.edges
