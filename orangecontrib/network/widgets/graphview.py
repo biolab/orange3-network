@@ -14,7 +14,7 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, *args, **kwargs):
         self.widths = kwargs.pop("widths", None)
-        self.setPen(kwargs.pop("pen", None))
+        self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
         super().__init__(*args, **kwargs)
 
     def setWidths(self, widths):
@@ -25,7 +25,8 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         self.pen = pen
 
     def setData(self, *args, **kwargs):
-        self.widths = kwargs.pop("widths", None)
+        self.widths = kwargs.pop("widths", self.widths)
+        self.pen = kwargs.pop("pen", self.pen)
         super().setData(*args, **kwargs)
 
     def paint(self, p, opt, widget):
