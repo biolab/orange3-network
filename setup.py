@@ -13,7 +13,7 @@ from numpy.distutils.core import setup
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.3.2'
+VERSION = '1.4.0'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
