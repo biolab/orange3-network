@@ -626,7 +626,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             self._animation_thread = None
 
     def onDeleteWidget(self):
-        self.stop_optimization_blocking()
+        self.stop_optimization_and_wait()
         super().onDeleteWidget()
 
     def send_report(self):
