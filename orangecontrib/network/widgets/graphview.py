@@ -1,493 +1,259 @@
-from threading import Thread
+import time
 
 import numpy as np
-import networkx as nx
+import pyqtgraph as pg
 
-from AnyQt import QtCore, QtGui
-from AnyQt.QtCore import QLineF, QRectF, Qt
-from AnyQt.QtGui import QBrush, QPen, QColor
-from AnyQt.QtWidgets import qApp, QStyle, QGraphicsLineItem, QGraphicsEllipseItem, \
-    QGraphicsView, QGraphicsScene, QWidget, QGraphicsSimpleTextItem
+from AnyQt.QtCore import QLineF
+from AnyQt.QtGui import QPen
 
-from orangecontrib.network._fr_layout import fruchterman_reingold_layout
-
-from Orange.widgets.visualize.owdistributions import LegendItem as DistributionsLegendItem
-# Expose OpenGL rendering for large graphs, if available
-HAVE_OPENGL = True
-try:
-    from AnyQt import QtOpenGL
-except:
-    HAVE_OPENGL = False
-
-FR_ITERATIONS = 250
-
-IS_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 4000
-IS_VERY_LARGE_GRAPH = lambda G: G.number_of_nodes() + G.number_of_edges() > 10000
+from Orange.util import scale
+from Orange.widgets.settings import Setting
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 
 
-class LegendItem(DistributionsLegendItem):
-    def __init__(self):
-        super().__init__()
-        self.parent = None
-        self.x = None
-        self.y = None
+class PlotVarWidthCurveItem(pg.PlotCurveItem):
+    def __init__(self, *args, **kwargs):
+        self.widths = kwargs.pop("widths", None)
+        self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
+        super().__init__(*args, **kwargs)
 
-    def set_parent(self, parent):
-        self.parent = parent
-        parent.scene().changed.connect(self.geometry_changed)
+    def setWidths(self, widths):
+        self.widths = widths
+        self.update()
 
-    def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
-            event.accept()
-            if self.parent is not None:
-                new_pos = self.pos() + (event.pos() - event.lastPos())
-                self.setPos(new_pos)
-                new_pos = self.parent.mapFromScene(new_pos)
-                self.x = new_pos.x()
-                self.y = new_pos.y()
+    def setPen(self, pen):
+        self.pen = pen
+
+    def setData(self, *args, **kwargs):
+        self.widths = kwargs.pop("widths", self.widths)
+        self.pen = kwargs.pop("pen", self.pen)
+        super().setData(*args, **kwargs)
+
+    def paint(self, p, opt, widget):
+        if self.xData is None or len(self.xData) == 0:
+            return
+        p.setRenderHint(p.Antialiasing, True)
+        p.setCompositionMode(p.CompositionMode_SourceOver)
+        if self.widths is None:
+            p.setPen(self.pen)
+            for x0, y0, x1, y1 in zip(self.xData[::2], self.yData[::2],
+                                      self.xData[1::2], self.yData[1::2]):
+                p.drawLine(QLineF(x0, y0, x1, y1))
         else:
-            event.ignore()
-
-    def geometry_changed(self):
-        a = self.parent.frameRect()
-        x = a.width() - self.width()
-        y = a.height() - self.height()
-        if None in [self.x, self.y]:
-            self.x = x
-            self.y = 0
-        inside = lambda x, min_x, max_x: max(min(max_x, x), min_x)
-        self.x = inside(self.x, 0, x)
-        self.y = inside(self.y, 0, y)
-        self.setPos(self.parent.mapToScene(self.x, self.y))
+            pen = QPen(self.pen)
+            for x0, y0, x1, y1, w in zip(self.xData[::2], self.yData[::2],
+                                         self.xData[1::2], self.yData[1::2],
+                                         self.widths):
+                pen.setWidth(w)
+                p.setPen(pen)
+                p.drawLine(QLineF(x0, y0, x1, y1))
 
 
-class QGraphicsEdge(QGraphicsLineItem):
-    def __init__(self, source, dest, view=None):
-        super().__init__()
-        self.setAcceptedMouseButtons(Qt.NoButton)
-        self.setFlags(self.ItemIgnoresTransformations |
-                      self.ItemIgnoresParentOpacity)
-        self.setZValue(1)
-        self.setPen(QPen(Qt.gray, .7))
+class GraphView(OWScatterPlotBase):
+    show_edge_weights = Setting(False)
+    relative_edge_widths = Setting(True)
+    edge_width = Setting(2)
+    label_selected_edges = Setting(True)
 
-        source.addEdge(self)
-        dest.addEdge(self)
-        self.source = source
-        self.dest = dest
-        self.__transform = view.transform
-        # Add text labels
-        label = self.label = QGraphicsSimpleTextItem('test', self)
-        label.setVisible(False)
-        label.setBrush(Qt.gray)
-        label.setZValue(2)
-        label.setFlags(self.ItemIgnoresParentOpacity |
-                       self.ItemIgnoresTransformations)
-        view.scene().addItem(label)
+    COLOR_NOT_SUBSET = (255, 255, 255, 255)
+    COLOR_SUBSET = (0, 0, 0, 255)
+    COLOR_DEFAULT = (255, 255, 255, 0)
 
-        self.adjust()
+    class Simplifications:
+        NoLabels, NoEdges, NoEdgeLabels, NoDensity, = 1, 2, 4, 8
+        NoSimplifications, All = 0, 255
 
-    def adjust(self):
-        line = QLineF(self.mapFromItem(self.source, 0, 0),
-                      self.mapFromItem(self.dest, 0, 0))
-        self.label.setPos(line.pointAt(.5))
-        self.setLine(self.__transform().map(line))
-
-
-class Edge(QGraphicsEdge):
-    def __init__(self, source, dest, view=None):
-        super().__init__(source, dest, view)
-        self.setSize(.7)
-
-    def setSize(self, size):
-        self.setPen(QPen(self.pen().color(), size))
-
-    def setText(self, text):
-        if text: self.label.setText(text)
-        self.label.setVisible(bool(text))
-
-    def setColor(self, color):
-        self.setPen(QPen(QColor(color or Qt.gray), self.pen().width()))
-
-
-class QGraphicsNode(QGraphicsEllipseItem):
-    """This class is the bare minimum to sustain a connected graph"""
-    def __init__(self, rect=QRectF(-5, -5, 10, 10), view=None):
-        super().__init__(rect)
-        self.setCacheMode(self.DeviceCoordinateCache)
-        self.setAcceptHoverEvents(True)
-        self.setFlags(self.ItemIsMovable |
-                      self.ItemIsSelectable |
-                      self.ItemIgnoresTransformations |
-                      self.ItemIgnoresParentOpacity |
-                      self.ItemSendsGeometryChanges)
-        self.setZValue(4)
-
-        self.edges = []
-        self._radius = rect.width() / 2
-        self.__transform = view.transform
-        # Add text labels
-        label = self.label = QGraphicsSimpleTextItem('test', self)
-        label.setVisible(False)
-        label.setFlags(self.ItemIgnoresParentOpacity |
-                       self.ItemIgnoresTransformations)
-        label.setZValue(3)
-        view.scene().addItem(label)
-
-    def setPos(self, x, y):
-        self.adjust()
-        super().setPos(x, y)
-
-    def adjust(self):
-        # Adjust label position
-        d = 1 / self.__transform().m11() * self._radius
-        self.label.setPos(self.pos().x() + d, self.pos().y() + d)
-
-    def addEdge(self, edge):
-        self.edges.append(edge)
-
-    def itemChange(self, change, value):
-        if change == self.ItemPositionHasChanged:
-            self.adjust()
-            for edge in self.edges:
-                edge.adjust()
-        return super().itemChange(change, value)
-
-
-class Node(QGraphicsNode):
-    """
-    This class provides an interface for all the bells & whistles of the
-    Network Explorer.
-    """
-
-    BRUSH_DEFAULT = QBrush(QColor('#669'))
-
-    class Pen:
-        DEFAULT = QPen(Qt.black, 0)
-        SELECTED = QPen(QColor('#dd0000'), 3)
-        HIGHLIGHTED = QPen(QColor('#ffaa22'), 3)
-
-    _TOOLTIP = lambda: ''
-
-    def __init__(self, id, view):
-        super().__init__(view=view)
-        self.id = id
-        self.setBrush(Node.BRUSH_DEFAULT)
-        self.setPen(Node.Pen.DEFAULT)
-
-        self._is_highlighted = False
-        self._tooltip = Node._TOOLTIP
-
-    def setSize(self, size):
-        self._radius = radius = size/2
-        self.setRect(-radius, -radius, size, size)
-
-    def setText(self, text):
-        if text: self.label.setText(text)
-        self.label.setVisible(bool(text))
-
-    def setColor(self, color):
-        self.setBrush(QBrush(QColor(color)) if color else Node.BRUSH_DEFAULT)
-
-    def isHighlighted(self):
-        return self._is_highlighted
-
-    def setHighlighted(self, highlight):
-        self._is_highlighted = highlight
-        if not self.isSelected():
-            self.itemChange(self.ItemSelectedChange, False)
-
-    def itemChange(self, change, value):
-        if change == self.ItemSelectedChange:
-            self.setPen(Node.Pen.SELECTED if value else
-                        Node.Pen.HIGHLIGHTED if self._is_highlighted else
-                        Node.Pen.DEFAULT)
-        return super().itemChange(change, value)
-
-    def paint(self, painter, option, widget):
-        option.state &= ~QStyle.State_Selected  # We use a custom selection pen
-        super().paint(painter, option, widget)
-
-    def setTooltip(self, callback):
-        assert not callback or callable(callback)
-        self._tooltip = callback or Node._TOOLTIP
-
-    def hoverEnterEvent(self, event):
-        self.setToolTip(self._tooltip())
-
-    def hoverLeaveEvent(self, event):
-        self.setToolTip('');
-
-
-class GraphView(QGraphicsView):
-
-    positionsChanged = QtCore.pyqtSignal(np.ndarray, float)
-    # Emitted when nodes' selected or highlighted state changes
-    selectionChanged = QtCore.pyqtSignal()
-    # Emitted when the relayout() animation finishes
-    animationFinished = QtCore.pyqtSignal()
-
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.nodes = []
-        self.edges = []
-        self._selection = []
-        self._clicked_node = None
-        self.is_animating = False
-        self.legend = None
-        self._pressed = False
-
-        scene = QGraphicsScene(self)
-        scene.setItemIndexMethod(scene.BspTreeIndex)
-        scene.setBspTreeDepth(2)
-        self.setScene(scene)
-        self.setSceneRect(-1e5, -1e5, 2e5, 2e5)
-        self.scaleFactor = 300
-        self.setText('')
-
-        self.setCacheMode(self.CacheBackground)
-        self.setViewportUpdateMode(self.FullViewportUpdate)  # BoundingRectViewportUpdate doesn't work on Mac
-
-        self.setTransformationAnchor(self.AnchorUnderMouse)
-        self.setResizeAnchor(self.AnchorViewCenter)
-
-        self.setDragMode(self.RubberBandDrag)
-
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.positionsChanged.connect(self._update_positions, type=Qt.BlockingQueuedConnection)
-        self.animationFinished.connect(self.finish)
-
-    def finish(self):
-        self.is_animating = False
-        self.centerView()
-
-    def centerView(self):
-        xs, ys = zip(*((item.x(), item.y())
-                       for item in self.scene().items()
-                       if isinstance(item, Node)))
-        mx, Mx = min(xs), max(xs)
-        my, My = min(ys), max(ys)
-        w, h = Mx-mx, My-my
-        self.centerOn(mx+w/2, my+h/2)
-
-    def mousePressEvent(self, event):
-        self._selection = []
-        if event.button() == Qt.LeftButton:
-            if self.is_animating:
-                self.is_animating = False
-                return
-            # Save the current selection and restore it on mouse{Move,Release}
-            self._clicked_node = self.itemAt(event.pos())
-            self._pressed = True
-            if self._clicked_node and isinstance(self._clicked_node, Node):
-                self.setCursor(Qt.ClosedHandCursor)
-            if event.modifiers() & Qt.ShiftModifier:
-                self._selection = self.scene().selectedItems()
-        # On right mouse button, switch to pan mode
-        elif event.button() == Qt.RightButton:
-            self.setDragMode(self.ScrollHandDrag)
-            # Forge left mouse button event
-            event = QtGui.QMouseEvent(event.type(),
-                                      event.pos(),
-                                      event.globalPos(),
-                                      Qt.LeftButton,
-                                      event.buttons(),
-                                      event.modifiers())
-        super().mousePressEvent(event)
-        # Reselect the selection that had just been discarded
-        for node in self._selection: node.setSelected(True)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        if not self._clicked_node:
-            for node in self._selection: node.setSelected(True)
-        if not self._pressed:
-            self.setCursor(
-                Qt.OpenHandCursor if isinstance(self.itemAt(event.pos()), Node) else Qt.ArrowCursor)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        self._pressed = False
-        if self.dragMode() == self.RubberBandDrag:
-            for node in self._selection: node.setSelected(True)
-            self.selectionChanged.emit()
-        if self._clicked_node and isinstance(self._clicked_node, Node):
-            self.selectionChanged.emit()
-            self.setCursor(Qt.OpenHandCursor)
-        # The following line is required (QTBUG-48443)
-        self.setDragMode(self.NoDrag)
-        # Restore default drag mode
-        self.setDragMode(self.RubberBandDrag)
-
-    def setText(self, text):
-        text = self._text = QtGui.QStaticText(text or '')
-        text.setPerformanceHint(text.AggressiveCaching)
-        option = QtGui.QTextOption()
-        option.setWrapMode(QtGui.QTextOption.NoWrap)
-        text.setTextOption(option)
-        scene = self.scene()
-        scene.invalidate(layers=scene.BackgroundLayer)
-
-    def drawForeground(self, painter, rect):
-        painter.resetTransform()
-        painter.drawStaticText(10, 10, self._text)
-        super().drawForeground(painter, rect)
-
-    def scrollContentsBy(self, dx, dy):
-        scene = self.scene()
-        scene.invalidate(layers=scene.BackgroundLayer)
-        super().scrollContentsBy(dx, dy)
-
-    def _setState(self, nodes, extend, state_setter):
-        nodes = set(nodes)
-        if extend:
-            for node in self.nodes:
-                if node.id in nodes:
-                    getattr(node, state_setter)(True)
-        else:
-            for node in self.nodes:
-                getattr(node, state_setter)(node.id in nodes)
-        self.selectionChanged.emit()
-
-    def getSelected(self):
-        return [node.id for node in self.scene().selectedItems()]
-
-    def getUnselected(self):
-        return [node.id
-                for node in (set(self.scene().items()) - set(self.scene().selectedItems()))
-                if isinstance(node, Node)]
-
-    def setSelected(self, nodes, extend=False):
-        self._setState(nodes, extend, 'setSelected')
-
-    def getHighlighted(self):
-        return [node.id for node in self.nodes
-                if node.isHighlighted() and not node.isSelected()]
-
-    def setHighlighted(self, nodes):
-        self._setState(nodes, False, 'setHighlighted')
+    def __init__(self, master, parent=None):
+        super().__init__(master)
+        self._reset_attributes()
+        self.simplify = self.Simplifications.NoSimplifications
 
     def clear(self):
-        self.scene().clear()
-        self.scene().setSceneRect(QRectF())
-        self.legend = None
-        self.nodes.clear()
-        self.edges.clear()
+        super().clear()
+        self._reset_attributes()
 
-    def set_graph(self, graph, relayout=True):
-        assert not graph or isinstance(graph, nx.Graph)
-        self.graph = graph
-        if not graph:
-            self.clear()
+    def _reset_attributes(self):
+        self.paired_indices = None
+        self.edge_curve = None
+        self.edge_labels = []
+        self.scatterplot_marked = None
+        self.last_click = (-1, None)
+
+    def update_coordinates(self):
+        super().update_coordinates()
+        self.update_marks()
+        self.update_edges()
+
+    def set_simplifications(self, simplifications):
+        S = self.Simplifications
+        for flag, remove, update in (
+                (S.NoDensity, self._remove_density, self.update_density),
+                (S.NoLabels, self._remove_labels, self.update_labels),
+                (S.NoEdges, self._remove_edges, self.update_edges),
+                (S.NoEdgeLabels,
+                 self._remove_edge_labels, self.update_edge_labels)):
+            if simplifications & flag != self.simplify & flag:
+                if simplifications & flag:
+                    self.simplify += flag
+                    remove()
+                else:
+                    self.simplify -= flag
+                    update()
+
+    def update_edges(self):
+        if not self.scatterplot_item \
+                or self.simplify & self.Simplifications.NoEdges:
             return
-        large_graph = IS_LARGE_GRAPH(graph)
-        very_large_graph = IS_VERY_LARGE_GRAPH(graph)
-        self.setViewport(QtOpenGL.QGLWidget()
-                         # FIXME: Try reenable the following test after Qt5 port
-                         if large_graph and HAVE_OPENGL else
-                         QWidget())
-        self.setRenderHints(QtGui.QPainter.RenderHint() if very_large_graph else
-                            (QtGui.QPainter.Antialiasing |
-                             QtGui.QPainter.TextAntialiasing))
-        self.clear()
-        nodes = {}
-        for v in sorted(graph.nodes()):
-            node = Node(v, view=self)
-            self.addNode(node)
-            nodes[v] = node
-        for u, v in graph.edges():
-            self.addEdge(Edge(nodes[u], nodes[v], view=self))
-        self.selectionChanged.emit()
-        if relayout: self.relayout()
+        x, y = self.scatterplot_item.getData()
+        edges = self.master.get_edges()
+        srcs, dests, weights = edges.row, edges.col, edges.data
+        if self.edge_curve is None:
+            self.paired_indices = np.empty((2 * len(srcs), ), dtype=int)
+            self.paired_indices[::2] = srcs
+            self.paired_indices[1::2] = dests
 
-    def addNode(self, node):
-        assert isinstance(node, Node)
-        self.nodes.append(node)
-        self.scene().addItem(node)
+        data = dict(x=x[self.paired_indices], y=y[self.paired_indices],
+                    pen=self._edge_curve_pen(), antialias=True)
+        if self.relative_edge_widths and len(set(weights)) > 1:
+            data['widths'] = \
+                scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
+        else:
+            data['widths'] = None
 
-    def addEdge(self, edge):
-        assert isinstance(edge, Edge)
-        self.edges.append(edge)
-        self.scene().addItem(edge)
+        if self.edge_curve is None:
+            self.edge_curve = PlotVarWidthCurveItem(**data)
+            self.edge_curve.setZValue(-10)
+            self.plot_widget.addItem(self.edge_curve)
+        else:
+            self.edge_curve.setData(**data)
+        self.update_edge_labels()
 
-    def wheelEvent(self, event):
-        if event.angleDelta().x() != 0: return
-        self.scaleView(2**(event.angleDelta().y() / 240))
+    def set_edge_pen(self):
+        if self.edge_curve:
+            self.edge_curve.setPen(self._edge_curve_pen())
 
-    def scaleView(self, factor):
-        magnitude = self.transform().scale(factor, factor).mapRect(QRectF(0, 0, 1, 1)).width()
-        if 0.2 < magnitude < 30:
-            self.scale(factor, factor)
-        # Reposition nodes' labela and edges, both of which are node-dependend
-        # (and nodes just "moved")
-        for node in self.nodes: node.adjust()
-        for edge in self.edges: edge.adjust()
+    def _edge_curve_pen(self):
+        return pg.mkPen(
+            0.5 if self.class_density else 0.8,
+            width=self.edge_width,
+            cosmetic=True)
 
-    @property
-    def is_animating(self):
-        return self._is_animating
+    def update_edge_labels(self):
+        for label in self.edge_labels:
+            self.plot_widget.removeItem(label)
+        self.edge_labels = []
+        if self.scatterplot_item is None \
+                or not self.show_edge_weights \
+                or self.simplify & self.Simplifications.NoEdgeLabels:
+            return
+        edges = self.master.get_edges()
+        if edges is None:
+            return
+        srcs, dests, weights = edges.row, edges.col, edges.data
+        if self.label_selected_edges:
+            selected = self._selected_and_marked()
+            selected_edges = selected[srcs] | selected[dests]
+            srcs = srcs[selected_edges]
+            dests = dests[selected_edges]
+            weights = weights[selected_edges]
+        if np.allclose(weights, np.round(weights)):
+            labels = [str(x) for x in weights.astype(np.int)]
+        else:
+            labels = ["{:.02}".format(x) for x in weights]
+        x, y = self.scatterplot_item.getData()
+        xs = (x[srcs.astype(np.int64)] + x[dests.astype(np.int64)]) / 2
+        ys = (y[srcs.astype(np.int64)] + y[dests.astype(np.int64)]) / 2
+        black = pg.mkColor(0, 0, 0)
+        for label, x, y in zip(labels, xs, ys):
+            ti = pg.TextItem(label, black)
+            ti.setPos(x, y)
+            self.plot_widget.addItem(ti)
+            self.edge_labels.append(ti)
 
-    @is_animating.setter
-    def is_animating(self, value):
-        self.setCursor(Qt.ForbiddenCursor if value else Qt.ArrowCursor)
-        self._is_animating = value
+    def _remove_edges(self):
+        if self.edge_curve:
+            self.plot_widget.removeItem(self.edge_curve)
+            self.edge_curve = None
+        self._remove_edge_labels()
 
-    def relayout(self, randomize=True, weight=None):
-        if self.is_animating: return
-        self.is_animating = True
-        if weight is None: weight = 'weight'
-        pos, graphview = None, self
-        if not randomize:
-            pos = np.array([[pos.x(), pos.y()]
-                            for pos in (node.pos()/self.scaleFactor for node in self.nodes)])
+    def _remove_edge_labels(self):
+        for label in self.edge_labels:
+            self.plot_widget.removeItem(label)
+        self.edge_labels = []
 
-        class AnimationThread(Thread):
-            def __init__(self, iterations, callback):
-                super().__init__()
-                self.daemon = True
-                self.iterations = iterations
-                self.callback = callback
-            def run(self):
-                newpos = fruchterman_reingold_layout(graphview.graph,
-                                                     pos=pos,
-                                                     weight=weight,
-                                                     iterations=self.iterations,
-                                                     sample_ratio=0.1,
-                                                     callback=self.callback,
-                                                     callback_rate=0.25)
-                graphview.update_positions(newpos)
-                graphview.animationFinished.emit()
+    def update_density(self):
+        if not self.simplify & self.Simplifications.NoDensity:
+            super().update_density()
+            self.set_edge_pen()
 
-        iterations, callback = FR_ITERATIONS, self.update_positions
-        if IS_VERY_LARGE_GRAPH(self.graph):
-            # Don't animate very large graphs
-            iterations, callback = 5, None
-        AnimationThread(iterations, callback).start()
+    # pylint: disable=access-member-before-definition
+    def _remove_density(self):
+        if self.density_img:
+            self.plot_widget.removeItem(self.density_img)
+            self.density_img = None
 
-    def update_positions(self, positions, progress=1.0):
-        self.positionsChanged.emit(positions, progress)
-        return self._is_animating
+    def _selected_and_marked(self):
+        if self.selection is None:
+            selection = np.zeros(len(self.scatterplot_item.data), dtype=bool)
+        else:
+            selection = np.array(self.selection, dtype=np.bool)
+        marked = self.master.get_marked_nodes()
+        if marked is not None:
+            selection[marked] = 1
+        return selection
 
-    def _update_positions(self, positions, _):
-        for node, pos in zip(self.nodes, positions*self.scaleFactor):
-            node.setPos(*pos)
-        qApp.processEvents()
+    def update_labels(self):
+        if self.simplify & self.Simplifications.NoLabels:
+            return
+        # This is not nice, but let's not add methods to the parent just
+        # to support this specific needs of network explorer
+        # pylint: disable=access-member-before-definition
+        saved_selection = self.selection
+        if self.label_only_selected and self.scatterplot_item:
+            marked = self.master.get_marked_nodes()
+            if marked is not None and len(marked):
+                self.selection = self._selected_and_marked()
+        super().update_labels()
+        self.selection = saved_selection
 
+    def _remove_labels(self):
+        # pylint: disable=access-member-before-definition
+        for label in self.labels:
+            self.plot_widget.removeItem(label)
+        self.labels = []
 
-if __name__ == '__main__':
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    widget = GraphView()
-    widget.show()
-    G = nx.scale_free_graph(int(sys.argv[1]) if len(sys.argv) > 1 else 100, seed=0)
+    def update_marks(self):
+        if self.scatterplot_marked is None:
+            self.scatterplot_marked = pg.ScatterPlotItem([], [])
+            self.scatterplot_marked.setZValue(-5)
+            self.plot_widget.addItem(self.scatterplot_marked)
 
-    widget.set_graph(G)
-    print('nodes', len(widget.nodes), 'edges', len(widget.edges))
+        marked = self.master.get_marked_nodes()
+        if marked is None:
+            self.scatterplot_marked.setData([], [])
+            return
+        x, y = self.get_coordinates()
+        if x is None:  # sanity check; there can be no marked nodes if x is None
+            return
+        self.scatterplot_marked.setData(
+            x[marked], y[marked], size=25,
+            pen=pg.mkPen(None), brush=pg.mkBrush("aff"))
 
-    for node in widget.nodes[:10]:
-        node.setHighlighted(True)
+    def select_by_click(self, _, points):
+        # Poor man's double click
+        indices = [p.data() for p in points]
+        last_time, last_indices = self.last_click
+        if time.time() - last_time < 0.5 and indices == last_indices:
+            indices = self.master.get_reachable(indices)
+        self.last_click = (time.time(), indices)
+        self.select_by_indices(indices)
 
-    sys.exit(app.exec_())
+    def unselect_all(self):
+        super().unselect_all()
+        if self.label_selected_edges:
+            self.update_edge_labels()
+
+    def _update_after_selection(self):
+        if self.label_selected_edges:
+            self.update_edge_labels()
+        super()._update_after_selection()
