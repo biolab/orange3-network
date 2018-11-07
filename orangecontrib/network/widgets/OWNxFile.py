@@ -36,7 +36,7 @@ class OWNxFile(OWWidget):
         vertices_length_not_matching = Msg('Vertices data length does not match the number of vertices')
         error_reading_file = Msg('Error reading file "{}"')
         pajek_bug = Msg("{}")
-    
+
     want_main_area = False
 
     def __init__(self):
@@ -135,20 +135,21 @@ class OWNxFile(OWWidget):
         if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
             return self.readingFailed('Network file type not supported')
 
-        G = None
         try:
             G = network.readwrite.read(filename, auto_table=self.auto_table)
         except OSError:
             self.Error.file_not_found(''.format(filename))
             return self.readingFailed('Network file not found')
-        except PajekBug as ex:
-            self.Error.pajek_bug(str(ex))
-        else:
-            self.Error.file_not_found.clear()
-            self.Error.pajek_bug.clear()
-        if G is None:
-            self.Error.error_reading_file(filename)
+        # File reader can throw arbitrary exceptions
+        # pylint: disable=broad-except
+        except Exception as ex:
+            if isinstance(ex, PajekBug):
+                self.Error.pajek_bug(str(ex))
+            else:
+                self.Error.error_reading_file(filename)
             return self.readingFailed('Error reading file "{}"'.format(filename))
+        self.Error.file_not_found.clear()
+        self.Error.pajek_bug.clear()
         self.Error.error_reading_file.clear()
 
         info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
