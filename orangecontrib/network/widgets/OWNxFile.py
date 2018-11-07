@@ -7,6 +7,7 @@ from Orange.data import Table
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget, Msg, Output
 import orangecontrib.network as network
+import traceback
 from orangecontrib.network.readwrite import PajekBug
 
 NONE = "(none)"
@@ -82,7 +83,10 @@ class OWNxFile(OWWidget):
         self.resize(150, 100)
 
         self.populate_comboboxes()
-        self.reload()
+        try:
+            self.reload()
+        except Exception:
+            self.info.setText(traceback.format_exc())
 
     def reload(self):
         if self.recentFiles:
