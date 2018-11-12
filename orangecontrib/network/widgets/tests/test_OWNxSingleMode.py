@@ -275,19 +275,49 @@ class TestOWNxExplorerGui(TestOWNxSingleMode):
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
 
-        self.variable = c
+        widget.variable = c
         widget.controls.variable.activated[int].emit(1)
         self.assertEqual(len(cb_kept), 4)
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
 
         widget.connect_value = 3
-        self.variable = a
+        widget.variable = a
         widget.controls.variable.activated[int].emit(0)
         self.assertEqual(len(cb_kept), 2)
         self.assertEqual(widget.connect_value, 0)
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
+
+    def test_disable_combo_on_binary(self):
+        widget = self.widget
+        a, c = self.a, self.c
+        cb_variable = widget.controls.variable
+        cb_connect = widget.controls.connect_value
+        cb_connector = widget.controls.connector_value
+
+        self.assertFalse(cb_connector.isEnabled())
+
+        self._set_graph(Table(Domain([a, c])))
+        self.assertFalse(cb_connector.isEnabled())
+        self.assertEqual(widget.connector_value, 2)
+
+        widget.connect_value = 1
+        cb_connect.activated[int].emit(1)
+        self.assertFalse(cb_connector.isEnabled())
+        self.assertEqual(widget.connector_value, 1)
+
+        widget.variable = c
+        cb_variable.activated[int].emit(1)
+        self.assertTrue(cb_connector.isEnabled())
+        self.assertEqual(widget.connect_value, 0)
+        self.assertEqual(widget.connector_value, 0)
+
+        widget.variable = a
+        cb_variable.activated[int].emit(0)
+        self.assertFalse(cb_connector.isEnabled())
+        self.assertEqual(widget.connect_value, 0)
+        self.assertEqual(widget.connector_value, 2)
 
     def test_callbacks_called_on_value(self):
         widget = self.widget

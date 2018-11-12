@@ -58,15 +58,18 @@ class OWNxSingleMode(OWWidget):
             None, self, "variable", model=VariableListModel(),
             callback=self.indicator_changed))
         form.addRow("Connect:", gui.comboBox(
-            None, self, "connect_value", callback=self.update_output))
-        form.addRow("Connectors:", gui.comboBox(
-            None, self, "connector_value", callback=self.update_output))
+            None, self, "connect_value",
+            callback=self.connect_combo_changed))
+        form.addRow("Connector:", gui.comboBox(
+            None, self, "connector_value",
+            callback=self.connector_combo_changed))
 
         gui.radioButtons(
             self.controlArea, self, "weighting", box="Edge weights",
             btnLabels=self.Weighting.option_names, callback=self.update_output)
 
         self.lbout = gui.widgetLabel(gui.hBox(self.controlArea, "Output"), "")
+        self._update_combos()
         self._set_output_msg()
 
     @Inputs.network
@@ -89,6 +92,15 @@ class OWNxSingleMode(OWWidget):
     def indicator_changed(self):
         """Called on change of indicator variable"""
         self._update_value_combos()
+        self.update_output()
+
+    def connect_combo_changed(self):
+        cb_connector = self.controls.connector_value
+        if not cb_connector.isEnabled():
+            self.connector_value = 2 - self.connect_value
+        self.update_output()
+
+    def connector_combo_changed(self):
         self.update_output()
 
     def _update_combos(self):
@@ -118,14 +130,17 @@ class OWNxSingleMode(OWWidget):
         """Update combos for values"""
         cb_connect = self.controls.connect_value
         cb_connector = self.controls.connector_value
+        variable = self.variable
 
         cb_connect.clear()
         cb_connector.clear()
-        if self.variable is not None:
-            cb_connect.addItems(self.variable.values)
-            cb_connector.addItems(["(all others)"] + self.variable.values)
+        cb_connector.setDisabled(variable is None or len(variable.values) == 2)
         self.connect_value = 0
         self.connector_value = 0
+        if variable is not None:
+            cb_connect.addItems(variable.values)
+            cb_connector.addItems(["(all others)"] + variable.values)
+            self.connector_value = len(variable.values) == 2 and 2
 
     def update_output(self):
         """Output the network on the output"""
