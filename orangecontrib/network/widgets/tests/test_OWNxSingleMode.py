@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -10,7 +10,7 @@ import orangecontrib.network
 from orangecontrib.network.widgets.OWNxSingleMode import OWNxSingleMode
 
 
-class TestOWNxExplorer(WidgetTest):
+class TestOWNxSingleMode(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWNxSingleMode)  # type: OWNxSingleMode
 
@@ -37,7 +37,8 @@ class TestOWNxExplorer(WidgetTest):
         net.set_items(data)
         self.send_signal(self.widget.Inputs.network, net)
 
-class TestOWNxExplorerComputation(TestOWNxExplorer):
+
+class TestOWNxExplorerComputation(TestOWNxSingleMode):
     def setUp(self):
         super().setUp()
         self.widget = self.create_widget(OWNxSingleMode)  # type: OWNxSingleMode
@@ -58,60 +59,65 @@ class TestOWNxExplorerComputation(TestOWNxExplorer):
         table = self.table
         self._set_graph(table, [(0, 1), (1, 3)])
 
-        widget.mode_feature = self.a
-        widget.kept_mode = 0
-        widget.connecting_mode = 0
+        widget.variable = self.a
+        widget.connect_value = 0
+        widget.connector_value = 0
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[0, 0, 2], [0, 2, 1], [0, 0, 1]])
         assertEdges({(0, 1), (1, 1)})
 
-        widget.kept_mode = 1
-        widget.connecting_mode = 0
+        widget.connect_value = 1
+        widget.connector_value = 0
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[1, 0, 3], [1, 0, 1]])
         assertEdges({(0, 3), (0, 0)})
 
         self._set_graph(table, [(0, 1), (1, 3), (2, 0), (3, 0), (4, 1)])
-        widget.mode_feature = self.c
-        widget.kept_mode = 0
-        widget.connecting_mode = 0
+        widget.variable = self.c
+        widget.connect_value = 0
+        widget.connector_value = 0
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(len(fdata), 0)
         self.assertEqual(len(fedges), 0)
 
-        widget.kept_mode = 1
-        widget.connecting_mode = 0
+        widget.connect_value = 1
+        widget.connector_value = 0
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
         assertEdges({(1, 1), (0, 0), (1, 0), (2, 1)})
 
-        widget.kept_mode = 1
-        widget.connecting_mode = 1
+        widget.connect_value = 1
+        widget.connector_value = 1
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
         self.assertEqual(len(fedges), 0)
 
-        widget.kept_mode = 1
-        widget.connecting_mode = 3
+        widget.connect_value = 1
+        widget.connector_value = 3
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
         assertEdges({(0, 0), (1, 0)})
 
-        widget.kept_mode = 1
-        widget.connecting_mode = 4
+        widget.connect_value = 1
+        widget.connector_value = 4
         fdata, fedges = widget._filtered_data_edges()
         self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
         assertEdges({(1, 1), (2, 1)})
 
         self._set_graph(table)
-        for widget.mode_feature in (self.a, self.c):
-            for widget.kept_mode in range(len(widget.mode_feature.values)):
-                for widget.connecting_mode in \
-                        range(len(widget.mode_feature.values)):
-                    if widget.kept_mode != widget.connecting_mode:
+        for widget.variable in (self.a, self.c):
+            for widget.connect_value in range(len(widget.variable.values)):
+                for widget.connector_value in \
+                        range(len(widget.variable.values)):
+                    if widget.connect_value != widget.connector_value:
                         fdata, fedges = widget._filtered_data_edges()
                         self.assertEqual(len(fdata), 0)
                         self.assertEqual(len(fedges), 0)
+
+    def test_no_intramode_connections(self):
+        self._set_graph(self.table, [(0, 3), (3, 4)])
+        _, fedges = self.widget._filtered_data_edges()
+        self.assertEqual(len(fedges), 0)
 
     def test_edges_and_intersections(self):
         self.assertEqual(
@@ -155,15 +161,15 @@ class TestOWNxExplorerComputation(TestOWNxExplorer):
             self.assertAlmostEqual(w, edges[(n1, n2)])
 
 
-class TestOWNxExplorerGui(TestOWNxExplorer):
+class TestOWNxExplorerGui(TestOWNxSingleMode):
     def test_combo_inits(self):
         widget = self.widget
-        model = widget.controls.mode_feature.model()
-        cb_select = widget.controls.kept_mode
-        cb_connect = widget.controls.connecting_mode
+        model = widget.controls.variable.model()
+        cb_select = widget.controls.connect_value
+        cb_connect = widget.controls.connector_value
 
         self.assertSequenceEqual(model, [])
-        self.assertIsNone(widget.mode_feature)
+        self.assertIsNone(widget.variable)
         self.assertEqual(cb_select.count(), 0)
         self.assertEqual(cb_connect.count(), 0)
         self.assertFalse(widget.Error.no_data.is_shown())
@@ -171,20 +177,20 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
         self.assertFalse(widget.Error.same_values.is_shown())
 
         self._set_graph(self.table)
-        model = widget.controls.mode_feature.model()
+        model = widget.controls.variable.model()
         self.assertSequenceEqual(model, [self.a, self.c])
-        self.assertIs(widget.mode_feature, self.a)
+        self.assertIs(widget.variable, self.a)
         self.assertEqual(cb_select.count(), 2)
         self.assertEqual(cb_select.itemText(0), "a0")
         self.assertEqual(cb_select.itemText(1), "a1")
         self.assertEqual(cb_connect.count(), 3)
-        self.assertEqual(cb_connect.itemText(0), "All")
+        self.assertEqual(cb_connect.itemText(0), "(all others)")
         self.assertEqual(cb_connect.itemText(1), "a0")
         self.assertEqual(cb_connect.itemText(2), "a1")
 
         self.send_signal(widget.Inputs.network, None)
         self.assertSequenceEqual(model, [])
-        self.assertIsNone(widget.mode_feature)
+        self.assertIsNone(widget.variable)
         self.assertEqual(cb_select.count(), 0)
         self.assertEqual(cb_connect.count(), 0)
         self.assertFalse(widget.Error.no_data.is_shown())
@@ -193,16 +199,16 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
 
         self._set_graph(Table(Domain([], [], [self.a, self.c])))
         self.assertSequenceEqual(model, [self.a, self.c])
-        self.assertIs(widget.mode_feature, self.a)
+        self.assertIs(widget.variable, self.a)
 
     def test_no_single_valued_vars(self):
         self._set_graph(Table(Domain([self.a, self.b, self.c, self.d])))
 
     def test_show_errors(self):
         widget = self.widget
-        model = widget.controls.mode_feature.model()
+        model = widget.controls.variable.model()
         a, b, c, d = self.a, self.b, self.c, self.d
-        cb_connecting = widget.controls.connecting_mode
+        cb_connector = widget.controls.connector_value
 
         no_data = widget.Error.no_data.is_shown
         no_categorical = widget.Error.no_categorical.is_shown
@@ -226,8 +232,8 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
         self.assertFalse(no_categorical())
         self.assertFalse(same_values())
 
-        widget.connecting_mode = widget.kept_mode + 1
-        cb_connecting.activated[int].emit(widget.connecting_mode)
+        widget.connector_value = widget.connect_value + 1
+        cb_connector.activated[int].emit(widget.connector_value)
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
@@ -240,15 +246,15 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
         self.assertFalse(same_values())
 
         self._set_graph(Table(Domain([a, b, c, d])))
-        widget.connecting_mode = widget.kept_mode + 1
+        widget.connector_value = widget.connect_value + 1
         self.send_signal(widget.Inputs.network, None)
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertFalse(same_values())
 
         self._set_graph(Table(Domain([a, b, c, d])))
-        widget.connecting_mode = widget.kept_mode + 1
-        cb_connecting.activated[int].emit(widget.connecting_mode)
+        widget.connector_value = widget.connect_value + 1
+        cb_connector.activated[int].emit(widget.connector_value)
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
@@ -261,7 +267,7 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
     def test_value_combo_updates(self):
         widget = self.widget
         widget.update_output = Mock()
-        cb_kept = widget.controls.kept_mode
+        cb_kept = widget.controls.connect_value
         a, c = self.a, self.c
 
         self._set_graph(Table(Domain([a, c])))
@@ -269,21 +275,21 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
 
-        self.mode_feature = c
-        widget.controls.mode_feature.activated[int].emit(1)
+        self.variable = c
+        widget.controls.variable.activated[int].emit(1)
         self.assertEqual(len(cb_kept), 4)
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
 
-        widget.kept_mode = 3
-        self.mode_feature = a
-        widget.controls.mode_feature.activated[int].emit(0)
+        widget.connect_value = 3
+        self.variable = a
+        widget.controls.variable.activated[int].emit(0)
         self.assertEqual(len(cb_kept), 2)
-        self.assertEqual(widget.kept_mode, 0)
+        self.assertEqual(widget.connect_value, 0)
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
 
-    def test_callbacks_called_on_mode(self):
+    def test_callbacks_called_on_value(self):
         widget = self.widget
         send = widget.Outputs.network.send = Mock()
 
@@ -291,13 +297,13 @@ class TestOWNxExplorerGui(TestOWNxExplorer):
         send.assert_called()
         send.reset_mock()
 
-        widget.kept_mode = 1
-        widget.controls.kept_mode.activated[int].emit(1)
+        widget.connect_value = 1
+        widget.controls.connect_value.activated[int].emit(1)
         send.assert_called()
         send.reset_mock()
 
-        widget.connecting_mode = 1
-        widget.controls.connecting_mode.activated[int].emit(1)
+        widget.connector_value = 1
+        widget.controls.connector_value.activated[int].emit(1)
         send.assert_called()
         send.reset_mock()
 

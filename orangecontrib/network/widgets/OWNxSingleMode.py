@@ -31,9 +31,9 @@ class OWNxSingleMode(OWWidget):
             "Weighted number of connections"]
 
     settingsHandler = DomainContextHandler(match_values=True)
-    mode_feature = ContextSetting(None)
-    kept_mode = ContextSetting(0)
-    connecting_mode = ContextSetting(0)
+    variable = ContextSetting(None)
+    connect_value = ContextSetting(0)
+    connector_value = ContextSetting(0)
     weighting = Setting(0)
 
     class Inputs:
@@ -55,12 +55,12 @@ class OWNxSingleMode(OWWidget):
         form.setFieldGrowthPolicy(form.AllNonFixedFieldsGrow)
         gui.widgetBox(self.controlArea, box="Mode indicator", orientation=form)
         form.addRow("Feature:", gui.comboBox(
-            None, self, "mode_feature", model=VariableListModel(),
+            None, self, "variable", model=VariableListModel(),
             callback=self.indicator_changed))
-        form.addRow("Selected:", gui.comboBox(
-            None, self, "kept_mode", callback=self.update_output))
-        form.addRow("Connecting:", gui.comboBox(
-            None, self, "connecting_mode", callback=self.update_output))
+        form.addRow("Connect:", gui.comboBox(
+            None, self, "connect_value", callback=self.update_output))
+        form.addRow("Connectors:", gui.comboBox(
+            None, self, "connector_value", callback=self.update_output))
 
         gui.radioButtons(
             self.controlArea, self, "weighting", box="Edge weights",
@@ -97,10 +97,10 @@ class OWNxSingleMode(OWWidget):
 
         Set the combo for indicator variable and call the method to update
         combos for values"""
-        model = self.controls.mode_feature.model()
+        model = self.controls.variable.model()
         if self.network is None:
             model.clear()
-            self.mode_feature = None
+            self.variable = None
         else:
             domain = self.network.items().domain
             model[:] = [
@@ -109,30 +109,30 @@ class OWNxSingleMode(OWWidget):
             if not model.rowCount():
                 self.Error.no_categorical()
                 self.network = None
-                self.mode_feature = None
+                self.variable = None
             else:
-                self.mode_feature = model[0]
+                self.variable = model[0]
         self._update_value_combos()
 
     def _update_value_combos(self):
         """Update combos for values"""
-        cb_kept = self.controls.kept_mode
-        cb_connecting = self.controls.connecting_mode
+        cb_connect = self.controls.connect_value
+        cb_connector = self.controls.connector_value
 
-        cb_kept.clear()
-        cb_connecting.clear()
-        if self.mode_feature is not None:
-            cb_kept.addItems(self.mode_feature.values)
-            cb_connecting.addItems(["All"] + self.mode_feature.values)
-        self.kept_mode = 0
-        self.connecting_mode = 0
+        cb_connect.clear()
+        cb_connector.clear()
+        if self.variable is not None:
+            cb_connect.addItems(self.variable.values)
+            cb_connector.addItems(["(all others)"] + self.variable.values)
+        self.connect_value = 0
+        self.connector_value = 0
 
     def update_output(self):
         """Output the network on the output"""
         self.Error.same_values.clear()
         new_net = None
         if self.network is not None:
-            if self.kept_mode == self.connecting_mode - 1:
+            if self.connect_value == self.connector_value - 1:
                 self.Error.same_values()
             else:
                 new_net = self._compute_network()
@@ -154,31 +154,28 @@ class OWNxSingleMode(OWWidget):
 
     def _filtered_data_edges(self):
         """
-        Compute list of edges that link selected mode to the connecting mode.
+        Compute list of edges that link connect value to the connector mode.
 
         Returns data rows for nodes in selected mode and edges as a
         two-column matrix. The first column contains indices corresponding
-        to the new data. The second column contains indices of connecting nodes
+        to the new data. The second column contains indices of connector nodes
         in the original graph.
         """
         data = self.network.items()
         edges = np.array(self.network.edges())
         if not len(edges):
             return Table(data.domain), np.zeros((0, 2), dtype=np.int)
-        column = data.get_column_view(self.mode_feature)[0].astype(int)
-        mode_mask = column == self.kept_mode
+        column = data.get_column_view(self.variable)[0].astype(int)
+        mode_mask = column == self.connect_value
         filt_data = data[mode_mask]
-        if self.connecting_mode:
-            conn_mask = column == self.connecting_mode - 1
-            filt_edges = np.vstack([
-                edges[mode_mask[edges[:, 0]] * conn_mask[edges[:, 1]]],
-                edges[conn_mask[edges[:, 0]] * mode_mask[edges[:, 1]]][:, ::-1]
-            ])
+        if self.connector_value:
+            conn_mask = column == self.connector_value - 1
         else:
-            filt_edges = np.vstack([
-                edges[mode_mask[edges[:, 0]]],
-                edges[mode_mask[edges[:, 1]]][:, ::-1]
-            ])
+            conn_mask = column != self.connect_value
+        filt_edges = np.vstack([
+            edges[mode_mask[edges[:, 0]] * conn_mask[edges[:, 1]]],
+            edges[conn_mask[edges[:, 0]] * mode_mask[edges[:, 1]]][:, ::-1]
+        ])
         new_idxs = np.cumsum(mode_mask) - 1
         filt_edges[:, 0] = new_idxs[filt_edges[:, 0]]
         return filt_data, filt_edges
@@ -250,12 +247,12 @@ class OWNxSingleMode(OWWidget):
                      self.network.number_of_nodes(),
                      self.network.number_of_edges())),
                 ('Mode',
-                 self.mode_feature and bool(self.mode_feature.values) and (
+                 self.variable and bool(self.variable.values) and (
                      "Select {}={}, connected through {}".format(
-                         self.mode_feature.name,
-                         self.mode_feature.values[self.kept_mode],
-                         "any node" if not self.connecting_mode
-                         else self.mode_feature.values[self.connecting_mode - 1]
+                         self.variable.name,
+                         self.variable.values[self.connect_value],
+                         "any node" if not self.connector_value
+                         else self.variable.values[self.connector_value - 1]
                      ))),
                 ('Weighting',
                  bool(self.weighting)
