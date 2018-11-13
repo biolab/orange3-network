@@ -47,7 +47,7 @@ Download [Microsoft Visual Studio compiler] and run the command
 
     python setup.py build_ext -i --compiler=msvc install
 
-[Microsoft Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
+[Microsoft Visual Studio compiler]: https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk
 
 Usage
 -----
