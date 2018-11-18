@@ -18,7 +18,7 @@ from orangecontrib import network
 class OWNxSingleMode(OWWidget):
     name = "Single Mode"
     description = "Convert multimodal graphs to single modal"
-    icon = "icons/NetworkFile.svg"
+    icon = "icons/SingleMode.svg"
     priority = 7000
 
     want_main_area = False
