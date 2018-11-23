@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -7,7 +7,7 @@ from Orange.data import Domain, DiscreteVariable, ContinuousVariable, Table
 from Orange.widgets.tests.base import WidgetTest
 
 import orangecontrib.network
-from orangecontrib.network.widgets.OWNxSingleMode import OWNxSingleMode
+from orangecontrib.network.widgets.ownxsinglemode import OWNxSingleMode
 
 
 class TestOWNxSingleMode(WidgetTest):
@@ -37,131 +37,6 @@ class TestOWNxSingleMode(WidgetTest):
         net.set_items(data)
         self.send_signal(self.widget.Inputs.network, net)
 
-
-class TestOWNxExplorerComputation(TestOWNxSingleMode):
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(OWNxSingleMode)  # type: OWNxSingleMode
-
-    def _set_graph(self, data, edges=None):
-        net = orangecontrib.network.Graph()
-        net.add_nodes_from(range(len(data)))
-        if edges is not None:
-            net.add_edges_from(edges)
-        net.set_items(data)
-        self.send_signal(self.widget.Inputs.network, net)
-
-    def test_filtered_data_edges(self):
-        def assertEdges(expected):
-            self.assertEqual(set(map(tuple, fedges.tolist())), expected)
-
-        widget = self.widget
-        table = self.table
-        self._set_graph(table, [(0, 1), (1, 3)])
-
-        widget.variable = self.a
-        widget.connect_value = 0
-        widget.connector_value = 0
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[0, 0, 2], [0, 2, 1], [0, 0, 1]])
-        assertEdges({(0, 1), (1, 1)})
-
-        widget.connect_value = 1
-        widget.connector_value = 0
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[1, 0, 3], [1, 0, 1]])
-        assertEdges({(0, 3), (0, 0)})
-
-        self._set_graph(table, [(0, 1), (1, 3), (2, 0), (3, 0), (4, 1)])
-        widget.variable = self.c
-        widget.connect_value = 0
-        widget.connector_value = 0
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(len(fdata), 0)
-        self.assertEqual(len(fedges), 0)
-
-        widget.connect_value = 1
-        widget.connector_value = 0
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
-        assertEdges({(1, 1), (0, 0), (1, 0), (2, 1)})
-
-        widget.connect_value = 1
-        widget.connector_value = 1
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
-        self.assertEqual(len(fedges), 0)
-
-        widget.connect_value = 1
-        widget.connector_value = 3
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
-        assertEdges({(0, 0), (1, 0)})
-
-        widget.connect_value = 1
-        widget.connector_value = 4
-        fdata, fedges = widget._filtered_data_edges()
-        self.assertEqual(list(fdata), [[1, 0, 1], [0, 2, 1], [0, 0, 1]])
-        assertEdges({(1, 1), (2, 1)})
-
-        self._set_graph(table)
-        for widget.variable in (self.a, self.c):
-            for widget.connect_value in range(len(widget.variable.values)):
-                for widget.connector_value in \
-                        range(len(widget.variable.values)):
-                    if widget.connect_value != widget.connector_value:
-                        fdata, fedges = widget._filtered_data_edges()
-                        self.assertEqual(len(fdata), 0)
-                        self.assertEqual(len(fedges), 0)
-
-    def test_no_intramode_connections(self):
-        self._set_graph(self.table, [(0, 3), (3, 4)])
-        _, fedges = self.widget._filtered_data_edges()
-        self.assertEqual(len(fedges), 0)
-
-    def test_edges_and_intersections(self):
-        self.assertEqual(
-            list(self.widget._edges_and_intersections(np.array([
-                [0, 0], [0, 1], [0, 3], [1, 1], [1, 2], [1, 3],
-                [2, 0], [3, 4]
-            ]))),
-            [(0, 1, {1, 3}), (0, 2, {0})]
-        )
-
-    def test_weighted_edges(self):
-        widget = self.widget
-        w = "weight"
-
-        widget.weighting = widget.Weighting.NoWeights
-        self.assertEqual(
-            widget._weighted_edges(
-                iter([(0, 1, {1, 2, 3}), (0, 2, {3}), (2, 5, {1, 2})]),
-                None),
-            [(0, 1), (0, 2), (2, 5)]
-        )
-
-        widget.weighting = widget.Weighting.Connections
-        self.assertEqual(
-            widget._weighted_edges(
-                iter([(0, 1, {1, 2, 3}), (0, 2, {3}), (2, 5, {1, 2})]),
-                None),
-            [(0, 1, {w: 3}), (0, 2, {w: 1}), (2, 5, {w: 2})]
-        )
-
-        widget.weighting = widget.Weighting.WeightedConnections
-        edges = widget._weighted_edges(
-            iter([(0, 1, {1, 2, 3}), (0, 2, {3}), (2, 5, {1, 2})]),
-            np.array([[0, 1], [3, 1], [5, 1], [4, 2], [2, 3], [1, 3]]))
-        edges = {(n1, n2): ws[w] for n1, n2, ws in edges}
-        expected = [(0, 1, 1 / 9 + 1 + 1 / 4),
-                  (0, 2, 1 / 4),
-                  (2, 5, 1 / 9 + 1)]
-        self.assertEqual(len(edges), len(expected))
-        for n1, n2, w in expected:
-            self.assertAlmostEqual(w, edges[(n1, n2)])
-
-
-class TestOWNxExplorerGui(TestOWNxSingleMode):
     def test_combo_inits(self):
         widget = self.widget
         model = widget.controls.variable.model()
@@ -322,20 +197,135 @@ class TestOWNxExplorerGui(TestOWNxSingleMode):
     def test_callbacks_called_on_value(self):
         widget = self.widget
         send = widget.Outputs.network.send = Mock()
+        update = widget.update_output = Mock(side_effect=widget.update_output)
 
         self._set_graph(Table(Domain([self.c])))
+        update.assert_called()
+        update.reset_mock()
         send.assert_called()
         send.reset_mock()
 
         widget.connect_value = 1
         widget.controls.connect_value.activated[int].emit(1)
+        update.assert_called()
+        update.reset_mock()
         send.assert_called()
         send.reset_mock()
 
         widget.connector_value = 1
         widget.controls.connector_value.activated[int].emit(1)
+        update.assert_called()
+        update.reset_mock()
         send.assert_called()
         send.reset_mock()
+
+    @patch("orangecontrib.network.twomode.to_single_mode")
+    def test_masks_in_update(self, to_single_mode):
+        widget = self.widget
+
+        def check_call(expected_mode_mask, expected_conn_mask):
+            to_single_mode.assert_called()
+            net, mode_mask, conn_mask, weighting = to_single_mode.call_args[0]
+            self.assertIs(net, widget.network)
+            np.testing.assert_almost_equal(mode_mask, expected_mode_mask)
+            np.testing.assert_almost_equal(conn_mask, expected_conn_mask)
+            self.assertEqual(weighting, widget.weighting)
+
+        self._set_graph(self.table)
+
+        widget.variable = self.a
+        widget.connect_value = 0
+        widget.connector_value = 0
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, True, True]),
+            np.array([False, True, True, False, False]))
+        widget.connector_value = 2
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, True, True]),
+            np.array([False, True, True, False, False]))
+        widget.connect_value = 1
+        widget.connector_value = 0
+        widget.update_output()
+        check_call(
+            np.array([False, True, True, False, False]),
+            np.array([True, False, False, True, True]))
+        widget.connector_value = 2
+        widget.update_output()
+        check_call(
+            np.array([False, True, True, False, False]),
+            np.array([True, False, False, True, True]))
+
+        widget.variable = self.c
+        widget.connect_value = 0
+        widget.connector_value = 0
+        widget.update_output()
+        check_call(
+            np.array([False] * 5),
+            np.array([True] * 5))
+
+        widget.connect_value = 1
+        widget.connector_value = 0
+        widget.update_output()
+        check_call(
+            np.array([False, False, True, True, True]),
+            np.array([True, True, False, False, False]))
+
+        widget.connect_value = 1
+        widget.connector_value = 1
+        widget.update_output()
+        check_call(
+            np.array([False, False, True, True, True]),
+            np.array([False, False, False, False, False]))
+
+        widget.connect_value = 1
+        widget.connector_value = 3
+        widget.update_output()
+        check_call(
+            np.array([False, False, True, True, True]),
+            np.array([True, False, False, False, False]))
+
+        widget.connect_value = 1
+        widget.connector_value = 4
+        widget.update_output()
+        check_call(
+            np.array([False, False, True, True, True]),
+            np.array([False, True, False, False, False]))
+
+        widget.connect_value = 2
+        widget.connector_value = 0
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, False, False]),
+            np.array([False, True, True, True, True]))
+
+        widget.connect_value = 2
+        widget.connector_value = 1
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, False, False]),
+            np.array([False, False, False, False, False]))
+
+        widget.connect_value = 2
+        widget.connector_value = 2
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, False, False]),
+            np.array([False, False, True, True, True]))
+
+        widget.connect_value = 2
+        widget.connector_value = 4
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, False, False]),
+            np.array([False, True, False, False, False]))
+
+        widget.weighting = 3
+        widget.update_output()
+        check_call(
+            np.array([True, False, False, False, False]),
+            np.array([False, True, False, False, False]))
 
     def test_send_report(self):
         self._set_graph(self.table)
@@ -344,4 +334,3 @@ class TestOWNxExplorerGui(TestOWNxSingleMode):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -1,11 +1,8 @@
-from collections import defaultdict
 from itertools import chain
-
-import numpy as np
 
 from AnyQt.QtWidgets import QFormLayout
 
-from Orange.data import DiscreteVariable, Table
+from Orange.data import DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
@@ -13,6 +10,7 @@ from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.widget import OWWidget, Msg
 from orangecontrib import network
+from orangecontrib.network import twomode
 
 
 class OWNxSingleMode(OWWidget):
@@ -22,13 +20,6 @@ class OWNxSingleMode(OWWidget):
     priority = 7000
 
     want_main_area = False
-
-    class Weighting:
-        NoWeights, Connections, WeightedConnections = range(3)
-        option_names = [
-            "No weights",
-            "Number of connections",
-            "Weighted number of connections"]
 
     settingsHandler = DomainContextHandler(match_values=True)
     variable = ContextSetting(None)
@@ -60,13 +51,14 @@ class OWNxSingleMode(OWWidget):
         form.addRow("Connect:", gui.comboBox(
             None, self, "connect_value",
             callback=self.connect_combo_changed))
-        form.addRow("Connector:", gui.comboBox(
+        form.addRow("by:", gui.comboBox(
             None, self, "connector_value",
             callback=self.connector_combo_changed))
 
-        gui.radioButtons(
+        gui.comboBox(
             self.controlArea, self, "weighting", box="Edge weights",
-            btnLabels=self.Weighting.option_names, callback=self.update_output)
+            items=[x.name for x in twomode.Weighting],
+            callback=self.update_output)
 
         self.lbout = gui.widgetLabel(gui.hBox(self.controlArea, "Output"), "")
         self._update_combos()
@@ -150,101 +142,24 @@ class OWNxSingleMode(OWWidget):
             if self.connect_value == self.connector_value - 1:
                 self.Error.same_values()
             else:
-                new_net = self._compute_network()
+                mode_mask, conn_mask = self._mode_masks()
+                new_net = twomode.to_single_mode(
+                    self.network, mode_mask, conn_mask, self.weighting)
+                new_net.set_items(self.network.items()[mode_mask])
+
         self.Outputs.network.send(new_net)
         self._set_output_msg(new_net)
 
-    def _compute_network(self):
-        """Compute the network for the output"""
-        assert self.network is not None
-        filt_data, filt_edges = self._filtered_data_edges()
-        edges_commons = self._edges_and_intersections(filt_edges)
-        new_edges = self._weighted_edges(edges_commons, filt_edges)
-
-        new_net = network.Graph()
-        new_net.add_nodes_from(range(len(filt_data)))
-        new_net.add_edges_from(new_edges)
-        new_net.set_items(filt_data)
-        return new_net
-
-    def _filtered_data_edges(self):
-        """
-        Compute list of edges that link connect value to the connector mode.
-
-        Returns data rows for nodes in selected mode and edges as a
-        two-column matrix. The first column contains indices corresponding
-        to the new data. The second column contains indices of connector nodes
-        in the original graph.
-        """
+    def _mode_masks(self):
+        """Return indices of nodes in the two modes"""
         data = self.network.items()
-        edges = np.array(self.network.edges())
-        if not len(edges):
-            return Table(data.domain), np.zeros((0, 2), dtype=np.int)
         column = data.get_column_view(self.variable)[0].astype(int)
         mode_mask = column == self.connect_value
-        filt_data = data[mode_mask]
         if self.connector_value:
             conn_mask = column == self.connector_value - 1
         else:
             conn_mask = column != self.connect_value
-        filt_edges = np.vstack([
-            edges[mode_mask[edges[:, 0]] * conn_mask[edges[:, 1]]],
-            edges[conn_mask[edges[:, 0]] * mode_mask[edges[:, 1]]][:, ::-1]
-        ])
-        new_idxs = np.cumsum(mode_mask) - 1
-        filt_edges[:, 0] = new_idxs[filt_edges[:, 0]]
-        return filt_data, filt_edges
-
-    @staticmethod
-    def _edges_and_intersections(filt_edges):
-        """
-        Computes edges of the new network
-
-        Args:
-            filt_edges: two-column table with relevant edges, as returned
-              by `_filtered_data_edges`
-
-        Returns:
-            a generator of triplets (node1, node2, set of common neighbours)
-        """
-        conns = defaultdict(set)
-        for node, conn in filt_edges:
-            conns[node].add(conn)
-        conns = list(conns.items())
-        edges = (
-            (node2, node1, conns1 & conns2)
-            for i, (node1, conns1) in enumerate(conns)
-            for node2, conns2 in conns[:i]
-        )
-        return ((n1, n2, common) for n1, n2, common in edges if common)
-
-    def _weighted_edges(self, edges_inter, filt_edges):
-        """
-        Compute weighted edges of the new network
-
-        Args:
-            edges_inter: list of triplets (node1, node2, intersection)
-            filt_edges: relevant edges, as returned by `_filtered_data_edges`
-
-        Returns:
-            list of edges for networkx.Graph; either (node1, node2) if
-            unweighted, or (node1, node2, {'weight': weight})
-        """
-        # If trying different weighting schemas is common and speed becomes an
-        # issue, edges can be stored as a list, and this function can be
-        # called directly when only weighting is changed
-        if self.weighting == self.Weighting.Connections:
-            return [(node1, node2, {"weight": float(len(common))})
-                    for node1, node2, common in edges_inter]
-        elif self.weighting == self.Weighting.WeightedConnections:
-            counts = np.bincount(filt_edges[:, 1]).astype(float)
-            counts[counts == 0] = 1  # Prevent warnings from numpy
-            weights = 1 / counts ** 2
-            return [(node1, node2,
-                     {"weight": sum(weights[node] for node in common)})
-                    for node1, node2, common in edges_inter]
-        else:  # no weights
-            return [e[:2] for e in edges_inter]
+        return mode_mask, conn_mask
 
     def _set_output_msg(self, out_network=None):
         if out_network is None:
@@ -271,7 +186,7 @@ class OWNxSingleMode(OWWidget):
                      ))),
                 ('Weighting',
                  bool(self.weighting)
-                 and self.Weighting.option_names[self.weighting]),
+                 and twomode.Weighting[self.weighting].name),
                 ("Output network", self.lbout.text())
             ])
 
