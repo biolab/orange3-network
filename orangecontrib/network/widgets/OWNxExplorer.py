@@ -7,8 +7,9 @@ import Orange
 from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting, SettingProvider
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
+from Orange.widgets.widget import Input, Output
 
 import orangecontrib.network as network
 from orangecontrib.network._fr_layout import fruchterman_reingold
@@ -96,12 +97,13 @@ class OWNxExplorer(OWDataProjectionWidget):
         return QSize(800, 600)
 
     def _add_controls(self):
+        self.gui = OWPlotGUI(self)
         self._add_info_box()
-        self.graph.gui.point_properties_box(self.controlArea)
+        self.gui.point_properties_box(self.controlArea)
         self._add_effects_box()
-        self.graph.gui.plot_properties_box(self.controlArea)
+        self.gui.plot_properties_box(self.controlArea)
         gui.rubber(self.controlArea)
-        self.graph.box_zoom_select(self.controlArea)
+        self.gui.box_zoom_select(self.controlArea)
         gui.auto_commit(
             self.controlArea, self, "auto_commit",
             "Send Selection", "Send Automatically")
@@ -127,10 +129,10 @@ class OWNxExplorer(OWDataProjectionWidget):
             lbox, self, "randomizePositions", "Randomize positions")
 
     def _add_effects_box(self):
-        gbox = self.graph.gui.create_gridbox(self.controlArea, True)
-        self.graph.gui.add_widget(self.graph.gui.PointSize, gbox)
+        gbox = self.gui.create_gridbox(self.controlArea, True)
+        self.gui.add_widget(self.gui.PointSize, gbox)
         gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
-        self.graph.gui.add_control(
+        self.gui.add_control(
             gbox, gui.hSlider, "Edge width:",
             master=self, value='graph.edge_width',
             minValue=1, maxValue=10, step=1,
