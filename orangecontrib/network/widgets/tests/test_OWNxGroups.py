@@ -66,9 +66,9 @@ class TestOWNxGroups(WidgetTest):
 
         self.assertIsInstance(network, Graph)
         self.assertSetEqual(set(network.nodes()), set(range(3)))
-        edges_ = list(network.edges(data='weight'))
-        for n1, n2, w in [(0, 1, 12.), (1, 2, 7.), (0, 2, 20.)]:
-            self.assertTrue((n1, n2, w) in edges_)
+        edges_ = list(network.edges())
+        for n1, n2 in [(0, 1), (1, 2), (0, 2)]:
+            self.assertTrue((n1, n2) in edges_)
 
         self.assertIsInstance(network.items(), Table)
 
