@@ -25,7 +25,7 @@ import networkx.readwrite.pajek as rwpajek
 import networkx.readwrite.gml as rwgml
 import networkx.readwrite.gpickle as rwgpickle
 
-from Orange.data import Table
+from Orange.data import Table, Domain, StringVariable
 
 from .network import Graph, DiGraph, MultiGraph, MultiDiGraph
 
@@ -110,7 +110,8 @@ def graph_to_table(G):
         fp.close()
         table = Table(fp.name)
         os.unlink(fp.name)
-
+    else:
+        table = Table(Domain([], [], [StringVariable("id")]), [])
     return table
 
 
