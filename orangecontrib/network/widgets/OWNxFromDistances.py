@@ -11,7 +11,7 @@ from AnyQt.QtCore import QLineF, QSize
 from Orange.data import Domain, StringVariable, Table
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import Input, Output, Msg
 import orangecontrib.network as network
 
 import pyqtgraph as pg
@@ -54,11 +54,16 @@ class OWNxFromDistances(widget.OWWidget):
     excludeLimit = settings.Setting(2)
 
     class Warning(widget.OWWidget.Warning):
-        kNN_too_large  = widget.Msg('kNN larger then supplied distance matrix dimension. Using k = {}')
-        large_number_of_nodes = widget.Msg('Large number of nodes/edges; performance will be hindered')
+        kNN_too_large = \
+            Msg('kNN is larger than supplied distance matrix dimension. '
+                'Using k = {}')
+        large_number_of_nodes = \
+            Msg('Large number of nodes/edges; performance will be hindered')
+        invalid_number_of_items = \
+            Msg('Number of data items does not match the nunmber of nodes')
 
     class Error(widget.OWWidget.Error):
-        number_of_edges = widget.Msg('Estimated number of edges is too high ({})')
+        number_of_edges = Msg('Estimated number of edges is too high ({})')
 
     def __init__(self):
         super().__init__()
@@ -211,12 +216,22 @@ class OWNxFromDistances(widget.OWWidget):
             matrix = self.matrix
 
             if matrix is not None and matrix.row_items is not None:
-                if isinstance(self.matrix.row_items, Table):
-                    graph.set_items(self.matrix.row_items)
+                row_items = self.matrix.row_items
+                if isinstance(row_items, Table):
+                    if self.matrix.axis == 1:
+                        items = row_items
+                    else:
+                        items = [[v.name] for v in row_items.domain.attributes]
                 else:
-                    data = [[str(x)] for x in self.matrix.row_items]
-                    items = Table(Domain([], metas=[StringVariable('label')]), data)
-                    graph.set_items(items)
+                    items = [[str(x)] for x in self.matrix.row_items]
+            if len(items) != self.matrix.shape[0]:
+                self.Warning.invalid_number_of_items()
+            else:
+                if items and not isinstance(items, Table):
+                    items = Table(
+                        Domain([], metas=[StringVariable('label')]),
+                        items)
+                graph.set_items(items)
 
             # set the threshold
             # set edges where distance is lower than threshold
