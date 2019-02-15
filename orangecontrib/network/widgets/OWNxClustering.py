@@ -2,7 +2,7 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.utils.annotated_data import get_next_name
+from Orange.data.util import get_unique_names
 from Orange.widgets.widget import Input, Output
 from orangecontrib.network import Graph, community as cd
 
@@ -77,7 +77,7 @@ class OWNxClustering(widget.OWWidget):
 
         labels = alg(self.net, **kwargs)
         domain = self.net.items().domain
-        cd.add_results_to_items(self.net, labels, get_next_name(domain, 'Cluster'))
+        cd.add_results_to_items(self.net, labels, get_unique_names(domain, 'Cluster'))
 
         self.info.setText('%d clusters found' % len(set(labels.values())))
         self.Outputs.items.send(self.net.items())
