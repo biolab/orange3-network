@@ -5,15 +5,15 @@ import sys
 
 from setuptools import find_packages
 
-if sys.version_info < (3, 4):
-    sys.exit('Orange3-Network requires Python >= 3.4')
+if sys.version_info < (3, 6):
+    sys.exit('Orange3-Network requires Python >= 3.6')
 
 from numpy.distutils.core import setup
 
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
@@ -67,7 +67,7 @@ INSTALL_REQUIRES = (
     'networkx>=2.0',
     'pyqtgraph>=0.9.10',
     'numpy>=1.8.0',
-    'Orange3>=3.3.9'
+    'Orange3>=3.20'
 ),
 
 EXTRAS_REQUIRE = {
