@@ -390,6 +390,10 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.nodes_per_edge = \
                 self.number_of_nodes / max(1, self.number_of_edges)
 
+        self.mark_text = ""
+        self.set_mark_mode(0)
+        self.positions = None
+
         if not graph or graph.number_of_nodes == 0:
             set_graph_none()
             return
@@ -398,11 +402,8 @@ class OWNxExplorer(OWDataProjectionWidget):
             return
         self.Error.clear()
 
-        self.mark_text = ""
-        self.set_mark_mode(0)
         self.network = graph
         compute_stats()
-        self.positions = None
 
     def handleNewSignals(self):
         network = self.network
@@ -481,7 +482,10 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.update_selection_buttons()
 
     def set_random_positions(self):
-        self.positions = np.random.uniform(size=(self.number_of_nodes, 2))
+        if self.network is None:
+            self.position = None
+        else:
+            self.positions = np.random.uniform(size=(self.number_of_nodes, 2))
 
     def get_reachable(self, initial):
         to_check = list(initial)
@@ -549,7 +553,7 @@ class OWNxExplorer(OWDataProjectionWidget):
     def relayout(self):
         if self.edges is None:
             return
-        if self.randomizePositions:
+        if self.randomizePositions or self.positions is None:
             self.set_random_positions()
         self.progressbar = gui.ProgressBar(self, FR_ITERATIONS)
         self.set_buttons(running=True)
