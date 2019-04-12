@@ -11,7 +11,7 @@ from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
 
-import orangecontrib.network as network
+from orangecontrib.network.network.base import Network
 from orangecontrib.network._fr_layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
@@ -27,12 +27,12 @@ class OWNxExplorer(OWDataProjectionWidget):
     class Inputs:
         node_data = Input("Node Data", Table)
         node_subset = Input("Node Subset", Table)
-        network = Input("Network", network.Graph, default=True)
+        network = Input("Network", Network, default=True)
         node_distances = Input("Node Distances", Orange.misc.DistMatrix)
 
     class Outputs(OWDataProjectionWidget.Outputs):
-        subgraph = Output("Selected sub-network", network.Graph)
-        unselected_subgraph = Output("Remaining sub-network", network.Graph)
+        subgraph = Output("Selected sub-network", Network)
+        unselected_subgraph = Output("Remaining sub-network", Network)
         distances = Output("Distance matrix", Orange.misc.DistMatrix)
 
     UserAdviceMessages = [
@@ -179,31 +179,30 @@ class OWNxExplorer(OWDataProjectionWidget):
                 orientation=Qt.Horizontal, minimumWidth=50,
                 callback=set_search_string_timer, callbackOnType=True).box
 
-        def mark_label_starts():
+        def _mark_by_labels(marker):
             txt = self.mark_text.lower()
             if not txt:
                 return None
             labels = self.get_label_data()
             if labels is None:
                 return None
-            return [i for i, label in enumerate(labels)
-                    if label.lower().startswith(txt)]
+            return marker(np.char.array(labels), txt)
+
+        def mark_label_starts():
+            return _mark_by_labels(
+                lambda labels, txt: np.flatnonzero(labels.lower().startswith(txt)))
 
         def mark_label_contains():
-            txt = self.mark_text.lower()
-            if not txt:
-                return None
-            labels = self.get_label_data()
-            if labels is None:
-                return None
-            return [i for i, label in enumerate(labels) if txt in label.lower()]
+            return _mark_by_labels(
+                lambda labels, txt: np.flatnonzero(labels.lower().find(txt) != -1))
 
         def mark_text():
             txt = self.mark_text.lower()
             if not txt or self.data is None:
                 return None
-            return [i for i, inst in enumerate(self.data)
-                    if txt in "\x00".join(map(str, inst.list)).lower()]
+            return np.array(
+                [i for i, inst in enumerate(self.data)
+                 if txt in "\x00".join(map(str, inst.list)).lower()])
 
         def mark_reachable():
             selected = self.graph.get_selection()
@@ -220,29 +219,47 @@ class OWNxExplorer(OWDataProjectionWidget):
             for _ in range(self.mark_hops):
                 next_round = set()
                 for neigh in last_round:
-                    next_round |= set(self.network[neigh])
+                    next_round |= set(self.network.neighbours(neigh))
                 neighbours |= next_round
                 last_round = next_round
             neighbours -= set(selected)
-            return list(neighbours)
+            return np.array(list(neighbours))
 
         def mark_from_input():
             if self.subset_data is None or self.data is None:
                 return None
             ids = set(self.subset_data.ids)
-            return [i for i, ex in enumerate(self.data) if ex.id in ids]
+            return np.array(
+                [i for i, ex in enumerate(self.data) if ex.id in ids])
 
         def mark_most_connections():
             n = self.mark_most_conn
             if n >= self.number_of_nodes:
                 return np.arange(self.number_of_nodes)
-            degrees = np.array(self.network.degree())
+            degrees = self.network.degrees()
             # pylint: disable=invalid-unary-operand-type
-            min_degree = np.partition(degrees[:, 1].flatten(), -n)[-n]
-            return degrees[degrees[:, 1] >= min_degree, 0]
+            min_degree = np.partition(degrees, -n)[-n]
+            return np.flatnonzero(degrees >= min_degree)
+
+        def mark_more_than_any_neighbour():
+            degrees = self.network.degrees()
+            return np.array(
+                [node for node, degree in enumerate(degrees)
+                 if degree > np.max(degrees[self.network.neighbours(node)],
+                                    initial=0)])
+
+        def mark_more_than_average_neighbour():
+            degrees = self.network.degrees()
+            return np.array(
+                [node for node, degree, neighbours in (
+                    (node, degree, self.network.neighbours(node))
+                     for node, degree in enumerate(degrees))
+                 if degree > (np.mean(degrees[neighbours]) if neighbours.size else 0)
+                 ]
+            )
 
         self.mark_criteria = [
-            ("(Select criteria for marking)", None, lambda: []),
+            ("(Select criteria for marking)", None, lambda: np.zeros((0,))),
             ("Mark nodes whose label starts with", text_line(), mark_label_starts),
             ("Mark nodes whose label contains", text_line(), mark_label_contains),
             ("Mark nodes whose data that contains", text_line(), mark_text),
@@ -256,31 +273,23 @@ class OWNxExplorer(OWDataProjectionWidget):
 
             ("Mark nodes with few connections",
              spin("mark_max_conn", "Max. connections:", 0, 1000),
-             lambda: [node for node, degree in self.network.degree()
-                      if degree <= self.mark_max_conn]),
+             lambda: np.flatnonzero(self.network.degrees() <= self.mark_max_conn)),
 
             ("Mark nodes with many connections",
              spin("mark_min_conn", "Min. connections:", 1, 1000),
-             lambda: [node for node, degree in self.network.degree()
-                      if degree >= self.mark_min_conn]),
+             lambda: np.flatnonzero(self.network.degrees() >= self.mark_min_conn)),
 
             ("Mark nodes with most connections",
              spin("mark_most_conn", "Number of marked:", 1, 1000),
              mark_most_connections),
 
             ("Mark nodes with more connections than any neighbour", None,
-             lambda: [node for node, degree in self.network.degree()
-                      if degree > max((deg for _, deg in
-                                       self.network.degree(
-                                           self.network[node])),
-                                      default=0)]),
+             mark_more_than_any_neighbour),
 
             ("Mark nodes with more connections than average neighbour", None,
-             lambda: [node for node, degree in self.network.degree()
-                      if degree > np.mean([deg for _, deg in
-                                           self.network.degree(
-                                               self.network[node])] or [0])])
+             mark_more_than_average_neighbour)
         ]
+
         cb = gui.comboBox(
             hbox, self, "mark_mode",
             items=[item for item, *_ in self.mark_criteria],
@@ -310,11 +319,9 @@ class OWNxExplorer(OWDataProjectionWidget):
     def update_marks(self):
         if self.network is None:
             return
-        to_mark = self.mark_criteria[self.mark_mode][2]()
-        if to_mark is None or not len(to_mark):
+        self.marked_nodes = self.mark_criteria[self.mark_mode][2]()
+        if self.marked_nodes is not None and not self.marked_nodes.size:
             self.marked_nodes = None
-        else:
-            self.marked_nodes = np.asarray(to_mark)
         self.graph.update_marks()
         if self.graph.label_only_selected:
             self.graph.update_labels()
@@ -425,7 +432,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                 else:
                     self.data = self.node_data
             if self.node_data is None:
-                self.data = network.items()
+                self.data = network.nodes
             if self.data is not None:
                 # Replicate the necessary parts of set_data
                 self.valid_data = np.full(len(self.data), True, dtype=np.bool)
@@ -446,12 +453,8 @@ class OWNxExplorer(OWDataProjectionWidget):
                 return
 
             set_checkboxes(True)
-            edges = network.edges(data='weight')
-            if edges:
-                row, col, data = zip(*edges)
-                if all(w is None for w in data):
-                    data = np.ones((len(data), ), dtype=float)
-                self.edges = sp.coo_matrix((data, (row, col)))
+            if network.number_of_edges(0):
+                self.edges = network.edges[0].out_edges.tocoo()
             else:
                 self.edges = sp.coo_matrix((0, 3))
             if self.distance_matrix is not None:
@@ -491,10 +494,10 @@ class OWNxExplorer(OWDataProjectionWidget):
         to_check = list(initial)
         reachable = set(to_check)
         for node in to_check:
-            new_checks = set(self.network[node]) - reachable
+            new_checks = set(self.network.neighbours(node)) - reachable
             to_check += new_checks
             reachable |= new_checks
-        return list(reachable)
+        return np.array(to_check)
 
     def send_data(self):
         super().send_data()
@@ -509,9 +512,8 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         selection = self.graph.selection
         subgraph = self.network.subgraph(selected_indices)
-        sub_data = \
+        subgraph.nodes = \
             self._get_selected_data(self.data, selected_indices, selection)
-        subgraph.set_items(sub_data)
         Outputs.subgraph.send(subgraph)
         Outputs.unselected_subgraph.send(
             self.network.subgraph(np.flatnonzero(selection == 0)))
@@ -537,6 +539,9 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def get_edges(self):
         return self.edges
+
+    def is_directed(self):
+        return self.network is not None and self.network.edges[0].directed
 
     def get_marked_nodes(self):
         return self.marked_nodes
@@ -655,26 +660,14 @@ class OWNxExplorer(OWDataProjectionWidget):
 
 
 def main():
-    import OWNxFile
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication([])
-    ow = OWNxExplorer()
-    ow.show()
-
-    def set_network(data, id=None):
-        ow.set_graph(data)
-
+    from Orange.widgets.utils.widgetpreview import WidgetPreview
+    from orangecontrib.network.network.readwrite \
+        import read_pajek, transform_data_to_orange_table
     from os.path import join, dirname
-    owFile = OWNxFile.OWNxFile()
-    owFile.Outputs.network.send = set_network
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_pmid.net'))
-    #owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
-    ow.handleNewSignals()
-    a.exec_()
-    ow.saveSettings()
-    owFile.saveSettings()
 
+    network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    transform_data_to_orange_table(network)
+    WidgetPreview(OWNxExplorer).run(set_graph=network)
 
 if __name__ == "__main__":
     main()
