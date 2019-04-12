@@ -102,7 +102,7 @@ class TestOWNxGroups(WidgetTest):
 
     def _read_network(self, filename=None):
         owfile = self.create_widget(OWNxFile)
-        owfile.openNetFile(self._get_filename(filename, "n"))
+        owfile.open_net_file(self._get_filename(filename, "n"))
         return self.get_output(owfile.Outputs.network, widget=owfile)
 
     def _read_items(self, filename=None):

@@ -203,7 +203,7 @@ def main():  # pragma: no cover
 
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    owFile.openNetFile("/Users/janez/Downloads/littlenet_weighted.net")
+    owFile.open_net_file("/Users/janez/Downloads/littlenet_weighted.net")
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()

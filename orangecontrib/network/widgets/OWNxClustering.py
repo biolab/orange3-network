@@ -98,7 +98,7 @@ if __name__ == "__main__":
     from os.path import join, dirname
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    owFile.open_net_file(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
     a.exec_()
     ow.saveSettings()

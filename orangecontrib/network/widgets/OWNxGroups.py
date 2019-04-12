@@ -241,7 +241,7 @@ def main():
 
     ow_file = OWNxFile()
     ow_file.Outputs.network.send = set_network
-    ow_file.openNetFile(join(dirname(dirname(__file__)),
+    ow_file.open_net_file(join(dirname(dirname(__file__)),
                              "networks", "airtraffic.net"))
     ow.handleNewSignals()
     app.exec_()
