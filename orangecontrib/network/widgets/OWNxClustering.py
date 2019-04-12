@@ -1,8 +1,8 @@
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table
-from Orange.widgets import gui, widget, settings
 from Orange.data.util import get_unique_names
+from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output
 from orangecontrib.network import Graph, community as cd
 
@@ -47,7 +47,7 @@ class OWNxClustering(widget.OWWidget):
         gui.doubleSpin(gui.indentedBox(ribg), self, "hop_attenuation",
                          0, 1, 0.01, label="Hop attenuation (delta): ")
 
-        self.info = gui.widgetLabel(self.controlArea, ' ')
+        self.infolabel = gui.widgetLabel(self.controlArea, ' ')
 
         gui.auto_commit(self.controlArea, self, "autoApply", 'Commit',
                         checkbox_label='Auto-commit', orientation=Qt.Horizontal)
@@ -59,7 +59,7 @@ class OWNxClustering(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        self.info.setText(' ')
+        self.infolabel.setText(' ')
 
         if self.method == 0:
             alg = cd.label_propagation
@@ -77,9 +77,10 @@ class OWNxClustering(widget.OWWidget):
 
         labels = alg(self.net, **kwargs)
         domain = self.net.items().domain
-        cd.add_results_to_items(self.net, labels, get_unique_names(domain, 'Cluster'))
+        cd.add_results_to_items(
+            self.net, labels, get_unique_names(domain, 'Cluster'))
 
-        self.info.setText('%d clusters found' % len(set(labels.values())))
+        self.infolabel.setText('%d clusters found' % len(set(labels.values())))
         self.Outputs.items.send(self.net.items())
         self.Outputs.network.send(self.net)
 

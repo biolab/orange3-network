@@ -41,3 +41,7 @@ class TestOWNxExplorer(WidgetTest):
         GH-68
         """
         self.widget.checkbox_show_weights.click()
+
+    def test_minimum_size(self):
+        # Disable this test from the base test class
+        pass
