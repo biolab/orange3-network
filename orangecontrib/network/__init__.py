@@ -50,4 +50,3 @@ import networkx as nx
 from .network import *
 
 from . import community
-from . import readwrite
