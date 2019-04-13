@@ -4,7 +4,7 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QTimer, QSize, Qt, Signal, QObject, QThread
 
 import Orange
-from Orange.data import Table
+from Orange.data import Table, Domain, StringVariable
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.plot import OWPlotGUI
@@ -424,15 +424,29 @@ class OWNxExplorer(OWDataProjectionWidget):
                 if self.node_data is not None:
                     self.Warning.no_graph_found()
                 return
+            n_nodes = len(self.network.nodes)
             if self.node_data is not None:
-                if len(self.node_data) != self.number_of_nodes:
+                if len(self.node_data) != n_nodes:
                     self.Error.data_size_mismatch()
                     self._invalid_data = True
                     self.data = None
                 else:
                     self.data = self.node_data
             if self.node_data is None:
-                self.data = network.nodes
+                if isinstance(network.nodes, Table):
+                    self.data = network.nodes
+                elif isinstance(network.nodes, np.ndarray) \
+                        and (len(network.nodes.shape) == 1
+                             or network.nodes.shape[1] == 1):
+                    self.data = Table.from_numpy(
+                        Domain([], None, [StringVariable("label")]),
+                        np.zeros((len(network.nodes),0)),
+                        None,
+                        metas=network.nodes.reshape((n_nodes, 1))
+                    )
+                else:
+                    self.data = None
+
             if self.data is not None:
                 # Replicate the necessary parts of set_data
                 self.valid_data = np.full(len(self.data), True, dtype=np.bool)
@@ -483,6 +497,14 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.graph.update_point_props()
         self.update_marks()
         self.update_selection_buttons()
+
+    def init_attr_values(self):
+        super().init_attr_values()
+        if self.node_data is None \
+                and self.data is not None \
+                and isinstance(self.network.nodes, np.ndarray):
+            assert len(self.data.domain.metas) == 1
+            self.attr_label = self.data.domain.metas[0]
 
     def set_random_positions(self):
         if self.network is None:
@@ -666,7 +688,7 @@ def main():
     from os.path import join, dirname
 
     network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-    transform_data_to_orange_table(network)
+    #transform_data_to_orange_table(network)
     WidgetPreview(OWNxExplorer).run(set_graph=network)
 
 if __name__ == "__main__":
