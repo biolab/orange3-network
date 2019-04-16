@@ -6,17 +6,15 @@ import scipy.sparse as sp
 
 
 class Edges:
+    directed = None
+
     def __init__(self,
-                 edges: sp.csr_matrix,  # row=from, column=to
+                 edges,  # row=from, column=to
                  edge_data: Sequence = None,
-                 directed: bool = False,
                  name: str = ""):
-        # for undirected graphs, does out_edges contains both directions?!
-        # currently doesn't. If it however would, it would hurt nxexplorer!!!
-        self.out_edges = edges.tocsr()
-        self.in_edges = edges.transpose().tocsr()
+        self.edges = edges.tocsr(copy=True)
+        self.edges.sum_duplicates()
         self.edge_data = edge_data
-        self.directed = directed
         self.name = name
 
     def out_degrees(self) -> np.ndarray:
@@ -184,99 +182,49 @@ class Network:
 
     @sum_over_edge_types()
     def number_of_edges(self, edge_type=None):
-        edges = self.edges[edge_type]
-        if edges.directed:
-            return edges.in_edges.shape[0] + edges.out_edges.shape[0]
-        else:
-            return edges.out_edges.shape[0] // 2
+        return len(self.edges[edge_type].edges.indices)
 
     def links(self, attr, edge_type=0, matrix_type=sp.coo_matrix):
         edges = self.edges[edge_type]
         return matrix_type(edges.edges), edges.edge_data.get_column_view(attr)
 
-    def weighted_links(self, edge_type=0, matrix_type=sp.coo_matrix):
-        return matrix_type(self.edges[edge_type].edges)
-
     @sum_over_edge_types()
     def out_degrees(self, edge_type):
-        out_edges = self.edges[edge_type].out_edges
-        return out_edges.indptr[1:] - out_edges.indptr[:-1]
+        return self.edges[edge_type].out_degrees()
 
     @sum_over_edge_types()
     def in_degrees(self, edge_type=None):
-        if self.edges[edge_type].directed:
-            in_edges = self.edges[edge_type].in_edges
-            return in_edges.indptr[1:] - in_edges.indptr[:-1]
-        else:
-            return self.out_degrees(edge_type)
+        return self.edges[edge_type].in_degrees()
 
     @sum_over_edge_types()
     def degrees(self, edge_type=None):
-        if self.edges[edge_type].directed:
-            return self.out_degrees(edge_type) + self.in_degrees(edge_type)
-        else:
-            return self.out_degrees(edge_type)
+        return self.edges[edge_type].degrees()
 
     @sum_over_edge_types(1)
     def out_degree(self, node, edge_type=None):
-        out_edges = self.edges[edge_type].out_edges
-        return out_edges.indptr[node + 1] - out_edges.indptr[node]
+        return self.edges[edge_type].out_degree(node)
 
     @sum_over_edge_types(1)
     def in_degree(self, node, edge_type=None):
-        if not self.edges[edge_type].directed:
-            return self.out_degree(edge_type)
-        in_edges = self.edges[edge_type].in_edges
-        return in_edges.indptr[node + 1] - in_edges.indptr[node]
+        return self.edges[edge_type].in_degree(node)
 
     @sum_over_edge_types(1)
     def degree(self, node, edge_type=None):
-        if self.edges[edge_type].directed:
-            return self.in_degree(node, edge_type) \
-                   + self.out_degree(node, edge_type)
-        else:
-            return self.out_degree(node, edge_type)
-
-    @staticmethod
-    def _compose_neighbours(node, matrix, weights):
-        fr, to = matrix.indptr[node], matrix.indptr[node + 1]
-        if not weights:
-            return matrix.indices[fr:to]
-        else:
-            return np.vstack(np.atleast_2d(matrix.indices[fr:to]),
-                             np.atleast_2d(matrix.data[fr:to]))
+        return self.edges[edge_type].degree(node)
 
     @concatenate_over_edge_types(1)
     def outgoing(self, node, edge_type=None, weights=False):
-        matrix = self.edges[edge_type].out_edges
-        return self._compose_neighbours(node, matrix, weights)
+        return self.edges[edge_type].outgoing(node, weights)
 
     @concatenate_over_edge_types(1)
-    def ingoing(self, node, edge_type=None, weights=False):
-        edges = self.edges[edge_type]
-        matrix = edges.in_edges if edges.directed else edges.out_edges
-        return self._compose_neighbours(node, matrix, weights)
+    def incoming(self, node, edge_type=None, weights=False):
+        return self.edges[edge_type].incoming(node, weights)
 
     @concatenate_over_edge_types(1)
     def neighbours(self, node, edge_type=None, weights=False):
-        if not self.edges[edge_type].directed:
-            return self.outgoing(node, edge_type, weights)
-        else:
-            return np.hstack((self.outgoing(node, edge_type, weights),
-                              self.ingoing(node, edge_type, weights)))
+        return self.edges[edge_type].neighbours(node, weights)
 
     def subgraph(self, mask):
-        def subset_edges(matrix, edge_data):
-            if matrix is None:
-                return None, None
-            matrix = matrix.tocoo()
-            edge_mask = np.logical_and(mask[matrix.row], mask[matrix.col])
-            row = node_renumeration[matrix.row[edge_mask]]
-            col = node_renumeration[matrix.col[edge_mask]]
-            data = matrix.data[edge_mask]
-            edge_data = edge_data[edge_mask] if edge_data is not None else None
-            return sp.csr_matrix((data, (row, col)), shape=shape), edge_data
-
         nodes = self.nodes[mask]
         coordinates = self.coordinates[mask]
         if mask.dtype is not np.bool:
@@ -285,7 +233,6 @@ class Network:
             mask = mask1
         node_renumeration = np.cumsum(mask) - 1
         shape = (len(nodes), len(nodes))
-        edge_sets = [Edges(*subset_edges(edges.out_edges, edges.edge_data),
-                           edges.directed, edges.name)
+        edge_sets = [edges.subset(mask, node_renumeration, shape)
                      for edges in self.edges]
         return Network(nodes, edge_sets, self.name, coordinates)

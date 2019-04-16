@@ -3,7 +3,7 @@ import shlex
 import numpy as np
 import scipy.sparse as sp
 
-from .base import Network, Edges
+from .base import Network, EdgeType
 
 __all__ = ("read_pajek", )
 
@@ -92,15 +92,15 @@ def read_pajek(path):
         elif part_type in ("*edges", "*arcs"):
             check_has_vertices()
             edges.append(
-                Edges(read_edges(line_part, len(labels)),
-                      directed=part_type=="*arcs",
-                      name=part_args.strip() or part_type[1:]))
+                EdgeType[part_type=="*arcs"](
+                    read_edges(line_part, len(labels)),
+                    name=part_args.strip() or part_type[1:]))
         elif part_type in ("*edgeslist", "*arcslist"):
             check_has_vertices()
             edges.append(
-                Edges(read_edges_list(line_part, len(labels)),
-                      directed=part_type=="*arcslist",
-                      name=part_args.strip() or part_type[1:]))
+                EdgeType[part_type=="*arcslist"](
+                    read_edges_list(line_part, len(labels)),
+                    name=part_args.strip() or part_type[1:]))
     network = Network(labels, edges, network_name or "", coordinates)
     if in_first_mode is not None:
         network.in_first_mode = in_first_mode

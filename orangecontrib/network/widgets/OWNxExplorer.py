@@ -468,7 +468,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
             set_checkboxes(True)
             if network.number_of_edges(0):
-                self.edges = network.edges[0].out_edges.tocoo()
+                self.edges = network.edges[0].edges.tocoo()
             else:
                 self.edges = sp.coo_matrix((0, 3))
             if self.distance_matrix is not None:

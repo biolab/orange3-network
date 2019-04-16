@@ -21,7 +21,7 @@ TERMINATED = object()
 
 def shortest_paths_nan_diag(network):
     paths = csgraph.floyd_warshall(
-        network.edges[0].out_edges, network.edges[0].directed).astype(float)
+        network.edges[0].edges, network.edges[0].directed).astype(float)
     diag = np.lib.stride_tricks.as_strided(
         paths, (len(paths), ), ((len(paths) + 1) * paths.dtype.itemsize,))
     diag[:] = np.nan
@@ -60,10 +60,10 @@ METHODS = (
      "Average shortest path length", GRAPHLEVEL),
 
     ("number_strongly_connected_components", lambda network:
-         csgraph.connected_components(network.edges[0].out_edges, False)[0],
+         csgraph.connected_components(network.edges[0].edges, False)[0],
          "Number of strongly connected components", GRAPHLEVEL),
     ("number_weakly_connected_components", lambda network:
-         csgraph.connected_components(network.edges[0].out_edges, True)[0],
+         csgraph.connected_components(network.edges[0].edges, True)[0],
          "Number of strongly connected components", GRAPHLEVEL),
 
     ("in_degrees", lambda network: network.in_degrees(), "In-degree", NODELEVEL),
