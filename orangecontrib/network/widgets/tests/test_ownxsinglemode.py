@@ -2,11 +2,12 @@ import unittest
 from unittest.mock import Mock, patch
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Domain, DiscreteVariable, ContinuousVariable, Table
 from Orange.widgets.tests.base import WidgetTest
 
-import orangecontrib.network
+from orangecontrib.network import Network
 from orangecontrib.network.widgets.ownxsinglemode import OWNxSingleMode
 
 
@@ -30,11 +31,9 @@ class TestOWNxSingleMode(WidgetTest):
         self.d = DiscreteVariable("d", values=["d0"])
 
     def _set_graph(self, data, edges=None):
-        net = orangecontrib.network.Graph()
-        net.add_nodes_from(range(len(data)))
-        if edges is not None:
-            net.add_edges_from(edges)
-        net.set_items(data)
+        net = Network(
+            data,
+            sp.csr_matrix((len(data), len(data))) if edges is None else edges)
         self.send_signal(self.widget.Inputs.network, net)
 
     def test_combo_inits(self):
@@ -113,8 +112,7 @@ class TestOWNxSingleMode(WidgetTest):
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
 
-        net = orangecontrib.network.Graph()
-        net.add_edges_from(([0, 1], [1, 2]))
+        net = Network(range(3), sp.csr_matrix([[0, 1], [1, 2]]))
         self.send_signal(widget.Inputs.network, net)
         self.assertTrue(no_data())
         self.assertFalse(no_categorical())

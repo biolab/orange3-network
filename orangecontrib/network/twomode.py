@@ -3,8 +3,7 @@ from collections import namedtuple
 import numpy as np
 import scipy.sparse as sp
 
-from orangecontrib import network
-
+from orangecontrib.network import Network
 
 NoWeights, WeightConnections, WeightWeightedConnections,\
     WeightGeo, WeightGeoDeg, WeightInput, WeightOutput, WeightMin, WeightMax \
@@ -24,15 +23,9 @@ def to_single_mode(net, mode_mask, conn_mask, weighting):
     Returns:
         single-mode network
     """
-    new_net = network.Graph()
-    new_net.add_nodes_from(range(mode_mask.sum()))
-    mode_edges = _filtered_edges(net, mode_mask, conn_mask, weighting > 1)
-    if mode_edges is not None:
-        new_edges = Weighting[weighting].func(mode_edges)
-        new_edges = new_edges.tocoo()
-        new_net.add_weighted_edges_from(
-            zip(new_edges.row, new_edges.col, new_edges.data))
-    return new_net
+    mode_edges = _filtered_edges(net, mode_mask, conn_mask)
+    new_edges = Weighting[weighting].func(mode_edges)
+    return Network(net.nodes[mode_mask], new_edges)
 
 
 def _normalize(a, *nominators):
@@ -48,10 +41,13 @@ def _dot_edges(normalization):
     def norm_dot(edges):
         edges = normalization(
             edges, wuu=lambda: edges.sum(axis=0), wvv=lambda: edges.sum(axis=1))
-        new_edges = np.dot(edges, edges.T)
-        new_edges.setdiag(0)
-        new_edges.eliminate_zeros()
-        return new_edges
+        new_edges = np.dot(edges, edges.T).tocoo()
+        mask = np.logical_and(
+            new_edges.row < new_edges.col,  new_edges.data != 0)
+        n = np.sum(mask)
+        return sp.csr_matrix(
+            (new_edges.data[mask], (new_edges.row[mask], new_edges.col[mask])),
+            shape=(n, n))
     return norm_dot
 
 
@@ -130,28 +126,21 @@ Weighting = [WeightType(*x) for x in (
 )]
 
 
-def _filtered_edges(network, mode_mask, conn_mask, weighted):
+def _filtered_edges(network, mode_mask, conn_mask):
     """
     Compute a coo_matrix with network edges between nodes in mode_mask and
     conn_mask
     """
     if not network.number_of_edges():
-        return None
-    if weighted:
-        node1, node2, ws = zip(*network.edges(data="weight"))
-        ws = np.array(ws)
-    else:
-        node1, node2 = zip(*network.edges())
-    node1, node2 = np.array(node1), np.array(node2)
+        return sp.coo_matrix((0, 0))
+    edges = network.edges[0].edges.tocoo()
+    node1, node2, weights = edges.row, edges.col, edges.data
     fwd = mode_mask[node1] * conn_mask[node2]
     back = mode_mask[node2] * conn_mask[node1]
     us = np.hstack((node1[fwd], node2[back]))
     vs = np.hstack((node2[fwd], node1[back]))
     if not len(us):
         return sp.coo_matrix((0, 0))
-    if weighted:
-        data = np.hstack((ws[fwd], ws[back]))
-    else:
-        data = np.ones(len(us))
+    data = np.hstack((weights[fwd], weights[back]))
     new_indices = np.cumsum(mode_mask) - 1
     return sp.coo_matrix((data, (new_indices[us], vs)))
