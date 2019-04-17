@@ -76,7 +76,7 @@ class OWNxFile(OWWidget):
 
         # info
         box = gui.widgetBox(self.controlArea, "Info")
-        self.info = gui.widgetLabel(box, 'No data loaded.')
+        self.infolabel = gui.widgetLabel(box, 'No data loaded.')
 
         gui.rubber(self.controlArea)
         self.resize(150, 100)
@@ -128,7 +128,7 @@ class OWNxFile(OWWidget):
         self.graph = None
         self.Outputs.network.send(None)
         self.Outputs.items.send(None)
-        self.info.setText('No data loaded.\n' + message)
+        self.infolabel.setText('No data loaded.\n' + message)
 
     def openNetFile(self, filename):
         """Read network from file."""
@@ -155,7 +155,7 @@ class OWNxFile(OWWidget):
         info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
                 '{} nodes, {} edges'.format(G.number_of_nodes(), G.number_of_edges()),
                 'Vertices data generated from graph' if self.auto_table else '')
-        self.info.setText('\n'.join(info))
+        self.infolabel.setText('\n'.join(info))
 
         self.auto_items = G.items()
         assert self.auto_table or self.auto_items is None, \
@@ -190,10 +190,11 @@ class OWNxFile(OWWidget):
         if filename == NONE:
             if self.graph:
                 self.graph.set_items(self.auto_items)
-                self.info.setText(self.info.text().rpartition('\n')[0] + '\n' +
-                                  ('Vertices data generated from graph'
-                                   if self.auto_items is not None else
-                                   "No vertices data file specified"))
+                self.infolabel.setText(
+                    self.info.text().rpartition('\n')[0] + '\n' +
+                    ('Vertices data generated from graph'
+                     if self.auto_items is not None else
+                     "No vertices data file specified"))
         else:
             self.readDataFile(filename)
         self.Outputs.network.send(self.graph)
@@ -221,8 +222,9 @@ class OWNxFile(OWWidget):
                 table = Table.concatenate([table, items[:, domain]])
 
         self.graph.set_items(table)
-        self.info.setText(self.info.text().rpartition('\n')[0] + '\n' +
-                          'Vertices data added')
+        self.infolabel.setText(
+            self.infolabel.text().rpartition('\n')[0] + '\n' +
+            'Vertices data added')
 
     def browseNetFile(self, browse_demos=False):
         """user pressed the '...' button to manually select a file to load"""
