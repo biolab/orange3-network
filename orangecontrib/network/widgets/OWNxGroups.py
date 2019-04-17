@@ -1,6 +1,5 @@
-from itertools import repeat
-
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import DiscreteVariable, Table, Domain
 from Orange.widgets import gui
@@ -8,7 +7,7 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler, \
     Setting
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import Input, Output, OWWidget, Msg
-from orangecontrib.network import Graph
+from orangecontrib.network import Network
 
 
 class OWNxGroups(OWWidget):
@@ -18,11 +17,11 @@ class OWNxGroups(OWWidget):
     priority = 6435
 
     class Inputs:
-        network = Input("Network", Graph, default=True)
+        network = Input("Network", Network, default=True)
         data = Input("Data", Table)
 
     class Outputs:
-        network = Output("Network", Graph, default=True)
+        network = Output("Network", Network, default=True)
         data = Output("Data", Table)
 
     class Warning(OWWidget.Warning):
@@ -124,7 +123,7 @@ class OWNxGroups(OWWidget):
             else:
                 self.effective_data = self.data
         elif self.data is None and self.network is not None:
-            self.effective_data = self.network.items()
+            self.effective_data = self.network.nodes
 
         if self.effective_data is not None and not \
                 self.effective_data.domain.has_discrete_attributes(True, True):
@@ -142,34 +141,29 @@ class OWNxGroups(OWWidget):
         else:
             output_network = self._map_network()
         self.Outputs.network.send(output_network)
-        self.Outputs.data.send(output_network and output_network.items())
+        self.Outputs.data.send(output_network and output_network.nodes)
         self._set_output_label_text(output_network)
 
     def _map_network(self):
+        edges = self.network.edges[0].edges.tocoo()
+        row, col = edges.row, edges.col
         if self.weighting == self.WeightByWeights:
-            edges = self.network.edges(data='weight')
-            row, col, weights = map(np.array, zip(*edges))
+            weights = edges.data
         else:
-            edges = self.network.edges()
-            row, col = map(np.array, zip(*edges))
             weights = None
         if self.normalize:
             self._normalize_weights(row, col, weights)
         row, col = self._map_into_feature_values(row, col)
-        edges = self._construct_edges(row, col, weights)
-
-        network = Graph()
-        network.add_nodes_from(range(len(self.feature.values)))
-        network.add_weighted_edges_from(edges)
-        network.set_items(self._construct_items())
-        return network
+        return Network(
+            self._construct_items(),
+            self._construct_edges(row, col, weights))
 
     def _normalize_weights(self, row, col, weights):
         if weights is None:
             weights = np.ones((len(row)), dtype=float)
-            degs = np.array(sorted(self.network.degree()))[:, 1]
+            degs = self.network.degrees()
         else:
-            degs = np.array(sorted(self.network.degree(weight="weight")))[:, 1]
+            degs = self.network.degrees(weighted=True)
         weights /= np.sqrt(degs.T[row] * degs.T[col])
 
     def _map_into_feature_values(self, row, col):
@@ -194,15 +188,17 @@ class OWNxGroups(OWWidget):
         (row, col), inverse = np.unique(array, axis=1, return_inverse=True)
 
         if self.weighting == self.NoWeights:
-            return zip(row, col, repeat(1.0))
+            data = np.ones(len(row))
         elif self.weighting == self.WeightByDegrees:
-            return zip(
-                row, col,
-                (np.sum(inverse == i).astype(float) for i in range(len(row))))
-        else:  # self.WeightByWeights
-            return zip(
-                row, col,
-                (np.sum(weights[inverse == i]) for i in range(len(row))))
+            data = np.fromiter(
+                (np.sum(inverse == i).astype(float) for i in range(len(row))),
+                dtype=float, count=len(row))
+        else:
+            data = np.fromiter(
+                (np.sum(weights[inverse == i]) for i in range(len(row))),
+                dtype=float, count=len(row))
+        dim = len(self.feature.values)
+        return sp.csr_matrix((data, (row, col)), shape=(dim, dim))
 
     def _construct_items(self):
         domain = Domain([self.feature])
