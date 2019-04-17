@@ -188,12 +188,20 @@ class Network:
                 one or more set of edges
             name (str): network name
         """
+        def as_edges(edges):
+            if isinstance(edges, Edges):
+                return edges
+            if sp.issparse(edges):
+                return UndirectedEdges(edges)
+            raise ValueError(
+                "edges must be an instance of 'Edges' or a sparse matrix,"
+                f"not '{type(edges).__name__}")
+
         self.nodes = nodes
-        if sp.issparse(edges):
-            edges = UndirectedEdges(edges)
-        if isinstance(edges, Edges):
-            edges = [edges]
-        self.edges = edges
+        if isinstance(edges, Sequence):
+            self.edges = [as_edges(e) for e in edges]
+        else:
+            self.edges = [as_edges(edges)]
         self.name = name
         self.coordinates = coordinates
 
