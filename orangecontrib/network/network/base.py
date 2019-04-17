@@ -17,22 +17,22 @@ class Edges:
         self.edge_data = edge_data
         self.name = name
 
-    def out_degrees(self) -> np.ndarray:
+    def out_degrees(self, *, weighted=False) -> np.ndarray:
         pass
 
-    def in_degrees(self) -> np.ndarray:
+    def in_degrees(self, *, weighted=False) -> np.ndarray:
         pass
 
-    def degrees(self) -> np.ndarray:
+    def degrees(self, *, weighted=False) -> np.ndarray:
         pass
 
-    def out_degree(self, node) -> float:
+    def out_degree(self, node, *, weighted=False) -> float:
         pass
 
-    def in_degree(self, node) -> float:
+    def in_degree(self, node, *, weighted=False) -> float:
         pass
 
-    def degree(self, node) -> float:
+    def degree(self, node, *, weighted=False) -> float:
         pass
 
     def outgoing(self, node, weights=False) -> np.ndarray:
@@ -52,6 +52,21 @@ class Edges:
         else:
             return np.vstack(np.atleast_2d(matrix.indices[fr:to]),
                              np.atleast_2d(matrix.data[fr:to]))
+
+    @staticmethod
+    def _compute_degrees(edges, weighted):
+        if weighted:
+            return edges.sum(axis=1).getA1()
+        else:
+            return edges.indptr[1:] - edges.indptr[:-1]
+
+    @staticmethod
+    def _compute_degree(edges, node, weighted):
+        fr, to = edges.indptr[node], edges.indptr[node + 1]
+        if weighted:
+            return edges.data[fr:to].sum()
+        else:
+            return to - fr
 
     def subset(self, mask, node_renumeration, shape):
         edges = self.edges.tocoo()
@@ -76,23 +91,25 @@ class DirectedEdges(Edges):
         super().__init__(edges, edge_data, name)
         self.in_edges = self.edges.transpose()
 
-    def out_degrees(self):
-        return self.edges.indptr[1:] - self.edges.indptr[:-1]
+    def out_degrees(self, *, weighted=False):
+        return self._compute_degrees(self.edges, weighted)
 
-    def in_degrees(self):
-        return self.in_edges.indptr[1:] - self.in_edges.indptr[:-1]
+    def in_degrees(self, *, weighted=False):
+        return self._compute_degrees(self.in_edges, weighted)
 
-    def degrees(self):
-        return self.out_degrees() + self.in_degrees()
+    def degrees(self, *, weighted=False):
+        return self._compute_degrees(self.edges, weighted) \
+               + self.compute_degrees(self.in_edges, weighted)
 
-    def out_degree(self, node):
-        return self.edges.indptr[node + 1] - self.edges.indptr[node]
+    def out_degree(self, node, *, weighted=False):
+        return self._compute_degree(self.edges, node, weighted)
 
-    def in_degree(self, node):
-        return self.in_edges.indptr[node + 1] - self.in_edges.indptr[node]
+    def in_degree(self, node, *, weighted=False):
+        return self._compute_degree(self.in_edges, node, weighted)
 
-    def degree(self, node):
-        return self.out_degree(node) + self.in_degree(node)
+    def degree(self, node, *, weighted=False):
+        return self._compute_degree(self.in_edges, node, weighted) \
+               + self._compute_degree(self.out_Edgesnode, weighted)
 
     def outgoing(self, node, weights=False):
         return self._compose_neighbours(node, self.edges, weights)
@@ -101,8 +118,9 @@ class DirectedEdges(Edges):
         return self._compose_neighbours(node, self.in_edges, weights)
 
     def neighbours(self, node, edge_type=None, weights=False):
-        return np.hstack((self.outgoing(node, weights),
-                          self.ingoing(node, weights)))
+        return np.hstack(
+            (self._compose_neighbours(node, self.edges, weights),
+             self._compose_neighbours(node, self.in_edges, weights)))
 
 
 class UndirectedEdges(Edges):
@@ -116,11 +134,11 @@ class UndirectedEdges(Edges):
         self.twoway_edges = self.edges + self.edges.transpose()
         self.twoway_edges.sum_duplicates()
 
-    def degrees(self):
-        return self.twoway_edges.indptr[1:] - self.twoway_edges.indptr[:-1]
+    def degrees(self, *, weighted=False):
+        return self._compute_degrees(self.twoway_edges, weighted)
 
-    def degree(self, node):
-        return self.edges.indptr[node + 1] - self.edges.indptr[node]
+    def degree(self, node, *, weighted=False):
+        return self._compute_degree(self.twoway_edges, node, weighted)
 
     def neighbours(self, node, weights=False):
         return self._compose_neighbours(node, self.twoway_edges, weights)
@@ -136,13 +154,15 @@ EdgeType = [UndirectedEdges, DirectedEdges]
 def aggregate_over_edge_types(aggregate, arg_no=0):
     def wrapwrap(f):
         @wraps(f)
-        def wrapper(graph, *args):
+        def wrapper(graph, *args, **kwargs):
             if len(args) <= arg_no or args[arg_no] is None:
                 return aggregate(
-                    f(graph, *args[:arg_no], edge_type, *args[arg_no + 1:])
+                    f(graph,
+                      *args[:arg_no], edge_type, *args[arg_no + 1:],
+                      **kwargs)
                     for edge_type in range(len(graph.edges)))
             else:
-                return f(graph, *args)
+                return f(graph, *args, **kwargs)
         return wrapper
     return wrapwrap
 
@@ -189,28 +209,28 @@ class Network:
         return matrix_type(edges.edges), edges.edge_data.get_column_view(attr)
 
     @sum_over_edge_types()
-    def out_degrees(self, edge_type):
-        return self.edges[edge_type].out_degrees()
+    def out_degrees(self, edge_type, *, weighted=False):
+        return self.edges[edge_type].out_degrees(weighted=weighted)
 
     @sum_over_edge_types()
-    def in_degrees(self, edge_type=None):
-        return self.edges[edge_type].in_degrees()
+    def in_degrees(self, edge_type=None, *, weighted=False):
+        return self.edges[edge_type].in_degrees(weighted=weighted)
 
     @sum_over_edge_types()
-    def degrees(self, edge_type=None):
-        return self.edges[edge_type].degrees()
+    def degrees(self, edge_type=None, *, weighted=False):
+        return self.edges[edge_type].degrees(weighted=weighted)
 
     @sum_over_edge_types(1)
-    def out_degree(self, node, edge_type=None):
-        return self.edges[edge_type].out_degree(node)
+    def out_degree(self, node, edge_type=None, *, weighted=False):
+        return self.edges[edge_type].out_degree(node, weighted=weighted)
 
     @sum_over_edge_types(1)
-    def in_degree(self, node, edge_type=None):
-        return self.edges[edge_type].in_degree(node)
+    def in_degree(self, node, edge_type=None, *, weighted=False):
+        return self.edges[edge_type].in_degree(node, weighted=weighted)
 
     @sum_over_edge_types(1)
-    def degree(self, node, edge_type=None):
-        return self.edges[edge_type].degree(node)
+    def degree(self, node, edge_type=None, *, weighted=False):
+        return self.edges[edge_type].degree(node, weighted=weighted)
 
     @concatenate_over_edge_types(1)
     def outgoing(self, node, edge_type=None, weights=False):
