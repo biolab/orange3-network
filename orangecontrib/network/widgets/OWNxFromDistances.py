@@ -329,7 +329,7 @@ pg.graphicsItems.LinearRegionItem.InfiniteLine = InfiniteLine
 
 class Histogram(pg.PlotWidget):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, setAspectLocked=True, **kwargs)
+        super().__init__(parent, setAspectLocked=True, background="w", **kwargs)
         self.curve = self.plot([0, 1], [0], pen=pg.mkPen('b', width=2), stepMode=True)
         self.region = pg.LinearRegionItem([0, 0], brush=pg.mkBrush('#02f1'), movable=True)
         self.region.sigRegionChanged.connect(self._update_region)
