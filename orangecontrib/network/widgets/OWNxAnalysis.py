@@ -1,27 +1,104 @@
-import numpy as np
-import networkx as nx
+import inspect
+from collections import namedtuple
 
-from AnyQt.QtCore import QThread, QMutex
-from AnyQt.QtWidgets import QApplication, QSizePolicy, QWidget, QGridLayout
+import numpy as np
+from scipy.sparse import csgraph
+
+from AnyQt.QtCore import QThread
+from AnyQt.QtWidgets import QWidget, QGridLayout
 
 from Orange.data import ContinuousVariable, Table, Domain
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import Input, Output
-import orangecontrib.network as network
+from Orange.widgets.widget import Input, Output, Msg
+from orangecontrib.network.network import Network
+
+NODELEVEL, GRAPHLEVEL, INTERNAL = range(3)
+
+ERRORED = object()
+TERMINATED = object()
 
 
-NODELEVEL, GRAPHLEVEL = range(2)
+def shortest_paths_nan_diag(network):
+    paths = csgraph.floyd_warshall(
+        network.edges[0].edges, network.edges[0].directed).astype(float)
+    diag = np.lib.stride_tricks.as_strided(
+        paths, (len(paths), ), ((len(paths) + 1) * paths.dtype.itemsize,))
+    diag[:] = np.nan
+    return paths
+
+# TODO: adapt betweenness_centrality and perhaps other statistics from
+# https://github.com/networkdynamics/zenlib/blob/master/src/zen/algorithms/centrality.pyx
+
+# TODO: Add a flag telling whether the statistics is valid for directed,
+# undirected or both (default); show valid statistics
+
+# TODO: Combo that lets the user set edge types to use (or all)
+
+# Order of this list also defines execution priority
+METHODS = (
+    ("n", lambda network: network.number_of_nodes()),
+    ("e", lambda network: network.number_of_edges()),
+    ("degrees", lambda network: network.degrees(), "Degree", NODELEVEL),
+
+    ("number_of_nodes", lambda n: n, "Number of nodes", GRAPHLEVEL),
+    ("number_of_edges", lambda e: e, "Number of edges", GRAPHLEVEL),
+    ("average_degree",
+     lambda degrees: np.mean(degrees), "Average degree", GRAPHLEVEL),
+    ("density",
+     lambda n, e: 2 * (e - n + 1) / (n * (n - 3) + 2), # what if it's negative?! on last fm?!?!
+     "Density", GRAPHLEVEL),
+
+    ("shortest_paths", shortest_paths_nan_diag, "Shortest paths"),
+    ("diameter",
+     lambda shortest_paths: np.nanmax(shortest_paths), "Diameter", GRAPHLEVEL),
+    ("radius",
+     lambda shortest_paths: np.nanmin(np.nanmax(shortest_paths, axis=1)),
+     "Radius", GRAPHLEVEL),
+    ("average_shortest_path_length",
+     lambda shortest_paths: np.nanmean(shortest_paths),
+     "Average shortest path length", GRAPHLEVEL),
+
+    ("number_strongly_connected_components", lambda network:
+         csgraph.connected_components(network.edges[0].edges, False)[0],
+         "Number of strongly connected components", GRAPHLEVEL),
+    ("number_weakly_connected_components", lambda network:
+         csgraph.connected_components(network.edges[0].edges, True)[0],
+         "Number of strongly connected components", GRAPHLEVEL),
+
+    ("in_degrees", lambda network: network.in_degrees(), "In-degree", NODELEVEL),
+    ("out_degrees", lambda network: network.out_degrees(), "Out-degree", NODELEVEL),
+    ("average_neighbour_degrees",
+     lambda network, degrees: np.fromiter(
+         (np.mean(degrees[network.neighbours(i)]) if degree else np.nan
+          for i, degree in enumerate(degrees)),
+         dtype=np.float, count=len(degrees)),
+     "Average neighbour degree", NODELEVEL),
+    ("degree_centrality",
+     lambda degrees, n: n and degrees / (n - 1) if n > 1 else 0,
+     "Degree centrality", NODELEVEL),
+    ("in_degree_centrality",
+     lambda in_degrees, n: in_degrees / (n - 1) if n > 1 else 0,
+     "In-degree centrality", NODELEVEL),
+    ("out_degree_centrality",
+     lambda out_degrees, n: out_degrees / (n - 1) if n > 1 else 0,
+     "Out-degree centrality", NODELEVEL),
+    ("closeness_centrality",
+     lambda shortest_paths: 1 / np.nanmean(shortest_paths, axis=1),
+     "Closeness centrality", NODELEVEL)
+)
+
+MethodDefinition = namedtuple(
+    "MethodDefinition",
+    ["name", "func", "label", "level", "args"])
 
 
-METHODS = [
-        ("number_of_nodes", True, "Number of nodes", GRAPHLEVEL, lambda G: G.number_of_nodes()),
-        ("number_of_edges", True, "Number of edges", GRAPHLEVEL, lambda G: G.number_of_edges()),
-        ("average_degree", True, "Average degree", GRAPHLEVEL, lambda G: np.mean(list(dict(G.degree()).values()))),
-        ("diameter", False, "Diameter", GRAPHLEVEL, nx.diameter),
-        ("radius", False, "Radius", GRAPHLEVEL, nx.radius),
-        ("average_shortest_path_length", False, "Average shortest path length", GRAPHLEVEL, nx.average_shortest_path_length),
-        ("density", True, "Density", GRAPHLEVEL, nx.density),
+METHODS = {definition[0]:
+    MethodDefinition(*(definition + ("", None, "", INTERNAL)[len(definition):]),
+                     inspect.getfullargspec(definition[1]).args)
+    for definition in METHODS}
+
+"""
         ("degree_assortativity_coefficient", False, \
             "Degree assortativity coefficient", GRAPHLEVEL, \
                 nx.degree_assortativity_coefficient if \
@@ -36,23 +113,12 @@ METHODS = [
         ("graph_number_of_cliques", False, "Graph number of cliques", GRAPHLEVEL, nx.graph_number_of_cliques),
         ("transitivity", False, "Graph transitivity", GRAPHLEVEL, nx.transitivity),
         ("average_clustering", False, "Average clustering coefficient", GRAPHLEVEL, nx.average_clustering),
-        ("number_connected_components", False, "Number of connected components", GRAPHLEVEL, nx.number_connected_components),
-        ("number_strongly_connected_components", False, "Number of strongly connected components", GRAPHLEVEL, nx.number_strongly_connected_components),
-        ("number_weakly_connected_components", False, "Number of weakly connected components", GRAPHLEVEL, nx.number_weakly_connected_components),
         ("number_attracting_components", False, "Number of attracting components", GRAPHLEVEL, nx.number_attracting_components),
 
-        ("degree", False, "Degree", NODELEVEL, lambda G: dict(G.degree())),
-        ("in_degree", False, "In-degree", NODELEVEL, lambda G: dict(G.in_degree())),
-        ("out_degree", False, "Out-degree", NODELEVEL, lambda G: dict(G.out_degree())),
-        ("average_neighbor_degree", False, "Average neighbor degree", NODELEVEL, nx.average_neighbor_degree),
         ("clustering", False, "Clustering coefficient", NODELEVEL, nx.clustering),
         ("triangles", False, "Number of triangles", NODELEVEL, nx.triangles),
         ("square_clustering", False, "Squares clustering coefficient", NODELEVEL, nx.square_clustering),
         ("number_of_cliques", False, "Number of cliques", NODELEVEL, nx.number_of_cliques),
-        ("degree_centrality", False, "Degree centrality", NODELEVEL, nx.degree_centrality),
-        ("in_degree_centrality", False, "In-egree centrality", NODELEVEL, nx.in_degree_centrality),
-        ("out_degree_centrality", False, "Out-degree centrality", NODELEVEL, nx.out_degree_centrality),
-        ("closeness_centrality", False, "Closeness centrality", NODELEVEL, nx.closeness_centrality),
         ("betweenness_centrality", False, "Betweenness centrality", NODELEVEL, nx.betweenness_centrality),
         ("current_flow_closeness_centrality", False, "Information centrality", NODELEVEL, nx.current_flow_closeness_centrality),
         ("current_flow_betweenness_centrality", False, "Random-walk betweenness centrality", NODELEVEL, nx.current_flow_betweenness_centrality),
@@ -67,17 +133,14 @@ METHODS = [
         ("core_number", False, "Core number", NODELEVEL, nx.core_number),
         ("eccentricity", False, "Eccentricity", NODELEVEL, nx.eccentricity),
         ("closeness_vitality", False, "Closeness vitality", NODELEVEL, nx.closeness_vitality),
-]
+        """
 
 
 class WorkerThread(QThread):
-    def __init__(self, receiver, name, label, type, algorithm):
+    def __init__(self, method, data):
         super().__init__()
-        self.receiver = receiver
-        self.name = name
-        self.label = label
-        self.type = type
-        self.algorithm = algorithm
+        self.method = method
+        self.data = data
 
         self.stopped = 0
         self.result = None
@@ -85,11 +148,17 @@ class WorkerThread(QThread):
         self.is_terminated = False
 
     def run(self):
-        try:
-            self.result = self.algorithm(self.receiver.graph)
-        except Exception as ex:
-            self.result = None
-            self.error = ex
+        args = tuple(self.data[arg] for arg in self.method.args)
+        if any(arg is TERMINATED for arg in args):  # "in" doesn't work with np
+            self.result = TERMINATED
+        elif any(arg is ERRORED for arg in args):
+            self.result = TERMINATED
+        else:
+            try:
+                self.result = self.method.func(*args)
+            except Exception as ex:
+                self.error = ex
+                print(ex)
 
 
 class OWNxAnalysis(widget.OWWidget):
@@ -101,328 +170,239 @@ class OWNxAnalysis(widget.OWWidget):
     resizing_enabled = False
 
     class Inputs:
-        network = Input("Network", network.Graph)
+        network = Input("Network", Network)
         items = Input("Items", Table)
 
     class Outputs:
-        network = Output("Network", network.Graph)
+        network = Output("Network", Network)
         items = Output("Items", Table)
+
+    class Information(widget.OWWidget.Information):
+        computing = Msg("Computing {}")
 
     want_main_area = False
     want_control_area = True
 
     auto_commit = Setting(False)
-    enabled_methods = Setting(set(m[0] for m in METHODS if m[1]))  # contains method names
+    enabled_methods = Setting(
+        {"number_of_nodes", "number_of_edges", "average_degree"})
 
     def __init__(self):
         super().__init__()
-        self.controlArea = QWidget(self.controlArea)
-        self.layout().addWidget(self.controlArea)
-        layout = QGridLayout()
-        self.controlArea.setLayout(layout)
-        layout.setContentsMargins(4, 4, 4, 4)
-
-        self.methods = [method for method in METHODS if method[-1] is not None]
-
-        self.tab_index = 0
-        self.mutex = QMutex()
 
         self.graph = None
         self.items = None          # items set by Items signal
         self.items_graph = None    # items set by graph.items by Network signal
         self.items_analysis = None # items to output and merge with analysis result
 
-        self.job_queue = []
-        self.job_working = []
-        self.analfeatures = []
-        self.analdata = {}
+        self.known = {}
+        self.running_jobs = {}
 
-        for method in self.methods:
-            setattr(self, method[0], method[0] in self.enabled_methods)
-            setattr(self, "lbl_" + method[0], "")
+        self.controlArea = QWidget(self.controlArea)
+        self.layout().addWidget(self.controlArea)
+        layout = QGridLayout()
+        self.controlArea.setLayout(layout)
+        layout.setContentsMargins(4, 4, 4, 4)
+        tabs = gui.tabWidget(self.controlArea)
+        tabs.setMinimumWidth(450)
+        graph_indices = gui.createTabPage(tabs, "Graph-level indices")
+        node_indices = gui.createTabPage(tabs, "Node-level indices")
 
-        self.tabs = gui.tabWidget(self.controlArea)
-        self.tabs.setMinimumWidth(450)
-        self.graphIndices = gui.createTabPage(self.tabs, "Graph-level indices")
-        self.nodeIndices = gui.createTabPage(self.tabs, "Node-level indices")
-        self.tabs.setCurrentIndex(self.tab_index)
-        self.tabs.currentChanged.connect(lambda index: setattr(self, 'tab_index', index))
+        for method in METHODS.values():
+            if method.level == INTERNAL:
+                continue
+            setattr(self, method.name, method.name in self.enabled_methods)
+            setattr(self, "lbl_" + method.name, "")
 
-        a = {NODELEVEL: self.nodeIndices, GRAPHLEVEL: self.graphIndices}
-        for name, _, label, type, algorithm in self.methods:
-            box = gui.widgetBox(a[type], orientation="horizontal")
-
-            gui.checkBox(box, self, name, label=label, callback=lambda n=name: self.method_clicked(n))
+            box = gui.hBox(
+                node_indices if method.level == NODELEVEL else graph_indices)
+            gui.checkBox(
+                box, self, method.name, method.label,
+                callback=lambda attr=method.name: self.method_clicked(attr)
+            )
             box.layout().addStretch(1)
-            lbl = gui.label(box, self, "%(lbl_" + name + ")s")
-            setattr(self, "tool_" + name, lbl)
-
-        self.graphIndices.layout().addStretch(1)
-        self.nodeIndices.layout().addStretch(1)
-
-        autobox = gui.auto_commit(None, self, "auto_commit", "Commit", commit=self.analyze)
-        layout.addWidget(autobox, 3, 0, 1, 1)
-        cancel = gui.button(None, self, "Cancel", callback=lambda: self.stop_job(current=False))
-        autobox.layout().insertWidget(3, cancel)
-        autobox.layout().insertSpacing(2, 10)
-        cancel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            lbl = gui.label(box, self, f"%(lbl_{method.name})s")
+            setattr(self, "tool_" + method.name, lbl)
+            # todo: is this accessible through controls?
+        graph_indices.layout().addStretch(1)
+        node_indices.layout().addStretch(1)
 
     @Inputs.network
     def set_graph(self, graph):
-        if graph is None:
-            return
-
-        self.stop_job(current=False)
-
-        self.mutex.lock()
-
+        self.cancel_job()
         self.graph = graph
-        self.items_graph = graph.items()
-        self.items_analysis = graph.items()
 
-        if self.items is not None:
-            self.items_analysis = self.items
+        self.known = {}
+        for name in METHODS:
+            setattr(self, f"lbl_{name}", "")
 
-        self.clear_results()
-        self.clear_labels()
-        # only clear computed statistics on new graph
-        self.analdata.clear()
-
-        self.mutex.unlock()
-
-        self.unconditional_analyze()
+        if graph is not None:
+            self.known["network"] = graph
+            self.items_graph = graph.nodes
 
     @Inputs.items
     def set_items(self, items):
-        self.mutex.lock()
-
-        if items is None and self.items_graph is not None:
-            self.items_analysis = self.items_graph
-
-        elif items is not None:
-            self.items_analysis = items
-
         self.items = items
 
-        self.mutex.unlock()
-
-    def analyze(self):
-        if self.graph is None:
-            return
-
-        if len(self.job_queue) > 0 or len(self.job_working) > 0:
-            return
-
-        self.clear_labels()
-        QApplication.processEvents()
-
-        self.clear_results()
-
-        for method in self.methods:
-            self.add_job(method)
-
-        if len(self.job_queue) > 0:
-            self.start_job()
+    def handleNewSignals(self):
+        if self.items is not None:
+            self.items_analysis = self.items
+        elif self.graph:
+            self.items_analysis = self.graph.nodes
         else:
-            self.send_data()
+            self.items_analysis = None
+        self.run_more_jobs()
 
-    def add_job(self, method):
-        name, default, label, type, algorithm = method
+    def needed_methods(self):
+        # Preconditions for methods could be precomputed, so this function would
+        # only compute the union of sets of conditions for enabled checkboxes
+        tasks = [
+            name for name in METHODS if getattr(self, name, False)]
+        for name in tasks:
+            tasks += [name for name in METHODS[name].args if name != "network"]
+        tasks = set(tasks) - set(self.known)
+        return [method for name, method in METHODS.items() if name in tasks]
 
-        is_method_enabled = getattr(self, name)
-
-        if not is_method_enabled:
-            return
-
-        #if type == NODELEVEL:
-        job = WorkerThread(self, name, label, type, algorithm)
-        job.finished.connect(lambda j=job: self.job_finished(j))
-        self.job_queue.insert(0, job)
-        setattr(self, "lbl_" + job.name, "   waiting")
-
-    def start_job(self):
-        max_jobs = max(1, QThread.idealThreadCount())
-
-        self.mutex.lock()
-        if len(self.job_queue) > 0 and len(self.job_working) < max_jobs:
-            job = self.job_queue.pop()
-            setattr(self, "lbl_" + job.name, "   started")
-
-            # if data for this job already computed
-            if job.name in self.analdata:
-                if job.type == NODELEVEL:
-                    self.analfeatures.append((job.name, \
-                                ContinuousVariable(job.label)))
-                    setattr(self, "lbl_" + job.name, "  finished")
-
-                elif job.type == GRAPHLEVEL:
-                    setattr(self, "lbl_" + job.name,("%.4f" % \
-                            self.analdata[job.name]).rstrip('0').rstrip('.'))
-
-                job.quit()
-                self.send_data()
-            else:
-                self.job_working.append(job)
-                job.start()
-        self.mutex.unlock()
-
-        if len(self.job_queue) > 0 and len(self.job_working) < max_jobs:
-            self.start_job()
-
-    def job_terminated(self, job):
-        self.mutex.lock()
-        job.is_terminated = True
-        self.mutex.unlock()
+    def run_more_jobs(self):
+        known = set(self.known)
+        needed = self.needed_methods()
+        for method in needed:
+            if method.name not in self.running_jobs:
+                setattr(self, "lbl_" + method.name, "pending")
+        doable = [method for method in needed
+                  if method.name not in self.running_jobs
+                  and set(method.args) <= known]
+        free = max(1, QThread.idealThreadCount()) - len(self.running_jobs)
+        for method in doable[:free]:
+            job = WorkerThread(method, self.known)
+            job.finished.connect(lambda job=job: self.job_finished(job))
+            self.running_jobs[method.name] = job
+            job.start()
+            if not method.level == INTERNAL:
+                setattr(self, "lbl_" + method.name, "running")
+        self.show_computing()
 
     def job_finished(self, job):
-        self.mutex.lock()
-        if job.is_terminated:
-            setattr(self, "lbl_" + job.name, "terminated")
+        method = job.method
+        self.known[method.name] = job.result
+        del self.running_jobs[method.name]
+        self.set_label_for(method.name)
+        self.run_more_jobs()
+        if method.level == NODELEVEL:  # will send only if no new jobs are run
+            self.send_data()
+
+    def set_label_for(self, name):
+        level = METHODS[name].level
+        if level == INTERNAL:
+            return
+        value = self.known.get(name, None)
+        txt = ""
+        if getattr(self, name, False):
+            if value is TERMINATED:
+                txt = "terminated"
+            elif value is ERRORED:
+                txt = "error"
+            elif value is None:
+                txt = "computing" if name in self.running_jobs else "pending"
+            elif level == GRAPHLEVEL:
+                txt = f"{value:.4g}"
+        setattr(self, "lbl_" + name, txt)
+
+    def show_computing(self):
+        computing = ", ".join(METHODS[name].label for name in self.running_jobs)
+        self.Information.computing(computing, shown=bool(computing))
+
+    def cancel_job(self, name=None):
+        # This does not really work because functions called in those
+        # threads do not observe the "is_terminated" flag and won't quit
+        if name is None:
+            to_stop = [job.method.name for job in self.running_jobs]
+        elif name in self.running_jobs:
+            to_stop = [name]
         else:
-            setattr(self, "lbl_" + job.name, "  finished")
-
-            if job.error is not None:
-                setattr(self, "lbl_" + job.name, "     error")
-                tooltop = getattr(self, "tool_" + job.name)
-                tooltop.setToolTip(job.error.args[0])
-
-            elif job.result is not None:
-                if job.type == NODELEVEL:
-                    self.analfeatures.append((job.name, ContinuousVariable(job.label)))
-                    self.analdata[job.name] = [job.result[node] for node in sorted(job.result.keys())]
-
-                elif job.type == GRAPHLEVEL:
-                    self.analdata[job.name] = job.result
-                    setattr(self, "lbl_" + job.name, ("%.4f" % job.result).rstrip('0').rstrip('.'))
-
-        if job in self.job_working:
-            self.job_working.remove(job)
-
-        self.send_data()
-        self.mutex.unlock()
-
-        if len(self.job_queue) > 0:
-            self.start_job()
-
-    def stop_job(self, current=True, name=None):
-        self.mutex.lock()
-
-        if name is not None:
-            for i in range(len(self.job_queue) - 1, -1, -1 ):
-                job = self.job_queue[i]
-                if name == job.name:
-
-                    job.is_terminated = True
-                    job.quit()
-                    job.wait()
-                    self.job_queue.remove(job)
-                    setattr(self, "lbl_" + name, "terminated")
-
-            #~ # This was commented out because it might have hanged
-            #~ for job in self.job_working:
-                #~ if name == job.name:
-                    #~ job.is_terminated = True
-                    #~ job.terminate()
-        else:
-            if not current:
-                while len(self.job_queue) > 0:
-                    job = self.job_queue.pop()
-                    job.is_terminated = True
-                    job.quit()
-                    job.wait()
-                    setattr(self, "lbl_" + job.name, "terminated")
-
-            #~ # This was commented out because it hanged
-            #~ for job in self.job_working:
-                #~ job.is_terminated = True
-                #~ job.terminate()
-
-        self.mutex.unlock()
+            # This task is not running; but are its preconditions running?
+            still_needed = self.needed_methods()
+            to_stop = [
+                name for name in (job.method.name for job in self.running_jobs)
+                if METHODS[name] not in still_needed]
+        for name in to_stop:
+            job = self.running_jobs[name]
+            job.is_terminated = True
+            job.quit()
+        for name in to_stop:
+            job.wait()
+            setattr(self, "lbl_" + name, "terminated")
+            del self.running_jobs[name]
+        self.show_computing()
 
     def send_data(self):
-        if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
-            if self.analdata is not None and len(self.analdata) > 0 and \
-                                                    len(self.analfeatures) > 0:
-                vars = []
-                analdata = []
-                for name, var in self.analfeatures:
-                    analdata.append(self.analdata[name])
-                    vars.append(var)
+        if self.running_jobs:
+            return
+        if self.graph is None:
+            self.Outputs.network.send(None)
+            self.Outputs.items.send(None)
 
-                table  = Table(Domain(vars),
-                                      [list(t) for t in zip(*analdata)])
-                if self.items_analysis:
-                    table = Table.concatenate((table, self.items_analysis))
-                self.graph.set_items(table)
-
-            self.Outputs.network.send(self.graph)
-            self.Outputs.items.send(self.graph.items())
-
-            self.clear_results()
-
-    def commit(self):
-        self.analyze()
+        to_report = [
+            method for attr, method in METHODS.items()
+            if method.level == NODELEVEL
+            and getattr(self, attr) and attr in self.known]
+        items = self.items_analysis
+        graph = self.graph
+        n = graph.number_of_nodes()
+        if isinstance(items, Table):
+            dom = self.items_analysis.domain
+            attrs, class_vars, metas = dom.attributes, dom.class_vars, dom.metas
+            x, y, m = items.X, items.Y, items.metas
+        else:
+            attrs, class_vars, metas = [], [], []
+            x = y = m = np.empty((n, 0))
+        attrs += tuple(ContinuousVariable(method.label) for method in to_report)
+        x = np.hstack(
+            (x, ) + tuple(self.known[method.name].reshape((n, 1))
+                          for method in to_report))
+        domain = Domain(attrs, class_vars, metas)
+        table = Table(domain, x, y, m)
+        new_graph = Network(table, graph.edges, graph.name, graph.coordinates)
+        self.Outputs.network.send(new_graph)
+        self.Outputs.items.send(table)
 
     def method_clicked(self, name):
         if getattr(self, name):
             self.enabled_methods.add(name)
-        else:
-            if name in self.enabled_methods:
-                self.enabled_methods.remove(name)
-        self.mutex.lock()
-        if len(self.job_queue) <= 0 and len(self.job_working) <= 0:
-            self.mutex.unlock()
-            self.analyze()
-        else:
-            is_method_enabled = getattr(self, name)
-            if is_method_enabled:
-                for method in self.methods:
-                    if name == method[0]:
-                        self.add_job(method)
-                self.mutex.unlock()
+            if name in self.known:
+                self.set_label_for(name)
             else:
-                self.mutex.unlock()
-                self.stop_job(name=name)
+                self.run_more_jobs()
+        else:
+            self.enabled_methods.remove(name)
+            if name in self.running_jobs:
+                self.cancel_job(name)
+            else:
+                self.set_label_for(name)
 
-    def clear_results(self):
-        del self.job_queue[:]
-        del self.job_working[:]
-        del self.analfeatures[:]
+    def send_report(self):
+        self.report_items(
+            items=[(method.label, f"{self.known[attr]:.4g}")
+             for attr, method in METHODS.items()
+             if method.level == GRAPHLEVEL
+             and getattr(self, attr)
+             and attr in self.known
+             and isinstance(self.known[attr], (int, float))]
+        )
 
-    def clear_labels(self):
-        for method in self.methods:
-            setattr(self, "lbl_" + method[0], "")
 
-    def sendReport(self):
-        report = []
+def main():
+    from Orange.widgets.utils.widgetpreview import WidgetPreview
+    from orangecontrib.network.network.readwrite \
+        import read_pajek, transform_data_to_orange_table
+    from os.path import join, dirname
 
-        for name, default, label, type, algorithm in self.methods:
-            if type == GRAPHLEVEL:
-                value = getattr(self, "lbl_" + name)
-                value = str(value).strip().lower()
-                if value != "" and value != "error"  and value != "waiting" \
-                            and value != "terminated" and value != "finished":
-                    report.append((label, value))
-
-        self.reportSettings("Graph statistics", report)
+    #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'lastfm.net'))
+    #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'Erdos02.net'))
+    #transform_data_to_orange_table(network)
+    WidgetPreview(OWNxAnalysis).run(set_graph=network)
 
 
 if __name__ == "__main__":
-    a = QApplication([])
-    ow = OWNxAnalysis()
-    ow.show()
-    def setNetwork(signal, data, id=None):
-        if signal == 'Network':
-            ow.set_graph(data)
-        #if signal == 'Items':
-        #    ow.set_items(data)
-
-    import OWNxFile
-    from os.path import join, dirname
-    owFile = OWNxFile.OWNxFile()
-    owFile.send = setNetwork
-    owFile.openNetFile(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
-
-    a.exec_()
-    ow.saveSettings()
-    owFile.saveSettings()
+    main()

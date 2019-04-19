@@ -1,20 +1,17 @@
-#
-# OWHist.py
-#
-# the base for network histograms
-
-from itertools import chain
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import QLineF, QSize
+import pyqtgraph as pg
+from scipy.sparse import csgraph
 
 from Orange.data import Domain, StringVariable, Table
+from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output, Msg
-import orangecontrib.network as network
-
-import pyqtgraph as pg
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from orangecontrib.network.network import Network
 
 
 class NodeSelection:
@@ -39,7 +36,7 @@ class OWNxFromDistances(widget.OWWidget):
         distances = Input("Distances", DistMatrix)
 
     class Outputs:
-        network = Output("Network", network.Graph)
+        network = Output("Network", Network)
         data = Output("Data", Table)
         distances = Output("Distances", DistMatrix)
 
@@ -206,15 +203,11 @@ class OWNxFromDistances(widget.OWWidget):
                                  if x <= self.spinUpperThreshold)
 
         if nEdgesEstimate > 200000:
-            self.graph = None
-            nedges = 0
-            n = 0
+            graph = None
             self.Error.number_of_edges(nEdgesEstimate)
         else:
-            graph = network.Graph()
-            graph.add_nodes_from(range(self.matrix.shape[0]))
+            items = None
             matrix = self.matrix
-
             if matrix is not None and matrix.row_items is not None:
                 row_items = self.matrix.row_items
                 if isinstance(row_items, Table):
@@ -226,12 +219,13 @@ class OWNxFromDistances(widget.OWWidget):
                     items = [[str(x)] for x in self.matrix.row_items]
             if len(items) != self.matrix.shape[0]:
                 self.Warning.invalid_number_of_items()
-            else:
-                if items and not isinstance(items, Table):
-                    items = Table(
-                        Domain([], metas=[StringVariable('label')]),
-                        items)
-                graph.set_items(items)
+                items = None
+            if items is None:
+                items = list(range(self.matrix.shape[0]))
+            if not isinstance(items, Table):
+                items = Table(
+                    Domain([], metas=[StringVariable('label')]),
+                    items)
 
             # set the threshold
             # set edges where distance is lower than threshold
@@ -239,52 +233,28 @@ class OWNxFromDistances(widget.OWWidget):
             if self.kNN >= self.matrix.shape[0]:
                 self.Warning.kNN_too_large(self.matrix.shape[0] - 1)
 
-            def edges_from_distance_matrix(matrix, upper, knn):
-                rows, cols = matrix.shape
-                for i in range(rows):
-                    for j in range(i + 1, cols):
-                        if matrix[i, j] <= upper:
-                            yield i, j, matrix[i, j]
-                    if not knn: continue
-                    for j in np.argsort(matrix[i])[:knn]:
-                        yield i, j, matrix[i, j]
-
-            edge_list = edges_from_distance_matrix(
-                self.matrix, self.spinUpperThreshold,
-                min(self.kNN, self.matrix.shape[0] - 1) if self.include_knn else 0)
+            mask = self.matrix <= self.spinUpperThreshold
+            if self.include_knn:
+                mask |= mask.argsort() < self.kNN
+            weights = matrix[mask]
             if self.edge_weights == EdgeWeights.INVERSE:
-                edge_list = list(edge_list)
-                max_weight = max(d for u, v, d in edge_list)
-                graph.add_edges_from((u, v, {'weight': max_weight - d})
-                                     for u, v, d in edge_list)
-            else:
-                graph.add_edges_from((u, v, {'weight': d})
-                                     for u, v, d in edge_list)
-            matrix = None
+                weights = np.max(weights) - weights
+            edges = sp.csr_matrix((weights, mask.nonzero()))
+            graph = Network(items, edges)
+
             self.graph = None
-            component = []
             # exclude unconnected
-            if self.node_selection == NodeSelection.COMPONENTS:
-                component = list(chain.from_iterable(x for x in network.nx.connected_components(graph)
-                                                     if len(x) >= self.excludeLimit))
-            # largest connected component only
-            elif self.node_selection == NodeSelection.LARGEST_COMP:
-                component = max(network.nx.connected_components(graph), key=len)
-            else:
-                self.graph = graph
-            if len(component) > 1:
-                if len(component) == graph.number_of_nodes():
-                    self.graph = graph
-                    matrix = self.matrix
+            if self.node_selection != NodeSelection.ALL_NODES:
+                n_components, components = csgraph.connected_components(edges)
+                counts = np.bincount(components, minlength=n_components + 1)
+                if self.node_selection == NodeSelection.COMPONENTS:
+                    mask = counts >= self.excludeLimit
                 else:
-                    self.graph = graph.subgraph(component)
-                    matrix = self.matrix.submatrix(sorted(component))
+                    mask = counts == np.argmax(counts)
+                graph = graph.subgraph(mask)
 
-        if matrix is not None:
-            matrix.row_items = self.graph.items()
-        self.graph_matrix = matrix
-
-        if self.graph is None:
+        self.graph = graph
+        if graph is None:
             self.pconnected = 0
             self.nedges = 0
         else:
@@ -332,7 +302,7 @@ class OWNxFromDistances(widget.OWWidget):
         if self.graph is None:
             self.Outputs.data.send(None)
         else:
-            self.Outputs.data.send(self.graph.items())
+            self.Outputs.data.send(self.graph.nodes)
 
 
 pg_InfiniteLine = pg.InfiniteLine
@@ -416,8 +386,4 @@ class Histogram(pg.PlotWidget):
 
 
 if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    appl = QApplication([])
-    ow = OWNxFromDistances()
-    ow.show()
-    appl.exec_()
+    WidgetPreview(OWNxFromDistances).run(set_matrix=(Euclidean(Table("iris"))))

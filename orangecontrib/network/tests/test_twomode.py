@@ -4,8 +4,8 @@ import unittest
 
 import numpy as np
 import scipy.sparse as sp
-import orangecontrib.network
-import orangecontrib.network.twomode as tm
+import orangecontrib.network.network.twomode as tm
+from orangecontrib.network import Network
 
 
 class TestTwoMode(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestTwoMode(unittest.TestCase):
             a = a.todense()
             a2 = np.zeros(a.shape)
             for n1, n2, w in edges:
-                a2[n1, n2] = a2[n2, n1] = w
+                a2[n1, n2] = w
             np.testing.assert_almost_equal(a, a2)
             self.assertEqual(a.dtype, np.float)
 
@@ -73,6 +73,14 @@ class TestTwoMode(unittest.TestCase):
              (1, 2, 5 / 10 * 4 / 10 + 3 / 8 * 2 / 6))
         )
 
+    @staticmethod
+    def _create_net(edges, n=None):
+        row, col, data = zip(*edges)
+        if n is None:
+            n = max(*row, *col) + 1
+        return Network(np.arange(n),
+                       sp.coo_matrix((data, (row, col)), shape=(n, n)))
+
     def test_filtered_edges(self):
         def assert_edges(actual, expected):
             self.assertEqual(len(actual.data), len(expected))
@@ -80,19 +88,15 @@ class TestTwoMode(unittest.TestCase):
             self.assertEqual(
                 set(zip(actual.row, actual.col, actual.data)), set(expected))
 
-        net = orangecontrib.network.Graph()
-        net.add_nodes_from(range(7))
-        net.add_weighted_edges_from(
-            ((0, 4, 1.), (4, 1, 5), (1, 5, 3),
-             (2, 4, 4), (2, 5, 2), (3, 6, 6)))
+        net = self._create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
+                                (2, 4, 4), (2, 5, 2), (3, 6, 6)))
 
         # All edges
         assert_edges(
             tm._filtered_edges(
                 net,
                 np.array([True] * 4 + [False] * 3),
-                np.array([False] * 4 + [True] * 3),
-                True),
+                np.array([False] * 4 + [True] * 3)),
             ((0, 4, 1.), (1, 4, 5.), (1, 5, 3.),
              (2, 4, 4.), (2, 5, 2.), (3, 6, 6.))
         )
@@ -102,8 +106,7 @@ class TestTwoMode(unittest.TestCase):
             tm._filtered_edges(
                 net,
                 np.array([False] * 4 + [True] * 3),
-                np.array([True] * 4 + [False] * 3),
-                True),
+                np.array([True] * 4 + [False] * 3)),
             ((0, 0, 1.), (0, 1, 5.), (1, 1, 3.),
              (0, 2, 4.), (1, 2, 2.), (2, 3, 6.))
         )
@@ -113,8 +116,7 @@ class TestTwoMode(unittest.TestCase):
             tm._filtered_edges(
                 net,
                 np.array([True] * 4 + [False] * 3),
-                np.array([False] * 5 + [True] * 2),
-                True),
+                np.array([False] * 5 + [True] * 2)),
             ((1, 5, 3.), (2, 5, 2.), (3, 6, 6.))
         )
 
@@ -123,8 +125,7 @@ class TestTwoMode(unittest.TestCase):
             tm._filtered_edges(
                 net,
                 np.array([True] * 4 + [False] * 3),
-                np.array([False] * 7),
-                True),
+                np.array([False] * 7)),
             ()
         )
 
@@ -133,8 +134,7 @@ class TestTwoMode(unittest.TestCase):
             tm._filtered_edges(
                 net,
                 np.array([False] * 7),
-                np.array([False] * 5 + [True] * 2),
-                True),
+                np.array([False] * 5 + [True] * 2)),
             ()
         )
 
@@ -143,30 +143,17 @@ class TestTwoMode(unittest.TestCase):
             tm._filtered_edges(
                 net,
                 np.array([False] * 7),
-                np.array([False] * 7),
-                True),
+                np.array([False] * 7)),
             ()
         )
 
-        # No weights
+        # Graph is empty
+        net = Network(range(7), sp.csr_matrix((7, 7)))
         assert_edges(
             tm._filtered_edges(
                 net,
                 np.array([True] * 4 + [False] * 3),
-                np.array([False] * 5 + [True] * 2),
-                False),
-            ((1, 5, 1.), (2, 5, 1.), (3, 6, 1.))
-        )
-
-        # Graph is empty
-        net = orangecontrib.network.Graph()
-        net.add_nodes_from(range(7))
-        self.assertIsNone(
-            tm._filtered_edges(
-                net,
-                np.array([True] * 4 + [False] * 3),
-                np.array([False] * 7),
-                True),
+                np.array([False] * 7)),
             ()
         )
 
@@ -175,11 +162,8 @@ class TestTwoMode(unittest.TestCase):
             self.assertEqual(len(actual), len(expected))
             self.assertEqual(set(actual), set(expected))
 
-        net = orangecontrib.network.Graph()
-        net.add_nodes_from(range(7))
-        net.add_weighted_edges_from(
-            ((0, 4, 1.), (4, 1, 5), (1, 5, 3),
-             (2, 4, 4), (2, 5, 2), (3, 6, 6)))
+        net = self._create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
+                                (2, 4, 4), (2, 5, 2), (3, 6, 6)))
 
         net1 = tm.to_single_mode(
             net,
@@ -187,8 +171,12 @@ class TestTwoMode(unittest.TestCase):
             np.array([False] * 3 + [True] * 4),
             tm.NoWeights)
 
-        assert_edges(
-            net1.edges(data="weight"), ((0, 1, 1.), (0, 2, 1.), (1, 2, 1.)))
+        np.testing.assert_equal(
+            net1.edges[0].edges.todense(),
+            np.array([[0, 1, 1],
+                      [0, 0, 1],
+                      [0, 0, 0]])
+        )
 
 
 if __name__ == "__main__":

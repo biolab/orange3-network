@@ -1,78 +1,32 @@
+from functools import reduce
+
 import numpy as np
-import networkx as nx
 
+from AnyQt.QtWidgets import QSpinBox
+
+from Orange.data import Table, Domain, StringVariable
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.widget import Output
+from Orange.widgets.widget import Output, Msg
 
-import orangecontrib.network as network
-
-
-def _balanced_tree(n):
-    """
-    This function generates a balanced tree with approximately n nodes.
-    Each node of this tree has r children. Number of nodes cannot
-    be equal to n because real number of nodes is a sum of series
-    1 + r + r^2 + ... + r^h and we do not want to generate a trivial network
-    with one node and its n-1 children. Therefore this algorithm
-    finds a closest possible match. Number of children is also determined
-    by a logarithmic cost function.
-
-    Args:
-        n (int): number of nodes
-
-    Returns:
-        network x graph
-    """
-    series = lambda r, h: sum([r**x for x in range(h + 1)])
-    h, r = 1, 2
-    off = n
-    for r_ in range(2, 10):
-        last = series(r_, h)
-        for h_ in range(1, 15):
-            new = series(r_, h_)
-            if abs(new - n) * np.log2(r_) < off:
-                off = abs(new - n)
-                r, h = r_, h_
-            if abs(n - new) > abs(n - last):
-                break
-            last = new
-    return nx.balanced_tree(int(r), int(h))
-
-
-def _hypercube(n):
-    """Hypercube's nodes are cube coordinates, which isn't so nice"""
-    G = nx.hypercube_graph(int(np.log2(n) + .1))
-    G = nx.relabel_nodes(G, {n: int('0b' + ''.join(str(i) for i in n), 2)
-                             for n in G.node})
-    return G
+from orangecontrib.network import Network
+# __all__ is defined, pylint: disable=wildcard-import, unused-wildcard-import
+from orangecontrib.network.network.generate import *
 
 
 class GraphType:
+    """
     BALANCED_TREE = ('Balanced tree', _balanced_tree)
-    BARBELL = ('Barbell', lambda n: nx.barbell_graph(int(n*.4), int(n*.3)))
-    CIRCULAR_LADDER = ('Circular ladder', lambda n: nx.circular_ladder_graph(int(n/2)))
-    COMPLETE = ('Complete', lambda n: nx.complete_graph(int(n)))
-    COMPLETE_BIPARTITE = ('Complete bipartite',
-                          lambda n: nx.complete_bipartite_graph(int(n*.6), int(n*.4)))
-    CYCLE = ('Cycle', lambda n: nx.cycle_graph(int(n)))
-    GRID = ('Grid', lambda n: nx.grid_graph([int(np.sqrt(n))]*2))
-    HYPERCUBE = ('Hypercube', _hypercube)
-    LADDER = ('Ladder', lambda n: nx.ladder_graph(int(n/2)))
-    LOBSTER = ('Lobster', lambda n: nx.random_lobster(int(n / (1 + .7 + .7*.5)), .7, .5))
-    LOLLIPOP = ('Lollipop', lambda n: nx.lollipop_graph(int(n/2), int(n/2)))
-    PATH = ('Path', lambda n: nx.path_graph(int(n)))
     REGULAR = ('Regular', lambda n: nx.random_regular_graph(min(np.random.randint(10)*2, n - 1), n))
     SCALEFREE = ('Scale-free', lambda n: nx.scale_free_graph(int(n)))
     SHELL = ('Shell', lambda n: nx.random_shell_graph([(int(n*.1), int(n*.1), .2),
                                                        (int(n*.3), int(n*.3), .8),
                                                        (int(n*.6), int(n*.6), .5)]))
-    STAR = ('Star', lambda n: nx.star_graph(int(n - 1)))
-    WAXMAN = ('Waxman', lambda n: nx.waxman_graph(int(n)))
     WHEEL = ('Wheel', lambda n: nx.wheel_graph(int(n)))
+"""
 
-    all = (BALANCED_TREE, BARBELL, CIRCULAR_LADDER, COMPLETE, COMPLETE_BIPARTITE,
-           CYCLE, GRID, HYPERCUBE, LADDER, LOBSTER, LOLLIPOP, PATH, REGULAR,
-           SCALEFREE, SHELL, STAR, WAXMAN, WHEEL)
+
+def _ctrl_name(name, arg):
+    return (name + "___" + arg).replace(" ", "_")
 
 
 class OWNxGenerator(widget.OWWidget):
@@ -81,47 +35,124 @@ class OWNxGenerator(widget.OWWidget):
     icon = "icons/NetworkGenerator.svg"
     priority = 6420
 
-    class Outputs:
-        network = Output("Network", network.Graph, replaces=["Generated network"])
+    GRAPH_TYPES = (
+        ("Path", path, {"Path of length": 10}, ""),
+        ("Cycle", cycle, {"Cycle with": 10}, "nodes"),
+        ("Complete", complete, {"Complete with": 5}, "nodes"),
+        ("Complete bipartite", complete_bipartite,
+         {"Complete bipartite with": 5, "and": 8}, "nodes"),
+        ("Barbell", barbell, {"Barbell with": 5, "and": 8}, "nodes"),
+        ("Ladder", ladder, {"Ladder with": 10}, "steps"),
+        ("Circular ladder", circular_ladder,
+         {"Circular ladder with": 8}, "steps"),
+        ("Grid", grid, {"Grid of height": 4, "and width": 5}, ""),
+        ("Hypercube", hypercube, {"Hypercube,": 4}, "dimensional"),
+        ("Star", star, {"Star with": 10}, "edges"),
+        ("Lollipop", lollipop,
+         {"Lollipop with": 5, "nodes, stem of": 5}, "nodes"),
+        ("Geometric", geometric,
+         {"Geometric with": 20, "nodes, ": 50}, "edges", True)
+    )
 
-    graph_type = settings.Setting(0)
-    n_nodes = settings.Setting(50)
-    auto_commit = settings.Setting(True)
+    mins_maxs = {
+        "Geometric": ((5, 1000), (20, 10000))
+    }
+
+    class Outputs:
+        network = Output("Network", Network)
+
+    class Error(widget.OWWidget.Error):
+        generation_error = Msg("{}")
+
+    graph_type = settings.Setting(7)
+    arguments = settings.Setting(
+        reduce(lambda x, y: {**x, **y},
+               ({_ctrl_name(name, arg): val for arg, val in defaults.items()}
+                for name, _, defaults, *_1 in GRAPH_TYPES)))
 
     want_main_area = False
     resizing_enabled = False
 
     def __init__(self):
         super().__init__()
-        gui.comboBox(self.controlArea, self, 'graph_type',
-                     label='Network type:',
-                     items=GraphType.all,
-                     orientation='horizontal',
-                     callback=self.generate)
-        gui.spin(self.controlArea, self, 'n_nodes',
-                 10, 99999, 10,
-                 label='Approx. number of nodes:',
-                 orientation='horizontal',
-                 callbackOnReturn=True,
-                 callback=self.generate)
-        gui.auto_commit(self.controlArea, self, 'auto_commit',
-                        label='Generate network',
-                        checkbox_label='Auto-generate')
-        self.commit()
+        rb = self.radios = gui.radioButtons(
+            self.controlArea, self, "graph_type",
+            box="Graph type",
+            callback=self.on_type_changed
+        )
+        self.arg_spins = {}
+        for name, _, arguments, post, *_ in self.GRAPH_TYPES:
+            argbox = gui.hBox(rb)
+            gui.appendRadioButton(rb, name, argbox)
+            self.arg_spins[name] = box = []
+            min_max = self.mins_maxs.get(name, ((1, 100),) * len(arguments))
+            for arg, (minv, maxv) in zip(arguments, min_max):
+                box.append(gui.widgetLabel(argbox, arg))
+                spin = QSpinBox(value=self.arguments[_ctrl_name(name, arg)],
+                                minimum=minv, maximum=maxv)
+                argbox.layout().addWidget(spin)
+                spin.valueChanged.connect(
+                    lambda value, name=name, arg=arg:
+                    self.update_arg(value, name, arg))
+                box.append(spin)
+            if post:
+                box.append(gui.widgetLabel(gui.hBox(argbox), post))
+
+        self.bt_generate = gui.button(
+            self.controlArea, self, "Regenerate Network",
+            callback=self.generate)
+        self.on_type_changed()
+
+    def on_type_changed(self):
+        cur_def = self.GRAPH_TYPES[self.graph_type]
+        cur_name = cur_def[0]
+        for (name, spins), radio in zip(self.arg_spins.items(), self.radios.buttons):
+            radio.setText(name * (cur_name != name))
+            for spin in spins:
+                spin.setHidden(name != cur_name)
+
+        is_random = len(cur_def) >= 5 and cur_def[4]
+        self.bt_generate.setEnabled(is_random)
+
+        self.generate()
+
+    def update_arg(self, value, name, arg):
+        self.arguments[_ctrl_name(name, arg)] = value
+        self.generate()
 
     def generate(self):
-        return self.commit()
+        name, func, args, *_ = self.GRAPH_TYPES[self.graph_type]
+        args = tuple(self.arguments[_ctrl_name(name, arg)] for arg in args)
+        self.Error.generation_error.clear()
+        try:
+            network = func(*args)
+        except ValueError as exc:
+            self.Error.generation_error(exc)
+            network = None
+        else:
+            n = len(network.nodes)
+            network.nodes = Table(Domain([], [], [StringVariable("id")]),
+                                  np.zeros((n, 0)), np.zeros((n, 0)),
+                                  np.arange(n).reshape((n, 1)))
+        self.Outputs.network.send(network)
 
-    def commit(self):
-        _, func = GraphType.all[self.graph_type]
-        graph = network.readwrite._wrap(func(self.n_nodes))
-        self.Outputs.network.send(graph)
+
+def main():
+    def send(graph):
+        owe.set_graph(graph)
+        owe.handleNewSignals()
+
+    from AnyQt.QtWidgets import QApplication
+    from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer
+    a = QApplication([])
+    ow = OWNxGenerator()
+    owe = OWNxExplorer()
+    ow.Outputs.network.send = send
+    ow.show()
+    owe.show()
+    a.exec_()
+    ow.saveSettings()
 
 
 if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication([])
-    ow = OWNxGenerator()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+    main()

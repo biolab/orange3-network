@@ -64,7 +64,6 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
-    'networkx>=2.0',
     'pyqtgraph>=0.9.10',
     'numpy>=1.8.0',
     'Orange3>=3.20'

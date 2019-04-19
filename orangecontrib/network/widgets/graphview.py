@@ -12,9 +12,13 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 
 
 class PlotVarWidthCurveItem(pg.PlotCurveItem):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, directed, *args, **kwargs):
+        self.directed = directed
         self.widths = kwargs.pop("widths", None)
-        self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
+        self.pen = kwargs.pop("pen", pg.mkPen(0.0))
+        self.setPen(self.pen)
+        self.sizes = kwargs.pop("size", None)
+        self.coss = self.sins = None
         super().__init__(*args, **kwargs)
 
     def setWidths(self, widths):
@@ -27,26 +31,81 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def setData(self, *args, **kwargs):
         self.widths = kwargs.pop("widths", self.widths)
         self.pen = kwargs.pop("pen", self.pen)
+        self.sizes = kwargs.pop("size", self.sizes)
         super().setData(*args, **kwargs)
 
     def paint(self, p, opt, widget):
+        def get_arrows():
+            cos12 = 10 * np.cos(np.pi / 12)
+            sin12 = 10 * np.sin(np.pi / 12)
+
+            # cos(a ± 12) = cos(a) cos(12) ∓ sin(a) sin(12)
+            tx = sins * (fx * sin12)
+            xa1s = x1s - coss * (fx * cos12)
+            xa2s = xa1s - tx
+            xa1s += tx
+
+            # sin(a ± 12) = sin(a) cos(12) ± sin(12) cos(a)
+            ty = (fy * sin12) * coss
+            ya1s = y1s + sins * (fy * cos12)
+            ya2s = ya1s - ty
+            ya1s += ty
+            return xa1s, ya1s, xa2s, ya2s
+
+        def get_angles():
+            angles = np.arctan2(-(y1s - y0s) / fy, (x1s - x0s) / fx)
+            return np.cos(angles), np.sin(angles)
+            """
+            # This below faster. Uncomment and check that it works
+            diffx, diffy = (x1s - x0s) / fx, (y1s - y0s) / fy
+            norm = np.sqrt(diffx ** 2 + diffy ** 2)
+            self.coss = np.nan_to_num(diffx / norm)
+            self.sins = np.nan_to_num(diffy / norm)
+            """
+
+        def shorter_edges():
+            nonlocal x0s, x1s, y0s, y1s
+            sizes0, sizes1 = self.sizes[::2], self.sizes[1::2]
+            return (x0s + fx * sizes0 * coss, y0s - fy * sizes0 * sins,
+                    x1s - fx * sizes1 * coss, y1s + fy * sizes1 * sins)
+
         if self.xData is None or len(self.xData) == 0:
             return
+        x0s, x1s = self.xData[::2], self.xData[1::2]
+        y0s, y1s = self.yData[::2], self.yData[1::2]
+        fx = 1 / p.worldTransform().m11()
+        fy = 1 / p.worldTransform().m22()
+        coss, sins = get_angles()
+        endpoints = x0s, y0s, x1s, y1s = shorter_edges()
+
         p.setRenderHint(p.Antialiasing, True)
         p.setCompositionMode(p.CompositionMode_SourceOver)
         if self.widths is None:
             p.setPen(self.pen)
-            for x0, y0, x1, y1 in zip(self.xData[::2], self.yData[::2],
-                                      self.xData[1::2], self.yData[1::2]):
-                p.drawLine(QLineF(x0, y0, x1, y1))
+            if self.directed:
+                for x0, y0, x1, y1, xa1, ya1, xa2, ya2 in zip(
+                        *endpoints, *get_arrows()):
+                    p.drawLine(QLineF(x0, y0, x1, y1))
+                    p.drawLine(QLineF(xa1, ya1, x1, y1))
+                    p.drawLine(QLineF(xa2, ya2, x1, y1))
+            else:
+                for x0, y0, x1, y1 in zip(*endpoints):
+                    p.drawLine(QLineF(x0, y0, x1, y1))
         else:
             pen = QPen(self.pen)
-            for x0, y0, x1, y1, w in zip(self.xData[::2], self.yData[::2],
-                                         self.xData[1::2], self.yData[1::2],
-                                         self.widths):
-                pen.setWidth(w)
-                p.setPen(pen)
-                p.drawLine(QLineF(x0, y0, x1, y1))
+            if self.directed:
+                for x0, y0, x1, y1, xa1, ya1, xa2, ya2, w in zip(
+                        *endpoints, *get_arrows(), self.widths):
+                    pen.setWidth(w)
+                    p.setPen(pen)
+                    p.drawLine(QLineF(x0, y0, x1, y1))
+                    p.drawLine(QLineF(xa1, ya1, x1, y1))
+                    p.drawLine(QLineF(xa2, ya2, x1, y1))
+            else:
+                for x0, y0, x1, y1, w in zip(*endpoints, self.widths):
+                    pen.setWidth(w)
+                    p.setPen(pen)
+                    p.drawLine(QLineF(x0, y0, x1, y1))
 
 
 class GraphView(OWScatterPlotBase):
@@ -67,13 +126,15 @@ class GraphView(OWScatterPlotBase):
         super().__init__(master)
         self._reset_attributes()
         self.simplify = self.Simplifications.NoSimplifications
+        self.step_resizing.connect(self.update_edges)
+        self.end_resizing.connect(self.update_edges)
 
     def clear(self):
         super().clear()
         self._reset_attributes()
 
     def _reset_attributes(self):
-        self.paired_indices = None
+        self.pair_indices = None
         self.edge_curve = None
         self.edge_labels = []
         self.scatterplot_marked = None
@@ -108,12 +169,13 @@ class GraphView(OWScatterPlotBase):
         edges = self.master.get_edges()
         srcs, dests, weights = edges.row, edges.col, edges.data
         if self.edge_curve is None:
-            self.paired_indices = np.empty((2 * len(srcs), ), dtype=int)
-            self.paired_indices[::2] = srcs
-            self.paired_indices[1::2] = dests
+            self.pair_indices = np.empty((2 * len(srcs),), dtype=int)
+            self.pair_indices[::2] = srcs
+            self.pair_indices[1::2] = dests
 
-        data = dict(x=x[self.paired_indices], y=y[self.paired_indices],
-                    pen=self._edge_curve_pen(), antialias=True)
+        data = dict(x=x[self.pair_indices], y=y[self.pair_indices],
+                    pen=self._edge_curve_pen(), antialias=True,
+                    size=self.scatterplot_item.data["size"][self.pair_indices] / 2)
         if self.relative_edge_widths and len(set(weights)) > 1:
             data['widths'] = \
                 scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
@@ -121,7 +183,8 @@ class GraphView(OWScatterPlotBase):
             data['widths'] = None
 
         if self.edge_curve is None:
-            self.edge_curve = PlotVarWidthCurveItem(**data)
+            self.edge_curve = PlotVarWidthCurveItem(
+                self.master.is_directed(), **data)
             self.edge_curve.setZValue(-10)
             self.plot_widget.addItem(self.edge_curve)
         else:
@@ -134,7 +197,7 @@ class GraphView(OWScatterPlotBase):
 
     def _edge_curve_pen(self):
         return pg.mkPen(
-            0.5 if self.class_density else 0.8,
+            0.5 if self.class_density else 0.3,
             width=self.edge_width,
             cosmetic=True)
 

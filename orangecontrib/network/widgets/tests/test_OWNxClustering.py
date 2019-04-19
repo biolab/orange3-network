@@ -1,10 +1,9 @@
-import networkx as nx
 import numpy as np
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets.tests.base import WidgetTest
+from orangecontrib.network.network import generate
 from orangecontrib.network.widgets.OWNxClustering import OWNxClustering
-from orangecontrib.network.network import Graph
 
 
 class TestOWNxClustering(WidgetTest):
@@ -23,13 +22,13 @@ class TestOWNxClustering(WidgetTest):
             Domain([data_var], metas=[cluster_var]),
             X=x, metas=clusters,
         )
-        graph = Graph(nx.complete_graph(5), '5-Clique')
-        graph.set_items(data)
+        graph = generate.complete(5)
+        graph.nodes = data
 
         # Should not crash
         self.send_signal(self.widget.Inputs.network, graph)
         self.widget.unconditional_commit()
 
         # There should be an additional cluster column
-        output = self.get_output(self.widget.Outputs.network).items()
+        output = self.get_output(self.widget.Outputs.network).nodes
         self.assertEqual(len(data.domain.metas) + 1, len(output.domain.metas))

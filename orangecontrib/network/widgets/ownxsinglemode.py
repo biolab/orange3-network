@@ -2,15 +2,15 @@ from itertools import chain
 
 from AnyQt.QtWidgets import QFormLayout
 
-from Orange.data import DiscreteVariable
+from Orange.data import DiscreteVariable, Table
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.widget import OWWidget, Msg
-from orangecontrib import network
-from orangecontrib.network import twomode
+from orangecontrib.network import Network
+from orangecontrib.network.network import twomode
 
 
 class OWNxSingleMode(OWWidget):
@@ -28,10 +28,10 @@ class OWNxSingleMode(OWWidget):
     weighting = Setting(0)
 
     class Inputs:
-        network = Input("Network", network.Graph)
+        network = Input("Network", Network)
 
     class Outputs:
-        network = Output("Network", network.Graph)
+        network = Output("Network", Network)
 
     class Error(OWWidget.Error):
         no_data = Msg("Network has additional data.")
@@ -70,15 +70,14 @@ class OWNxSingleMode(OWWidget):
 
         self.Error.clear()
         if network is not None:
-            data = network.items()
-            if data is None:
+            if not isinstance(network.nodes, Table):
                 network = None
                 self.Error.no_data()
 
         self.network = network
         self._update_combos()
         if self.network is not None:
-            self.openContext(data.domain)
+            self.openContext(network.nodes.domain)
         self.update_output()
 
     def indicator_changed(self):
@@ -106,7 +105,7 @@ class OWNxSingleMode(OWWidget):
             model.clear()
             self.variable = None
         else:
-            domain = self.network.items().domain
+            domain = self.network.nodes.domain
             model[:] = [
                 var for var in chain(domain.variables, domain.metas)
                 if isinstance(var, DiscreteVariable) and len(var.values) >= 2]
@@ -145,14 +144,13 @@ class OWNxSingleMode(OWWidget):
                 mode_mask, conn_mask = self._mode_masks()
                 new_net = twomode.to_single_mode(
                     self.network, mode_mask, conn_mask, self.weighting)
-                new_net.set_items(self.network.items()[mode_mask])
 
         self.Outputs.network.send(new_net)
         self._set_output_msg(new_net)
 
     def _mode_masks(self):
         """Return indices of nodes in the two modes"""
-        data = self.network.items()
+        data = self.network.nodes
         column = data.get_column_view(self.variable)[0].astype(int)
         mode_mask = column == self.connect_value
         if self.connector_value:
@@ -203,7 +201,7 @@ def main():  # pragma: no cover
 
     owFile = OWNxFile.OWNxFile()
     owFile.Outputs.network.send = set_network
-    owFile.openNetFile("/Users/janez/Downloads/littlenet_weighted.net")
+    owFile.open_net_file("/Users/janez/Downloads/100_petrozavodsk_171_events_no_sqrt.net")
     ow.handleNewSignals()
     a.exec_()
     ow.saveSettings()

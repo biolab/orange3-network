@@ -1,297 +1,224 @@
 from os import path
-from itertools import chain, product
+from itertools import product
+from pkg_resources import load_entry_point
+from traceback import format_exception_only
 
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
 from Orange.data import Table
 from Orange.widgets import gui, settings
-from Orange.widgets.widget import OWWidget, Msg, Output
-import orangecontrib.network as network
-from orangecontrib.network.readwrite import PajekBug
-
-NONE = "(none)"
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
+from orangecontrib.network.network import Network
+from orangecontrib.network.network.readwrite import read_pajek
 
 
 class OWNxFile(OWWidget):
     name = "Network File"
-    description = "Read network graph file in Pajek or GML format."
+    description = "Read network graph file"
     icon = "icons/NetworkFile.svg"
     priority = 6410
 
+    class Inputs:
+        items = Input("Items", Table)
+
     class Outputs:
-        network = Output("Network", network.Graph)
+        network = Output("Network", Network)
         items = Output("Items", Table)
 
-    resizing_enabled = False
-
     recentFiles = settings.Setting([])
-    recentDataFiles = settings.Setting([])
-    auto_table = settings.Setting(True)
+
+    class Information(OWWidget.Information):
+        auto_annotation = Msg(
+            'Nodes annotated with data from file with the same name')
+        suggest_annotation = Msg(
+            'Add optional data input to annotate nodes')
 
     class Warning(OWWidget.Warning):
-        no_network_file = Msg('No network file loaded. Load the network first.')
+        auto_mismatched_lengths = Msg(
+            'Data file with the same name is not used.\n'
+            'The number of instances does not match the number of nodes.')
+        mismatched_lengths = Msg(
+            'Data size does not match the number of nodes.')
 
     class Error(OWWidget.Error):
-        file_not_found = Msg('File not found: "{}"')
-        vertices_length_not_matching = Msg('Vertices data length does not match the number of vertices')
-        error_reading_file = Msg('Error reading file "{}"')
-        pajek_bug = Msg("{}")
+        io_error = Msg('Error reading file "{}"\n{}')
+        error_parsing_file = Msg('Error reading file "{}"')
+        auto_data_failed = Msg(
+            "Attempt to read {} failed\n"
+            "The widget tried to annotated nodes with data from\n"
+            "a file with the same name.")
 
     want_main_area = False
 
     def __init__(self):
         super().__init__()
 
-        self.domain = None
-        self.graph = None
-        self.auto_items = None
-
+        self.network = None
+        self.auto_data = None
+        self.original_nodes = None
+        self.data = None
         self.net_index = 0
-        self.data_index = 0
 
-        #GUI
-        self.controlArea.layout().setContentsMargins(4, 4, 4, 4)
-        self.box = gui.widgetBox(self.controlArea, box="Graph File", orientation="vertical")
-        hb = gui.widgetBox(self.box, orientation="horizontal")
-        self.filecombo = gui.comboBox(hb, self, "net_index", callback=self.selectNetFile)
-        self.filecombo.setMinimumWidth(250)
-        button = gui.button(hb, self, '...', callback=self.browseNetFile, disabled=0)
-        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        button = gui.button(hb, self, 'Reload', callback=self.reload)
-        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-        chb = gui.widgetBox(self.box, orientation="horizontal")
-        gui.checkBox(chb, self, "auto_table", "Build graph data table automatically",
-                     callback=self.selectNetFile)
-
-        self.databox = gui.widgetBox(self.controlArea, box="Vertices Data File", orientation="vertical")
-        vdf = gui.widgetBox(self.databox, orientation="horizontal")
-        self.datacombo = gui.comboBox(vdf, self, "data_index", callback=self.selectDataFile)
-        self.datacombo.setMinimumWidth(250)
-        button = gui.button(vdf, self, '...', callback=self.browseDataFile, disabled=0)
-        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        button = gui.button(vdf, self, 'Reload', callback=self.reload_data)
-        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-
-        # info
-        box = gui.widgetBox(self.controlArea, "Info")
-        self.infolabel = gui.widgetLabel(box, 'No data loaded.')
-
-        gui.rubber(self.controlArea)
-        self.resize(150, 100)
+        hb = gui.widgetBox(self.controlArea, orientation="horizontal")
+        self.filecombo = gui.comboBox(
+            hb, self, "net_index", callback=self.select_net_file,
+            minimumWidth=250)
+        gui.button(
+            hb, self, '...', callback=self.browse_net_file, disabled=0,
+            icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
+            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
+        gui.button(
+            hb, self, 'Reload', callback=self.reload,
+            icon=self.style().standardIcon(QStyle.SP_BrowserReload),
+            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
 
         self.populate_comboboxes()
         self.reload()
 
-    def reload(self):
-        if self.recentFiles:
-            self.selectNetFile()
-
-    def reload_data(self):
-        if self.recentDataFiles:
-            self.selectDataFile()
+    @Inputs.items
+    def set_data(self, data):
+        self.data = data
+        self.send_output()
 
     def populate_comboboxes(self):
         self.filecombo.clear()
-        for file in self.recentFiles or (NONE,):
+        for file in self.recentFiles or ("(None)",):
             self.filecombo.addItem(path.basename(file))
         self.filecombo.addItem("Browse documentation networks...")
         self.filecombo.updateGeometry()
 
-        self.datacombo.clear()
-        for file in self.recentDataFiles:
-            self.datacombo.addItem(path.basename(file))
-        self.datacombo.addItem(NONE)
-        self.datacombo.updateGeometry()
-
-    def selectNetFile(self):
-        """user selected a graph file from the combo box"""
-        if self.net_index > len(self.recentFiles) - 1:
-            self.browseNetFile(True)
-        elif self.net_index:
-            self.recentFiles.insert(0, self.recentFiles.pop(self.net_index))
-            self.net_index = 0
-            self.populate_comboboxes()
-        if self.recentFiles:
-            self.openNetFile(self.recentFiles[0])
-
-    def selectDataFile(self):
-        if self.data_index > len(self.recentDataFiles) - 1:
-            return self.openDataFile(NONE)
-        self.recentDataFiles.insert(0, self.recentDataFiles.pop(self.data_index))
-        self.data_index = 0
-        self.populate_comboboxes()
-        self.openDataFile(self.recentDataFiles[0])
-
-    def readingFailed(self, message=''):
-        self.graph = None
-        self.Outputs.network.send(None)
-        self.Outputs.items.send(None)
-        self.infolabel.setText('No data loaded.\n' + message)
-
-    def openNetFile(self, filename):
-        """Read network from file."""
-        if path.splitext(filename)[1].lower() not in network.readwrite.SUPPORTED_READ_EXTENSIONS:
-            return self.readingFailed('Network file type not supported')
-
-        try:
-            G = network.readwrite.read(filename, auto_table=self.auto_table)
-        except OSError:
-            self.Error.file_not_found(''.format(filename))
-            return self.readingFailed('Network file not found')
-        # File reader can throw arbitrary exceptions
-        # pylint: disable=broad-except
-        except Exception as ex:
-            if isinstance(ex, PajekBug):
-                self.Error.pajek_bug(str(ex))
-            else:
-                self.Error.error_reading_file(filename)
-            return self.readingFailed('Error reading file "{}"'.format(filename))
-        self.Error.file_not_found.clear()
-        self.Error.pajek_bug.clear()
-        self.Error.error_reading_file.clear()
-
-        info = (('Directed' if G.is_directed() else 'Undirected') + ' graph',
-                '{} nodes, {} edges'.format(G.number_of_nodes(), G.number_of_edges()),
-                'Vertices data generated from graph' if self.auto_table else '')
-        self.infolabel.setText('\n'.join(info))
-
-        self.auto_items = G.items()
-        assert self.auto_table or self.auto_items is None, \
-            (self.auto_table, self.auto_items)
-
-        self.graph = G
-        self.Warning.no_network_file.clear()
-
-        # Find items data file for selected network
-        for basename, ext in product((filename,
-                                      path.splitext(filename)[0],
-                                      path.splitext(filename)[0] + '_items'),
-                                     ('.tab', '.tsv', '.csv')):
-            candidate = basename + ext
-            if path.exists(candidate):
-                try: self.recentDataFiles.remove(candidate)
-                except ValueError: pass
-                self.recentDataFiles.insert(0, candidate)
-                self.data_index = 0
-                self.populate_comboboxes()
-                self.openDataFile(self.recentDataFiles[0])
-                break
-        else:
-            self.data_index = len(self.recentDataFiles)
-
-        self.Outputs.network.send(G)
-        self.Outputs.items.send(G.items() if G else None)
-
-    def openDataFile(self, filename):
-        self.Error.vertices_length_not_matching.clear()
-        self.Warning.no_network_file.clear()
-        if filename == NONE:
-            if self.graph:
-                self.graph.set_items(self.auto_items)
-                self.infolabel.setText(
-                    self.info.text().rpartition('\n')[0] + '\n' +
-                    ('Vertices data generated from graph'
-                     if self.auto_items is not None else
-                     "No vertices data file specified"))
-        else:
-            self.readDataFile(filename)
-        self.Outputs.network.send(self.graph)
-        self.Outputs.items.send(self.graph.items() if self.graph else None)
-
-    def readDataFile(self, filename):
-        if not self.graph:
-            self.Warning.no_network_file()
-            return
-
-        table = Table.from_file(filename)
-
-        if len(table) != self.graph.number_of_nodes():
-            self.Error.vertices_length_not_matching()
-            self.populate_comboboxes()
-            return
-
-        items = self.auto_items
-        if items is not None and len(items) == len(table):
-            domain = [v for v in chain(items.domain.attributes,
-                                       items.domain.class_vars,
-                                       items.domain.metas)
-                      if v.name not in table.domain]
-            if domain:
-                table = Table.concatenate([table, items[:, domain]])
-
-        self.graph.set_items(table)
-        self.infolabel.setText(
-            self.infolabel.text().rpartition('\n')[0] + '\n' +
-            'Vertices data added')
-
-    def browseNetFile(self, browse_demos=False):
+    def browse_net_file(self, browse_demos=False):
         """user pressed the '...' button to manually select a file to load"""
         if browse_demos:
-            from pkg_resources import load_entry_point
-            startfile = next(load_entry_point("Orange3-Network",
-                                              "orange.data.io.search_paths",
-                                              "network")())[1]
+            startfile = next(load_entry_point(
+                "Orange3-Network",
+                "orange.data.io.search_paths",
+                "network")())[1]
         else:
             startfile = self.recentFiles[0] if self.recentFiles else '.'
 
         filename, _ = QFileDialog.getOpenFileName(
             self, 'Open a Network File', startfile,
-            ';;'.join(("All network files (*{})".format(
-                           ' *'.join(network.readwrite.SUPPORTED_READ_EXTENSIONS)),
-                       "NetworkX graph as Python pickle (*.gpickle)",
-                       "NetworkX edge list (*.edgelist)",
-                       "Pajek files (*.net *.pajek)",
-                       "GML files (*.gml)",
-                       "All files (*)")))
-
+            ';;'.join(("Pajek files (*.net *.pajek)",)))
         if not filename:
             return
-        try: self.recentFiles.remove(filename)
-        except ValueError: pass
+
+        if filename in self.recentFiles:
+            self.recentFiles.remove(filename)
         self.recentFiles.insert(0, filename)
 
         self.populate_comboboxes()
         self.net_index = 0
-        self.selectNetFile()
+        self.select_net_file()
 
-    def browseDataFile(self):
-        if self.graph is None:
-            self.Warning.no_network_file()
+    def reload(self):
+        if self.recentFiles:
+            self.select_net_file()
+
+    def select_net_file(self):
+        """user selected a graph file from the combo box"""
+        if self.net_index > len(self.recentFiles) - 1:
+            self.browse_net_file(True)
+        elif self.net_index:
+            self.recentFiles.insert(0, self.recentFiles.pop(self.net_index))
+            self.net_index = 0
+            self.populate_comboboxes()
+        if self.recentFiles:
+            self.open_net_file(self.recentFiles[0])
+
+    def open_net_file(self, filename):
+        """Read network from file."""
+        self.Error.clear()
+        self.Warning.clear()
+        self.Information.clear()
+        self.network = None
+        self.original_nodes = None
+        try:
+            self.network = read_pajek(filename)
+        except OSError as err:
+            self.Error.io_error(
+                filename,
+                "".join(format_exception_only(type(err), err)).rstrip())
+        except Exception:  # pylint: disable=broad-except
+            self.Error.error_parsing_file(filename)
+        else:
+            self.original_nodes = self.network.nodes
+            self.read_auto_data(filename)
+        self.send_output()
+
+    def read_auto_data(self, filename):
+        self.Error.auto_data_failed.clear()
+
+        self.auto_data = None
+        errored_file = None
+        basenames = (filename,
+                     path.splitext(filename)[0],
+                     path.splitext(filename)[0] + '_items')
+        for basename, ext in product(basenames, ('.tab', '.tsv', '.csv')):
+            filename = basename + ext
+            if path.exists(filename):
+                try:
+                    self.auto_data = Table.from_file(filename)
+                    break
+                except Exception:  # pylint: disable=broad-except
+                    errored_file = filename
+        else:
+            if errored_file:
+                self.Error.auto_data_failed(errored_file)
+
+    def send_output(self):
+        self.set_network_nodes()
+
+        if self.network is None:
+            self.Outputs.network.send(None)
+            self.Outputs.items.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
 
-        startfile = (self.recentDataFiles[0] if self.recentDataFiles else
-                     path.dirname(self.recentFiles[0]) if self.recentFiles else
-                     '.')
+        self.Outputs.network.send(self.network)
+        self.Outputs.items.send(self.network.nodes)
 
-        filename, _ = QFileDialog.getOpenFileName(
-            self, 'Open a Vertices Data File', startfile,
-            'Data files (*.tab *.tsv *.csv);;'
-            'All files(*)')
+        n_edges = self.network.number_of_nodes()
+        n_nodes = self.network.number_of_edges()
+        summary = f"{n_edges} nodes, {n_nodes} edges"
+        details = \
+            ('Directed' if self.network.edges[0].directed else 'Undirected') \
+            + f" network with {n_nodes} nodes and {n_edges} edges."
+        self.info.set_output_summary(summary, details)
 
-        if not filename:
+    def set_network_nodes(self):
+        self.Warning.mismatched_lengths.clear()
+        self.Warning.auto_mismatched_lengths.clear()
+        self.Information.auto_annotation.clear()
+        self.Information.suggest_annotation.clear()
+        if self.network is None:
             return
-        try: self.recentDataFiles.remove(filename)
-        except ValueError: pass
-        self.recentDataFiles.insert(0, filename)
-        self.populate_comboboxes()
-        self.data_index = 0
-        self.selectDataFile()
+
+        self.network.nodes = self.original_nodes
+        for data_source, warning_msg, info_msg in (
+            (self.data, self.Warning.mismatched_lengths, None),
+            (self.auto_data, self.Warning.auto_mismatched_lengths,
+             self.Information.auto_annotation)):
+            if data_source is not None:
+                if len(data_source) != self.network.number_of_nodes():
+                    warning_msg()
+                else:
+                    if info_msg is not None:
+                        info_msg()
+                    self.network.nodes = data_source
+                break
+        else:
+            self.Information.suggest_annotation()
 
     def sendReport(self):
-        self.reportSettings("Network file",
-                            [("File name", self.filecombo.currentText()),
-                             ("Vertices", self.graph.number_of_nodes()),
-                             hasattr(self.graph, "is_directed") and ("Directed", gui.YesNo[self.graph.is_directed()])])
-        self.reportSettings("Vertices meta data", [("File name", self.datacombo.currentText())])
-        self.reportData(self.graph.items(), None)
-        self.reportData(self.graph.links(), None, None)
+        self.reportSettings(
+            "Network file",
+            [("File name", self.filecombo.currentText()),
+             ("Vertices", self.network.number_of_nodes()),
+             ("Directed", gui.YesNo[self.network.edges[0].directed])
+             ])
+
 
 if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication([])
-    owf = OWNxFile()
-    owf.show()
-    a.exec_()
-    owf.saveSettings()
+    WidgetPreview(OWNxFile).run()
