@@ -4,7 +4,8 @@ from Orange.data import Table
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output
-from orangecontrib.network import Graph, community as cd
+from orangecontrib.network import Network
+from orangecontrib.network.network import community as cd
 
 
 class OWNxClustering(widget.OWWidget):
@@ -14,10 +15,10 @@ class OWNxClustering(widget.OWWidget):
     priority = 6430
 
     class Inputs:
-        network = Input("Network", Graph, default=True)
+        network = Input("Network", Network, default=True)
 
     class Outputs:
-        network = Output("Network", Graph)
+        network = Output("Network", Network)
         items = Output("Items", Table)
 
     resizing_enabled = False
@@ -76,12 +77,12 @@ class OWNxClustering(widget.OWWidget):
             return
 
         labels = alg(self.net, **kwargs)
-        domain = self.net.items().domain
+        domain = self.net.nodes.domain
         cd.add_results_to_items(
             self.net, labels, get_unique_names(domain, 'Cluster'))
 
         self.infolabel.setText('%d clusters found' % len(set(labels.values())))
-        self.Outputs.items.send(self.net.items())
+        self.Outputs.items.send(self.net.nodes)
         self.Outputs.network.send(self.net)
 
 

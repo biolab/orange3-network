@@ -45,8 +45,7 @@ from pkg_resources import resource_filename
 def networks():
     yield ('', resource_filename(__name__, 'networks'))
 
-import networkx as nx
 
 from .network import *
 
-from . import community
+from orangecontrib.network.network import community
