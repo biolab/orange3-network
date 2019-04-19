@@ -237,7 +237,7 @@ class OWNxFromDistances(widget.OWWidget):
             if self.include_knn:
                 mask |= mask.argsort() < self.kNN
             weights = matrix[mask]
-            if self.edge_weights == EdgeWeights.INVERSE:
+            if weights.size and self.edge_weights == EdgeWeights.INVERSE:
                 weights = np.max(weights) - weights
             edges = sp.csr_matrix((weights, mask.nonzero()))
             graph = Network(items, edges)
