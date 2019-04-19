@@ -1,10 +1,14 @@
+import os
+import unittest
+
 from orangecontrib.network.network import readwrite
 
-import unittest
+cwd = os.path.split(__file__)[0]
+
 
 class TestReadPajek(unittest.TestCase):
     def test_two_mode(self):
-        davis = readwrite.read_pajek("../networks/davis.net")
+        davis = readwrite.read_pajek(os.path.join(cwd, "../networks/davis.net"))
         self.assertEqual(davis.number_of_nodes(), 32)
         self.assertEqual(
             list(davis.nodes),
