@@ -13,8 +13,6 @@ Community Detection in Graphs
 import random
 import itertools
 
-import networkx as nx
-
 from Orange.data import Domain, Table, DiscreteVariable
 
 

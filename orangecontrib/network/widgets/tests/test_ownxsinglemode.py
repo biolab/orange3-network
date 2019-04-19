@@ -217,7 +217,7 @@ class TestOWNxSingleMode(WidgetTest):
         send.assert_called()
         send.reset_mock()
 
-    @patch("orangecontrib.network.twomode.to_single_mode")
+    @patch("orangecontrib.network.network.twomode.to_single_mode")
     def test_masks_in_update(self, to_single_mode):
         widget = self.widget
 

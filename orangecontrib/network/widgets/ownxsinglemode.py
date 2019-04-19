@@ -9,7 +9,8 @@ from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.widget import OWWidget, Msg
-from orangecontrib.network import Network, twomode
+from orangecontrib.network import Network
+from orangecontrib.network.network import twomode
 
 
 class OWNxSingleMode(OWWidget):

@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 import scipy.sparse as sp
-import orangecontrib.network.twomode as tm
+import orangecontrib.network.network.twomode as tm
 from orangecontrib.network import Network
 
 
