@@ -145,6 +145,8 @@ class OWNxFromDistances(widget.OWWidget):
 
     @Inputs.distances
     def set_matrix(self, data):
+        if data is not None and not data.size:
+            data = None
         self.matrix = data
         if data is None:
             self.histogram.setValues([])
