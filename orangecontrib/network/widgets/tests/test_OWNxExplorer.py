@@ -1,13 +1,17 @@
 import os
+import numpy as np
 
+import orangecontrib
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest
 from orangewidget.tests.utils import simulate
 
-import orangecontrib
+from orangecontrib.network import Network
 from orangecontrib.network.widgets.OWNxFile import OWNxFile
 from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer
 
+
+cwd = os.path.split(__file__)[0]
 
 class TestOWNxExplorer(WidgetTest):
     def setUp(self):
@@ -30,6 +34,15 @@ class TestOWNxExplorer(WidgetTest):
         self.assertTrue(self.widget.Warning.too_many_labels.is_shown())
         simulate.combobox_activate_index(self.widget.controls.attr_label, 0)
         self.assertFalse(self.widget.Warning.too_many_labels.is_shown())
+
+    def test_subset_selection(self):
+        # test if selecting from the graph works
+
+        self.send_signal(self.widget.Inputs.network, self.network)
+        self.send_signal(self.widget.Inputs.node_data, self.data)
+        self.widget.graph.selection_select(np.arange(0, 5))
+        outputs = self.widget.Outputs
+        self.assertIsInstance(self.get_output(outputs.subgraph), Network)
 
     def _read_network(self, filename=None):
         owfile = self.create_widget(OWNxFile)
