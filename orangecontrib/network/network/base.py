@@ -73,7 +73,7 @@ class Edges:
         edge_mask = np.logical_and(mask[edges.row], mask[edges.col])
         row = node_renumeration[edges.row[edge_mask]]
         col = node_renumeration[edges.col[edge_mask]]
-        data = self.data[edge_mask]
+        data = edges.data[edge_mask]
         edge_data = self.edge_data[edge_mask] if self.edge_data is not None \
             else None
         return type(self)(
