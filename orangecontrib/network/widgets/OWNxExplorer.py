@@ -36,7 +36,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         distances = Output("Distance matrix", Orange.misc.DistMatrix)
 
     UserAdviceMessages = [
-        widget.Message('Double clicks select connected components',
+        widget.Message("Double clicks select connected components",
                        widget.Message.Information),
     ]
 
@@ -51,16 +51,16 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     alpha_value = 255  # Override the setting from parent
 
-    class Warning(widget.OWWidget.Warning):
+    class Warning(OWDataProjectionWidget.Warning):
         distance_matrix_mismatch = widget.Msg(
             "Distance matrix size doesn't match the number of network nodes "
-            " and will be ignored.")
-        no_graph_found = widget.Msg('Node data is given, graph data is missing')
+            "and will be ignored.")
+        no_graph_found = widget.Msg("Node data is given, graph data is missing.")
 
-    class Error(widget.OWWidget.Error):
+    class Error(OWDataProjectionWidget.Error):
         data_size_mismatch = widget.Msg(
-            'Length of the data does not match the number of nodes.')
-        network_too_large = widget.Msg('Network is too large to visualize.')
+            "Length of the data does not match the number of nodes.")
+        network_too_large = widget.Msg("Network is too large to visualize.")
         single_node_graph = widget.Msg("I don't do single-node graphs today.")
 
     def __init__(self):
