@@ -59,7 +59,8 @@ def read_pajek(path):
         if labels is None:
             raise ValueError("Vertices must be defined before edges or arcs")
 
-    lines = [line.strip() for line in open(path)]
+    with open(path) as f:
+        lines = [line.strip() for line in f]
     lines = np.array([line for line in lines if line and line[0] != "%"])
     part_starts = [(line_no, line)
                    for line_no, line in enumerate(lines)
