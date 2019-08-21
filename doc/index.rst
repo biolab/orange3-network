@@ -12,7 +12,9 @@ Widgets
    widgets/networkgenerator
    widgets/networkanalysis
    widgets/networkclustering
+   widgets/networkofgroups
    widgets/networkfromdistances
+   widgets/singlemode
 
 Indices and tables
 ==================

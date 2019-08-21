@@ -1,55 +1,37 @@
-Network Generator
+Network of Groups
 =================
 
-.. figure:: icons/network-generator.png
+Group instances by feature and connect related groups.
 
-Signals
--------
+**Inputs**
 
-**Inputs**:
-
--  (None)
+- Network: An instance of network graph.
+- Data: Properties of a network graph.
 
 **Outputs**:
 
--  **Generated Network**
+- Network: A grouped network graph.
+- Data: Properties of the group network graph.
 
-   An instance of Network Graph.
+**Network of Groups** is the network version of the group-by operation. Nodes with the same values of the attribute, selected in the dropdown, will be represented as a single node.
 
-Description
------------
+![](images/Network-of-Groups-stamped.png)
 
-**Network Generator** constructs exemplary networks. It is mostly intended for teaching/learning about networks.
-
-.. figure:: images/network-generator.png
-
-1. Generate graph:
-   - `Balanced tree <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.classic.balanced_tree.html#networkx.generators.classic.balanced_tree>`_
-   - `Barbell <https://en.wikipedia.org/wiki/Barbell_graph>`_
-   - `Circular ladder <http://mathworld.wolfram.com/CircularLadderGraph.html>`_
-   - `Complete <https://en.wikipedia.org/wiki/Complete_graph>`_
-   - `Complete bipartite <https://en.wikipedia.org/wiki/Bipartite_graph>`_
-   - `Cycle <https://en.wikipedia.org/wiki/Cycle_(graph_theory)>`_
-   - `Grid <http://mathworld.wolfram.com/GridGraph.html>`_
-   - `Hypercube <https://en.wikipedia.org/wiki/Hypercube_graph>`_
-   - `Ladder <https://en.wikipedia.org/wiki/Ladder_graph>`_
-   - `Lobster <http://mathworld.wolfram.com/LobsterGraph.html>`_
-   - `Lollipop <https://en.wikipedia.org/wiki/Lollipop_graph>`_
-   - `Path <https://en.wikipedia.org/wiki/Path_(graph_theory)>`_
-   - `Regular <https://en.wikipedia.org/wiki/Regular_graph>`_
-   - `Scale-free <https://en.wikipedia.org/wiki/Scale-free_network>`_
-   - `Shell <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.random_graphs.random_shell_graph.html#networkx.generators.random_graphs.random_shell_graph>`_
-   - `Star <https://en.wikipedia.org/wiki/Star_(graph_theory)>`_
-   - `Waxman <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.geometric.waxman_graph.html#networkx.generators.geometric.waxman_graph>`_
-   - `Wheel <https://en.wikipedia.org/wiki/Wheel_graph>`_
-2. Approx. number of nodes: nodes that should roughly be in the network (some networks cannot exactly satisfy this condition, hence an approximation).
-3. If *Auto-generate* is on, the widget will automatically send the constructed graph to the output. Alternatively, press *Generate graph*.
+1. Information on the input and output network.
+2. Select the attribute to group by.
+3. Compute weights:
+   - *No weights*: all weights are set to 1.
+   - *Number of connections*: weight edges by the number of connections between the groups.
+   - *Sum of connection weights*:  weight edges by the sum of weights of connections between the groups.
+   *Normalize by geometric mean* divides weights by the geometric mean of the number of connections between the two groups.
 
 Example
 -------
 
-**Network Generator** is a nice tool to explore typical graph structures.
+In this example we are using *airtraffic* data set, that we loaded in the [Network File](networkfile.md) widget. We see the entire data set in **Network Explorer (1)**.
 
-.. figure:: images/network-generator-example.png
+Then we use **Network of Groups** to group the network by the *FAA Classifications* attribute. All nodes with the same value of this attribute will be represented as a single node in the output. There is an edge between the two nodes, if they share connections in the original network.
 
-Here, we generated a *Scale-free* graph with approximately 50 vertices and sent it to :doc:`Network Analysis <networkanalysis>`. We computed the clustering coefficient and sent the data to :doc:`Network Explorer <networkexplorer>`. Finally, we observed the generated graph in the visualization and set the size of the vertices to *Clustering coefficient*. This is a nice tool to observe and explain the properties of networks.
+The grouped network is shown in [Network Explorer](networkexplorer.md).
+
+![](images/Network-of-Groups-Example.png)

@@ -1,55 +1,46 @@
-Network Generator
-=================
+Single Mode
+===========
 
-.. figure:: icons/network-generator.png
+Convert multimodal graphs to single modal.
 
-Signals
--------
+**Inputs**
 
-**Inputs**:
+- Network: An instance of a bipartite network graph.
 
--  (None)
+**Outputs**
 
-**Outputs**:
+- Network: An instance of single network graph.
 
--  **Generated Network**
+**Single Mode** works with bipartite networks, where subsets are marked with a binary discrete attribute. The widget outputs a network where nodes represent the selected value (e.g. persons) and edges the remaining value (e.g. event). The widget also works with non-binary discrete attributes, but will treat them as binary (one-versus-all).
 
-   An instance of Network Graph.
+![](images/Single-Mode-stamped.png)
 
-Description
------------
+1. Mode indicator:
+   - *Feature*: discrete feature labeling network subsets.
+   - *Connect*: value used as nodes.
+   - *by*: value used as edges.
+2. Edge weights: compute weights for the output network.
+3. Information on the output network.
 
-**Network Generator** constructs exemplary networks. It is mostly intended for teaching/learning about networks.
+####Edge weights
 
-.. figure:: images/network-generator.png
+![](images/Single-Mode-weights.png)
 
-1. Generate graph:
-   - `Balanced tree <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.classic.balanced_tree.html#networkx.generators.classic.balanced_tree>`_
-   - `Barbell <https://en.wikipedia.org/wiki/Barbell_graph>`_
-   - `Circular ladder <http://mathworld.wolfram.com/CircularLadderGraph.html>`_
-   - `Complete <https://en.wikipedia.org/wiki/Complete_graph>`_
-   - `Complete bipartite <https://en.wikipedia.org/wiki/Bipartite_graph>`_
-   - `Cycle <https://en.wikipedia.org/wiki/Cycle_(graph_theory)>`_
-   - `Grid <http://mathworld.wolfram.com/GridGraph.html>`_
-   - `Hypercube <https://en.wikipedia.org/wiki/Hypercube_graph>`_
-   - `Ladder <https://en.wikipedia.org/wiki/Ladder_graph>`_
-   - `Lobster <http://mathworld.wolfram.com/LobsterGraph.html>`_
-   - `Lollipop <https://en.wikipedia.org/wiki/Lollipop_graph>`_
-   - `Path <https://en.wikipedia.org/wiki/Path_(graph_theory)>`_
-   - `Regular <https://en.wikipedia.org/wiki/Regular_graph>`_
-   - `Scale-free <https://en.wikipedia.org/wiki/Scale-free_network>`_
-   - `Shell <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.random_graphs.random_shell_graph.html#networkx.generators.random_graphs.random_shell_graph>`_
-   - `Star <https://en.wikipedia.org/wiki/Star_(graph_theory)>`_
-   - `Waxman <https://networkx.github.io/documentation/development/reference/generated/networkx.generators.geometric.waxman_graph.html#networkx.generators.geometric.waxman_graph>`_
-   - `Wheel <https://en.wikipedia.org/wiki/Wheel_graph>`_
-2. Approx. number of nodes: nodes that should roughly be in the network (some networks cannot exactly satisfy this condition, hence an approximation).
-3. If *Auto-generate* is on, the widget will automatically send the constructed graph to the output. Alternatively, press *Generate graph*.
+- *No weights*: all weights are set to 1.
+- *Number of connections*: weights correspond to the number of common connections (e.g. events the two people participated in).
+- *Weighted number of connections*: weights correspond to the sum of  the product of original edge weights that connect each person with the event.
+
+For details and for description of other options, see Vlado Batagelj's [Introduction to Network Science using Pajek](http://vladowiki.fmf.uni-lj.si/lib/exe/fetch.php?media=pajek:ev:pdf:na07.pdf), section 7, page 38.
 
 Example
 -------
 
-**Network Generator** is a nice tool to explore typical graph structures.
+For this example we have used the famous *davis* data set that describes ladies from the south of the United States and the events they have participated in. The network thus consists of nodes that are either persons or events. Node role is described in the attribute *role*. We load the network with [Network File](networkfile.md).
 
-.. figure:: images/network-generator-example.png
+We see the original file in [Network Explorer](networkexplorer.md). The blue nodes are events and the red ones are persons. Events are attended by persons. A node connects a person with the event, if the person attended the event. Now we can observe which people attended the same event or, conversely, which events were attended by the same people.
 
-Here, we generated a *Scale-free* graph with approximately 50 vertices and sent it to :doc:`Network Analysis <networkanalysis>`. We computed the clustering coefficient and sent the data to :doc:`Network Explorer <networkexplorer>`. Finally, we observed the generated graph in the visualization and set the size of the vertices to *Clustering coefficient*. This is a nice tool to observe and explain the properties of networks.
+In **Single Mode** we set the feature describing the role of the nodes. It so happens that our attribute is named *role*. We connect persons (nodes) with the events they attended (edges). Edge weight will be the number of connections in common. In translation, edge weights will be the number of events both people attended.
+
+**Network Explorer (1)** shows the final network.
+
+![](images/Single-Mode-Example.png)

@@ -20,45 +20,51 @@ Visually explore the network and its properties.
 
 **Network Explorer** is the primary widget for visualizing network graphs. It displays a graph with [Fruchterman-Reingold layout optimization](https://en.wikipedia.org/wiki/Force-directed_graph_drawing) and enables setting the color, size and label of nodes. One can also highlight nodes of specific properties and output them.
 
-Nodes can be moved around freely as their position in space is not fixed (only optimized). To select a subset of nodes, draw a rectangle around the subset. To highlight the nodes, set the criterium in *Marking* tab and press Enter to turn highlighted nodes (orange) into selected nodes (red). To use pan and move the network around, use the right click. Scroll in for zoom.
+The visualization in **Network Explorer** works just like the one for **Scatter Plot**. To select a subset of nodes, draw a rectangle around the subset. Shift will add a new group. Ctrl-Shift (Cmd-Shift) will add to the existing group. Alt (Option) will remove from the group. Pressing outside of the network will remove the selection.
 
-####Display
+![](images/Network-Explorer-overview-stamped.png)
 
-![](images/network-explorer-stamped.png)
-
-1. Information on the network. Reports on the number (and proportion) of nodes and edges.
-2. Nodes: re-layout nodes with Fruchterman-Reingold optimization. Color and set the size of nodes by attribute. Set the maximum and minimum size of nodes and/or invert their sizing.
-3. Node labels | tooltips: set node labels from the menu on the left and node tooltips from the menu on the right.
-4. Edges:
-   - If *Relative edge widths* is ticked, edges will have a thickness proportionate to their weight. Weights must be provided on the input for the option to be available.
-   - If *Show edge weights* is ticked, weight will be displayed above the edges.
+1. Information on the network. Reports on the number (and proportion) of nodes and edges. Press 'Re-layout' to re-compute nodes with Fruchterman-Reingold optimization. Select 'Randomize positions' starts from random position of nodes.
+2. Set the color, shape, size and label of the nodes by attribute. Color will display the 10 most frequent values and color the rest as 'Other'. Shape is assigned to the 5 most frequent values and the rest is marked as 'Other'. *Label only selection and subset* is handy for keeping the projection organized.
+3. Set the (relative) node size and edge width. By default, edge widths correspond to their weights. To see the weight value, select *Show edge weights*. By default, only the edges of selected nodes are labeled to keep the projection organized.
+4. *Show color regions* colors the projection according to the majority node value. Deselect *Show legend* to hide the legend.
+5. Select, zoom, pan and zoom to fit are the options for exploring the graph. The manual selection of data instances works as an angular/square selection tool. Double click to move the projection. Scroll in or out for zoom.
 
 ####Marking
 
-![](images/network-explorer2-stamped.png)
+Pressing *Select* will select and output the highlighted nodes. *Add to Group* adds to the existing selection, while *Add New Group* creates a new group.
 
-1. Information on the output. Reports on the number of nodes in the graph, selected nodes (red color), and highlighted nodes (orange color).
-2. Highlight nodes:
-   - None. Nodes are highlighted.
-   - ...whose attributes contain. Nodes that satisfy a stated condition will be highlighted.
-   - ...neighbors of selected, ≤ N hops away. Highlights nodes of selected points extending a specified number of hops away.
-   - ...with at least N connections. With equal or more connections than specified in 'Connections'.
-   - ...with at most N connections. With less or equal connections than specified in 'Connections'.
-   - ...with more connections than any neighbor. Highlights well connected nodes (hubs).
-   - ...with more connections than average neighbor. Highlights relatively well connected nodes.
-   - ...with most connections. Highlights a specified number of well connected nodes.
-   - ...given in the ItemSubset input signal. Highlights nodes matching the provided subset criteria (ID or other attribute).
-   If 'Output Changes Automatically' is ticked, changes will be communicated automatically. Alternatively, press 'Output Changes'.
+![](images/Network-Explorer-select-options.png)
 
-Examples
---------
+The widget enables selection of nodes by the specified criterium:
 
-In the first example we will simply display a network. We loaded *lastfm.net* data in [Network File](networkfile.md) and send the data to **Network Explorer**. The widget shows an optimized projection of artist similarity data. We colored the nodes by 'best tag' attribute, showing different genres artists belong to, and set the size to the number of listeners per artist.
+- *Mark nodes whose label starts with*. Set the condition to highlight the nodes whose label starts with the specified text. Label must be set for the highlighting to work. Press *Select* to select the highlighted nodes.
+- *Mark nodes whose label contains*. Set the condition to highlight the nodes whose label contains the specified text. Label must be set for the highlighting to work. Press *Select* to select the highlighted nodes.
+- *Mark nodes whose data contains*. Set the condition to highlight the nodes whose attributes contain the specified text. Press *Select* to select the highlighted nodes.
+- *Mark nodes reachable from selected*. Highlight the nodes that can be reached from the selected nodes. At least one node has to be selected for the highlighting to work.
+- *Mark nodes in vicinity of selection*. Highlight the nodes that are a selected number of hops away (first degree neighbors, second degree neighbors, etc.).
+- *Mark nodes from subset signal*. Highlight the nodes that are neighbors of the nodes from the *Node Subset* input.
+- *Mark nodes with few connections*. Highlight the nodes that have equal or less connections than the set number.
+- *Mark nodes with many connections*. Highlight the nodes that have equal or more connections than the set number.
+- *Mark nodes with most connections*. Highlight the nodes that have the most connections. The number of marked specifies how many top connected nodes to highlight (list is ranked).
+- *Mark nodes with more connections than any neighbor*. Highlight the most connected nodes.
+- *Mark nodes with more connections than average neighbor*. Highlight nodes whose degree is above average.
 
-![](images/network-explorer-example1.png)
+####Selecting a subset
 
-The second example shows how to highlight a specific subset in the graph. We continue to use *lastfm.net* data from the [Network File](networkfile.md). We also retained connection to the **Network Explorer**.
+Just like **Scatter Plot** widget, the **Network Explorer** supports group selection. To create the first group, either select nodes from the plot or highlight them by setting the criterium and pressing *Select*.
 
-![](images/network-explorer-example2.png)
+In the example below, we selected a single node (blue). Then we used *Mark nodes in vicinity of selection* to highlight neighbors of the selected node. We used *Add New Group* to create a new (red) group. Pressing *Add New Group* again will create yet another (green) group.
 
-Then we created a second link to **Data Table** widget, where we selected all the artists from the punk genre. We sent these data to **Network Explorer** where we set *Highlight nodes* to *...given in the ItemSubset input signal*. Attribute ID was automatically considered for matching nodes. We can see nodes we selected in the subset highlighted in the graph. To mark them as a selected subset, press Enter.
+*Add to Group* would add the highlighted (light blue) nodes to the last (green) group. This make this widget a nice tool for visualizing hops and network propagation.
+
+![](images/Network-Explorer-selection.png)
+
+Example
+-------
+
+In this example we will use the *lastfm* data set that can be loaded in the **Network File** widget under *Browse documentation networks*. The nodes of the network are musicians, which are characterized by the genre they play, number of albums produced and so on. The edges are the number of listeners on LastFm.
+
+The entire data set is visualized in **Network Explorer**. In the widget, we removed the coloring and set the size of the nodes to correspond to the *album count*. Then we selected some nodes from the network. We can observe the selection in **Network Explorer (1)**.
+
+![](images/Network-Explorer-Example.png)

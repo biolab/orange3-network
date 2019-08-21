@@ -9,9 +9,10 @@ Construct example graphs.
 
 **Network Generator** constructs exemplary networks. It is mostly intended for teaching/learning about networks.
 
-![](images/network-generator.png)
+![](images/Network-Generator.png)
 
-1. Generate graph:
+Graph options:
+
    - [Path](https://en.wikipedia.org/wiki/Path_(graph_theory)): a graph that can be drawn so that all of its vertices and edges lie on a single straight line.
    - [Cycle](https://en.wikipedia.org/wiki/Cycle_(graph_theory)): a graph that consists of a single cycle, i.e. some number of vertices (at least 3) are connected in a closed chain.
    - [Complete](https://en.wikipedia.org/wiki/Complete_graph): simple undirected graph in which every pair of distinct vertices is connected by a unique edge.
@@ -25,14 +26,13 @@ Construct example graphs.
    - [Lollipop](https://en.wikipedia.org/wiki/Lollipop_graph): a complete graph (clique) and a path graph, connected with a bridge.
    - [Geometric](https://en.wikipedia.org/wiki/Random_geometric_graph): an undirected graph constructed by randomly placing N nodes in some metric space.
 
-2. Approx. number of nodes: nodes that should roughly be in the network (some networks cannot exactly satisfy this condition, hence an approximation).
-3. If *Auto-generate* is on, the widget will automatically send the constructed graph to the output. Alternatively, press *Generate graph*.
+Press *Regenerate Network* to output a new graph instance.
 
 Example
 -------
 
 **Network Generator** is a nice tool to explore typical graph structures.
 
-![](images/network-generator-example.png)
+![](images/Network-Generator-Example.png)
 
-Here, we generated a *Scale-free* graph with approximately 50 vertices and sent it to [Network Analysis](networkanalysis.md). We computed the clustering coefficient and sent the data to [Network Explorer](networkexplorer.md). Finally, we observed the generated graph in the visualization and set the size of the vertices to *Clustering coefficient*. This is a nice tool to observe and explain the properties of networks.
+Here, we generated a *Grid* graph of height 4 and width 5 and sent it to [Network Analysis](networkanalysis.md). We computed node degrees and sent the data to [Network Explorer](networkexplorer.md). Finally, we observed the generated graph in the visualization and set the size and color of the nodes to *Degree*. This is a nice tool to observe and explain the properties of networks.
