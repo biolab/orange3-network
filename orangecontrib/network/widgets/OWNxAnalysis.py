@@ -64,7 +64,7 @@ METHODS = (
          "Number of strongly connected components", GRAPHLEVEL),
     ("number_weakly_connected_components", lambda network:
          csgraph.connected_components(network.edges[0].edges, True)[0],
-         "Number of strongly connected components", GRAPHLEVEL),
+         "Number of weakly connected components", GRAPHLEVEL),
 
     ("in_degrees", lambda network: network.in_degrees(), "In-degree", NODELEVEL),
     ("out_degrees", lambda network: network.out_degrees(), "Out-degree", NODELEVEL),
@@ -73,7 +73,7 @@ METHODS = (
          (np.mean(degrees[network.neighbours(i)]) if degree else np.nan
           for i, degree in enumerate(degrees)),
          dtype=np.float, count=len(degrees)),
-     "Average neighbour degree", NODELEVEL),
+     "Average neighbor degree", NODELEVEL),
     ("degree_centrality",
      lambda degrees, n: n and degrees / (n - 1) if n > 1 else 0,
      "Degree centrality", NODELEVEL),
