@@ -248,11 +248,12 @@ class OWNxFromDistances(widget.OWWidget):
             # exclude unconnected
             if self.node_selection != NodeSelection.ALL_NODES:
                 n_components, components = csgraph.connected_components(edges)
-                counts = np.bincount(components, minlength=n_components + 1)
+                counts = np.bincount(components)
                 if self.node_selection == NodeSelection.COMPONENTS:
-                    mask = counts >= self.excludeLimit
+                    ind = np.flatnonzero(counts >= self.excludeLimit)
+                    mask = np.in1d(components, ind)
                 else:
-                    mask = counts == np.argmax(counts)
+                    mask = components == np.argmax(counts)
                 graph = graph.subgraph(mask)
 
         self.graph = graph

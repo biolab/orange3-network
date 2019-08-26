@@ -254,7 +254,10 @@ class Network:
 
     def subgraph(self, mask):
         nodes = self.nodes[mask]
-        coordinates = self.coordinates[mask]
+        if self.coordinates is not None:
+            coordinates = self.coordinates[mask]
+        else:
+            coordinates = None
         if mask.dtype is not np.bool:
             mask1 = np.full((self.number_of_nodes(),), False)
             mask1[mask] = True
