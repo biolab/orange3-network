@@ -1,17 +1,16 @@
-import os
 import unittest
 
 import numpy as np
 
 from Orange.data import Table
-from Orange.widgets.tests.base import WidgetTest, simulate
-import orangecontrib.network
+from Orange.widgets.tests.base import simulate
+
 from orangecontrib.network import Network
 from orangecontrib.network.widgets.OWNxGroups import OWNxGroups
-from orangecontrib.network.widgets.OWNxFile import OWNxFile
+from orangecontrib.network.widgets.tests.utils import NetworkTest
 
 
-class TestOWNxGroups(WidgetTest):
+class TestOWNxGroups(NetworkTest):
     def setUp(self):
         self.widget = self.create_widget(OWNxGroups)
 
@@ -94,21 +93,6 @@ class TestOWNxGroups(WidgetTest):
         self.widget.report_button.click()
         self.send_signal(self.widget.Inputs.network, None)
         self.widget.report_button.click()
-
-    def _read_network(self, filename=None):
-        owfile = self.create_widget(OWNxFile)
-        owfile.open_net_file(self._get_filename(filename, "n"))
-        return self.get_output(owfile.Outputs.network, widget=owfile)
-
-    def _read_items(self, filename=None):
-        return Table(self._get_filename(filename))
-
-    def _get_filename(self, filename, mode="d"):
-        path = os.path.split(orangecontrib.network.__file__)[0]
-        if filename is None:
-            path = os.path.join(path, "widgets", "tests")
-            filename = "test_items.tab" if mode == "d" else "test.net"
-        return os.path.join(path, os.path.join("networks", filename))
 
 
 if __name__ == "__main__":

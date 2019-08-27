@@ -5,13 +5,13 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import Domain, DiscreteVariable, ContinuousVariable, Table
-from Orange.widgets.tests.base import WidgetTest
 
 from orangecontrib.network import Network
 from orangecontrib.network.widgets.ownxsinglemode import OWNxSingleMode
+from orangecontrib.network.widgets.tests.utils import NetworkTest
 
 
-class TestOWNxSingleMode(WidgetTest):
+class TestOWNxSingleMode(NetworkTest):
     def setUp(self):
         self.widget = self.create_widget(OWNxSingleMode)  # type: OWNxSingleMode
 
