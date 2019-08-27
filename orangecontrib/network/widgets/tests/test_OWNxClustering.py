@@ -1,12 +1,13 @@
 import numpy as np
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
-from Orange.widgets.tests.base import WidgetTest
+
 from orangecontrib.network.network import generate
 from orangecontrib.network.widgets.OWNxClustering import OWNxClustering
+from orangecontrib.network.widgets.tests.utils import NetworkTest
 
 
-class TestOWNxClustering(WidgetTest):
+class TestOWNxClustering(NetworkTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWNxClustering, stored_settings={'autoApply': False},

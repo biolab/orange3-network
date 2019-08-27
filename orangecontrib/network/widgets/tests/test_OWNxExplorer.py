@@ -1,19 +1,13 @@
-import os
 import numpy as np
 
-import orangecontrib
-from Orange.data import Table
-from Orange.widgets.tests.base import WidgetTest
+from orangecontrib.network.widgets.tests.utils import NetworkTest
 from orangewidget.tests.utils import simulate
 
 from orangecontrib.network import Network
-from orangecontrib.network.widgets.OWNxFile import OWNxFile
 from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer
 
 
-cwd = os.path.split(__file__)[0]
-
-class TestOWNxExplorer(WidgetTest):
+class TestOWNxExplorer(NetworkTest):
     def setUp(self):
         self.widget = self.create_widget(OWNxExplorer)  # type: OWNxExplorer
         self.network = self._read_network("lastfm.net")
@@ -43,18 +37,3 @@ class TestOWNxExplorer(WidgetTest):
         self.widget.graph.selection_select(np.arange(0, 5))
         outputs = self.widget.Outputs
         self.assertIsInstance(self.get_output(outputs.subgraph), Network)
-
-    def _read_network(self, filename=None):
-        owfile = self.create_widget(OWNxFile)
-        owfile.open_net_file(self._get_filename(filename, "n"))
-        return self.get_output(owfile.Outputs.network, widget=owfile)
-
-    def _read_items(self, filename=None):
-        return Table(self._get_filename(filename))
-
-    def _get_filename(self, filename, mode="d"):
-        path = os.path.split(orangecontrib.network.__file__)[0]
-        if filename is None:
-            path = os.path.join(path, "widgets", "tests")
-            filename = "test_items.tab" if mode == "d" else "test.net"
-        return os.path.join(path, os.path.join("networks", filename))
