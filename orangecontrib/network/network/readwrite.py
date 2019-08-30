@@ -4,9 +4,27 @@ from itertools import count, repeat
 import numpy as np
 import scipy.sparse as sp
 
+from Orange.data.io import FileFormatMeta
 from .base import Network, EdgeType
 
-__all__ = ("read_pajek", )
+__all__ = ("read_pajek", "write_pajek", "PajekReader")
+
+
+class NetFileFormat(metaclass=FileFormatMeta):
+    pass
+
+
+class PajekReader(NetFileFormat):
+    EXTENSIONS = ('.net', )
+    DESCRIPTION = 'Pajek network file format'
+
+    @staticmethod
+    def read(filename):
+        return read_pajek(filename)
+
+    @staticmethod
+    def write(filename, network):
+        return write_pajek(filename, network)
 
 
 def read_vertices(lines):
