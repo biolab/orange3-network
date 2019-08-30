@@ -1,4 +1,5 @@
 import shlex
+from itertools import count, repeat
 
 import numpy as np
 import scipy.sparse as sp
@@ -106,6 +107,45 @@ def read_pajek(path):
     if in_first_mode is not None:
         network.in_first_mode = in_first_mode
     return network
+
+
+def write_pajek(path, network):
+    if len(network.edges) > 1:
+        raise TypeError(
+            "This implementation of Pajek format does not support saving "
+            "networks with multiple edge types.")
+    f = open(path, "wt") if isinstance(path, str) else path
+    f.write(f'*Network "{network.name}"\n')
+    _write_vertices(f, network)
+    if network.edges:
+        _write_edges(f, network)
+    if f is not path:
+        f.close()
+
+
+def _write_vertices(f, network):
+    f.write(f"*Vertices\t{network.number_of_nodes()}\n")
+    if network.coordinates is not None:
+        coords = network.coordinates
+    else:
+        coords = repeat(())
+    for i, label, coordinates in zip(count(start=1), network.nodes, coords):
+        f.write(f"{i:6} {label}\t" +
+                f"{' '.join(f'{c:.4f}' for c in coordinates)}\n")
+
+
+def _write_edges(f, network):
+    edges = network.edges[0]
+    f.write("*Arcs\n" if edges.directed else "*Edges\n")
+    mat = edges.edges
+    if np.all(mat.data == 1):
+        for row, rb, re in zip(count(), mat.indptr, mat.indptr[1:]):
+            f.write("".join(f"{row + 1:6} {col + 1:6}\n"
+                            for col in mat.indices[rb:re]))
+    else:
+        for row, rb, re in zip(count(), mat.indptr, mat.indptr[1:]):
+            f.write("".join(f"{row + 1:6} {mat.indices[i] + 1:6} "
+                            f"{mat.data[i]:.6f}\n" for i in range(rb, re)))
 
 
 # TODO: doesn't belong here if this module is meant as independent from Orange
