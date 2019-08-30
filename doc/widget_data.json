@@ -1,0 +1,58 @@
+{
+"Network File": {
+"title": "Network File",
+"file": "widgets/networkfile.md",
+"icon": "widgets/icons/network-file.png",
+"keywords": ["pajek"],
+"category": "Networks"
+},
+"Network Explorer": {
+"title": "Network Explorer",
+"file": "widgets/networkexplorer.md",
+"icon": "widgets/icons/network-explorer.png",
+"keywords": ["visualization"],
+"category": "Networks"
+},
+"Network Generator": {
+"title": "Network Generator",
+"file": "widgets/networkgenerator.md",
+"icon": "widgets/icons/network-generator.png",
+"keywords": ["random", "synthetic", "data"],
+"category": "Networks"
+},
+"Network Analysis": {
+"title": "Network Analysis",
+"file": "widgets/networkanalysis.md",
+"icon": "widgets/icons/network-analysis.png",
+"keywords": ["statistics", "centrality", "degree", "betweenness"],
+"category": "Networks"
+},
+"Network Clustering": {
+"title": "Network Clustering",
+"file": "widgets/networkclustering.md",
+"icon": "widgets/icons/network-clustering.png",
+"keywords": ["clustering"],
+"category": "Networks"
+},
+"Network Of Groups": {
+"title": "Network Of Groups",
+"file": "widgets/networkofgroups.md",
+"icon": "widgets/icons/network-of-groups.png",
+"keywords": ["aggregate"],
+"category": "Networks"
+},
+"Network from Distances": {
+"title": "Network from Distances",
+"file": "widgets/networkfromdistances.md",
+"icon": "widgets/icons/network-from-distances.png",
+"keywords": ["distance matrix", "similarity"],
+"category": "Networks"
+},
+"Single Mode": {
+"title": "Single Mode",
+"file": "widgets/singlemode.md",
+"icon": "widgets/icons/single-mode.png",
+"keywords": ["bipartite"],
+"category": "Networks"
+},
+}
