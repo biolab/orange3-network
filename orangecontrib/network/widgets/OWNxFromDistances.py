@@ -3,6 +3,7 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import QLineF, QSize
 import pyqtgraph as pg
+from PyQt5.QtWidgets import QGridLayout
 from scipy.sparse import csgraph
 
 from Orange.data import Domain, StringVariable, Table
@@ -107,7 +108,7 @@ class OWNxFromDistances(widget.OWWidget):
 
         hbox = gui.widgetBox(boxGeneral, orientation='horizontal')
         knn_cb = gui.checkBox(hbox, self, 'include_knn',
-                              label='Include also closest neighbors',
+                              label='Include closest neighbors',
                               callback=self.generateGraph)
         knn = gui.spin(hbox, self, "kNN", 1, 1000, 1,
                        orientation='horizontal',
@@ -120,13 +121,26 @@ class OWNxFromDistances(widget.OWWidget):
         ribg = gui.radioButtonsInBox(self.controlArea, self, "node_selection",
                                      box="Node selection",
                                      callback=self.generateGraph)
-        gui.appendRadioButton(ribg, "Keep all nodes")
-        hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
-        gui.appendRadioButton(ribg, "Components with at least nodes", insertInto=hb)
-        gui.spin(hb, self, "excludeLimit", 2, 100, 1,
-                 callback=(lambda h=True: self.generateGraph(h)), controlWidth=60)
-        gui.appendRadioButton(ribg, "Largest connected component")
-        self.attribute = None
+        grid = QGridLayout()
+        ribg.layout().addLayout(grid)
+        grid.addWidget(
+            gui.appendRadioButton(ribg, "Keep all nodes", addToLayout=False),
+            0, 0
+        )
+
+        exclude_limit = gui.spin(
+            ribg, self, "excludeLimit", 2, 100, 1,
+            callback=(lambda h=True: self.generateGraph(h)),
+            controlWidth=60
+        )
+        grid.addWidget(
+            gui.appendRadioButton(ribg, "Components with at least nodes",
+                                  addToLayout=False), 1, 0)
+        grid.addWidget(exclude_limit, 1, 1)
+
+        grid.addWidget(
+            gui.appendRadioButton(ribg, "Largest connected component",
+                                  addToLayout=False), 2, 0)
 
         ribg = gui.radioButtonsInBox(self.controlArea, self, "edge_weights",
                                      box="Edge weights",
