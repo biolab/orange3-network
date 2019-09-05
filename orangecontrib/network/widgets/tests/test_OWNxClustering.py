@@ -33,3 +33,30 @@ class TestOWNxClustering(NetworkTest):
         # There should be an additional cluster column
         output = self.get_output(self.widget.Outputs.network).nodes
         self.assertEqual(len(data.domain.metas) + 1, len(output.domain.metas))
+
+    def test_reproducible_clustering(self):
+        network = self._read_network("leu_by_genesets.net")
+        self.widget.controls.use_random_state.setChecked(True)
+
+        self.send_signal(self.widget.Inputs.network, network)
+        self.widget.unconditional_commit()
+        res1 = self.get_output(self.widget.Outputs.network).nodes.metas
+
+        self.send_signal(self.widget.Inputs.network, network)
+        self.widget.unconditional_commit()
+        res2 = self.get_output(self.widget.Outputs.network).nodes.metas
+
+        # Seeded rerun should give same clustering result
+        self.assertTrue(np.all(res1 == res2))
+
+    def test_multiple_reruns_override_variable(self):
+        network = self._read_network("leu_by_genesets.net")
+        num_initial_metas = len(network.nodes.domain.metas)
+
+        for _ in range(10):
+            self.send_signal(self.widget.Inputs.network, network)
+            self.widget.unconditional_commit()
+
+        output = self.get_output(self.widget.Outputs.network).nodes
+        # Multiple reruns should override the results instead of adding new feature every time
+        self.assertEqual(len(output.domain.metas), num_initial_metas + 1)
