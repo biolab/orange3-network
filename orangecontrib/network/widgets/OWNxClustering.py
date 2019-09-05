@@ -29,16 +29,21 @@ class OWNxClustering(widget.OWWidget):
 
     method = settings.Setting(0)
     iterations = settings.Setting(1000)
+    use_random_state = settings.Setting(False)
     hop_attenuation = settings.Setting(0.1)
     autoApply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
         self.net = None
+        self.cluster_feature = None
         commit = lambda: self.commit()
         gui.spin(self.controlArea, self, "iterations", 1,
                    100000, 1, label="Max. iterations:",
                    callback=commit)
+        self.random_state = gui.checkBox(self.controlArea, self, "use_random_state",
+                                         label="Replicable clustering",
+                                         callback=commit)
         ribg = gui.radioButtonsInBox(
             self.controlArea, self, "method",
             btnLabels=["Label propagation clustering (Raghavan et al., 2007)",
@@ -62,24 +67,29 @@ class OWNxClustering(widget.OWWidget):
     def commit(self):
         self.infolabel.setText(' ')
 
+        kwargs = {'iterations': self.iterations}
         if self.method == 0:
             alg = cd.label_propagation
-            kwargs = {'iterations': self.iterations}
 
         elif self.method == 1:
             alg = cd.label_propagation_hop_attenuation
-            kwargs = {'iterations': self.iterations,
-                      'delta': self.hop_attenuation}
+            kwargs['delta'] = self.hop_attenuation
 
         if self.net is None:
             self.Outputs.items.send(None)
             self.Outputs.network.send(None)
+            self.cluster_feature = None
             return
+
+        if self.use_random_state:
+            kwargs['seed'] = 0
 
         labels = alg(self.net, **kwargs)
         domain = self.net.nodes.domain
-        cd.add_results_to_items(
-            self.net, labels, get_unique_names(domain, 'Cluster'))
+        # Tie a name for presenting clustering results to the widget instance
+        if self.cluster_feature is None:
+            self.cluster_feature = get_unique_names(domain, 'Cluster')
+        cd.add_results_to_items(self.net, labels, self.cluster_feature)
 
         self.infolabel.setText('%d clusters found' % len(set(labels.values())))
         self.Outputs.items.send(self.net.nodes)
