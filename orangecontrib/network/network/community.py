@@ -19,10 +19,11 @@ from Orange.data import Domain, Table, DiscreteVariable
 def add_results_to_items(G, labels, var_name):
     items = G.nodes
     if items is not None and var_name in items.domain:
-        domain = Domain([a for a in items.domain.attributes
-                         if a.name != var_name],
-                        items.domain.class_vars,
-                        items.domain.metas)
+        # a unique `var_name` is assumed to be obtained in OWNxClustering prior to calling this;
+        # only check metas to enable overriding results on multiple reruns
+        effective_metas = list(filter(lambda meta: meta.name != var_name, items.domain.metas))
+
+        domain = Domain(items.domain.attributes, items.domain.class_vars, effective_metas)
         items = Table.from_table(domain, items)
 
     attrs = [DiscreteVariable(
@@ -48,7 +49,7 @@ class CommunityDetection(object):
 
 
 def label_propagation_hop_attenuation(G, iterations=1000,
-                                      delta=0.1, node_degree_preference=0):
+                                      delta=0.1, node_degree_preference=0, seed=None):
     """Label propagation for community detection, Leung et al., 2009
 
     :param G: A Orange graph.
@@ -63,10 +64,15 @@ def label_propagation_hop_attenuation(G, iterations=1000,
     :param node_degree_preference: The power on node degree factor.
     :type node_degree_preference: float
 
+    :param seed: Seed for replicable clustering.
+    :type seed: int
     """
 
     if G.edges[0].directed:
         raise ValueError("Undirected graph expected")
+
+    if seed is not None:
+        random.seed(seed)
 
     vertices = list(range(G.number_of_nodes()))
     degrees = dict(enumerate(G.degrees()))
@@ -115,6 +121,9 @@ def label_propagation(G, iterations=1000, seed=None):
 
     :param iterations: The maximum number of iterations if there is no convergence.
     :type iterations: int
+
+    :param seed: Seed for replicable clustering.
+    :type seed: int
     """
     if seed is not None:
         random.seed(seed)
