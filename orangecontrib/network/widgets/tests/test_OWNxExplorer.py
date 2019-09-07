@@ -33,10 +33,12 @@ class TestOWNxExplorer(NetworkTest):
         # test if selecting from the graph works
 
         self.send_signal(self.widget.Inputs.network, self.network)
+        self.assertEqual(self.widget.nSelected, 0)
         self.send_signal(self.widget.Inputs.node_data, self.data)
         self.widget.graph.selection_select(np.arange(0, 5))
         outputs = self.widget.Outputs
         self.assertIsInstance(self.get_output(outputs.subgraph), Network)
+        self.assertEqual(self.widget.nSelected, 5)
 
     def test_get_reachable(self):
         # gene label indices, which are equal to their numbers assigned in the .net file - 1
