@@ -351,6 +351,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def selection_changed(self):
         super().selection_changed()
+        self.nSelected = 0 if self.selection is None else len(self.selection)
         self.update_selection_buttons()
         self.update_marks()
 
