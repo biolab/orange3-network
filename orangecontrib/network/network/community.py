@@ -20,14 +20,16 @@ from Orange.data import Domain, Table, DiscreteVariable
 def add_results_to_items(G, labels, var_name):
     items = G.nodes
 
-    new_attr = DiscreteVariable(var_name, values=["C%d" % (x + 1) for x in set(labels.values())])
-    new_data = np.array([[l] for l in labels.values()])
+    new_attr = DiscreteVariable(
+        var_name, values=["C%d" % (x + 1) for x in set(labels.values())])
+    new_data = np.array(list(labels.values())).reshape(-1, 1)
 
     if items is not None:
-        # a unique `var_name` is assumed to be obtained in OWNxClustering prior to calling this;
-        # only check metas to enable overriding results on multiple reruns
-        effective_metas = list(filter(lambda idx: items.domain.metas[idx].name != var_name,
-                                      range(len(items.domain.metas))))
+        # a unique `var_name` is assumed to be obtained in OWNxClustering prior
+        # to calling this; only check metas to enable overriding results on
+        # multiple reruns
+        effective_metas = [idx for idx, meta in enumerate(items.domain.metas)
+                           if meta.name != var_name]
         metas = np.take(items.domain.metas, effective_metas).tolist()
         metas.append(new_attr)
 
