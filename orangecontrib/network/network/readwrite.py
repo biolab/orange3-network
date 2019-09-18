@@ -11,11 +11,11 @@ __all__ = ("read_pajek", )
 def read_vertices(lines):
     coordinates = np.zeros((len(lines), 2))
     labels = np.full((len(lines)), None, dtype=object)
-    for line in lines:
-        i, *parts = shlex.split(line)[:4]
-        i = int(i) - 1  # -1 because pajek is 1-indexed
+    id_idx = {}
+    for i, line in enumerate(lines):
+        node_id, *parts = shlex.split(line)[:4]
         if not parts:
-            label = str(i)
+            label = str(node_id)
         else:
             try:  # The format specification was never set in stone, it seems
                 label, x, y, *_ = parts + [None, None]
@@ -24,14 +24,15 @@ def read_vertices(lines):
             except (TypeError, ValueError):
                 if x is not None:
                     label = line.strip().split(maxsplit=1)[1]
+        id_idx[node_id] = i
         labels[i] = label
     if np.sum(np.abs(coordinates)) == 0:
         coordinates = None
-    return labels, coordinates
+    return id_idx, labels, coordinates
 
 
-def read_edges(lines, nvertices):
-    lines = [(int(v1), int(v2), abs(float(value)))
+def read_edges(id_idx, lines, nvertices):
+    lines = [(id_idx[v1], id_idx[v2], abs(float(value)))
              for v1, v2, value, *_ in (line.split()[:3] + [1]
                                        for line in lines)]
     v1s, v2s, values = zip(*lines)
@@ -40,20 +41,22 @@ def read_edges(lines, nvertices):
         values = np.lib.stride_tricks.as_strided(
             values[0], (len(values), ), (0, ))
         values.flags.writeable = False
-    return sp.coo_matrix((values, (np.array(v1s) - 1, np.array(v2s) - 1)),
+    return sp.coo_matrix((values, (np.array(v1s), np.array(v2s))),
                          shape=(nvertices, nvertices))
 
 
-def read_edges_list(lines, nvertices):
+def read_edges_list(id_idx, lines, nvertices):
     indptr = []
     indices = []
-    lines = sorted((int(source), [int(t) for t in targets])
+    lines = sorted((id_idx[source], [id_idx[t] for t in targets])
                    for source, *targets in (line.split() for line in lines))
+    # Todo: We can avoid using potentially long Python list by writing directly
+    # into np.arrays
     for source, targets in lines:
         indptr += [len(indices)] * (source - len(indptr))
         indices += targets
     indptr += [len(indices)] * (nvertices - len(indptr) + 1)
-    indices = np.array(indices, dtype=int) - 1
+    indices = np.array(indices, dtype=int)
     data = np.lib.stride_tricks.as_strided(np.ones(1), (len(indices), ), (0, ))
     data.flags.writeable = False
     return sp.csr_matrix((data, indices, indptr), shape=(nvertices, nvertices))
@@ -91,7 +94,7 @@ def read_pajek(path):
                 raise ValueError(
                     "Pajek files with multiple set of vertices are not "
                     "supported")
-            labels, coordinates = read_vertices(line_part)
+            id_idx, labels, coordinates = read_vertices(line_part)
             part_args = part_args.split()
             if len(part_args) > 1:
                 in_first_mode = int(part_args[1])
@@ -99,13 +102,13 @@ def read_pajek(path):
             check_has_vertices()
             edges.append(
                 EdgeType[part_type=="*arcs"](
-                    read_edges(line_part, len(labels)),
+                    read_edges(id_idx, line_part, len(labels)),
                     name=part_args.strip() or part_type[1:]))
         elif part_type in ("*edgeslist", "*arcslist"):
             check_has_vertices()
             edges.append(
                 EdgeType[part_type=="*arcslist"](
-                    read_edges_list(line_part, len(labels)),
+                    read_edges_list(id_idx, line_part, len(labels)),
                     name=part_args.strip() or part_type[1:]))
     network = Network(labels, edges, network_name or "", coordinates)
     if in_first_mode is not None:
