@@ -35,6 +35,11 @@ def read_edges(lines, nvertices):
              for v1, v2, value, *_ in (line.split()[:3] + [1]
                                        for line in lines)]
     v1s, v2s, values = zip(*lines)
+    values = np.array(values)
+    if values.size and np.all(values == values[0]):
+        values = np.lib.stride_tricks.as_strided(
+            values[0], (len(values), ), (0, ))
+        values.flags.writeable = False
     return sp.coo_matrix((values, (np.array(v1s) - 1, np.array(v2s) - 1)),
                          shape=(nvertices, nvertices))
 
@@ -49,9 +54,9 @@ def read_edges_list(lines, nvertices):
         indices += targets
     indptr += [len(indices)] * (nvertices - len(indptr) + 1)
     indices = np.array(indices, dtype=int) - 1
-    return sp.csr_matrix(
-        (np.ones(len(indices), dtype=np.int8), indices, indptr),
-        shape=(nvertices, nvertices))
+    data = np.lib.stride_tricks.as_strided(np.ones(1), (len(indices), ), (0, ))
+    data.flags.writeable = False
+    return sp.csr_matrix((data, indices, indptr), shape=(nvertices, nvertices))
 
 
 def read_pajek(path):
