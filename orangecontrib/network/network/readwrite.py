@@ -23,8 +23,8 @@ class PajekReader(NetFileFormat):
         return read_pajek(filename)
 
     @staticmethod
-    def write(filename, network):
-        return write_pajek(filename, network)
+    def write(filename, network, labels=None):
+        return write_pajek(filename, network, labels)
 
 
 def read_vertices(lines):
@@ -127,28 +127,31 @@ def read_pajek(path):
     return network
 
 
-def write_pajek(path, network):
+def write_pajek(path, network, labels=None):
     if len(network.edges) > 1:
         raise TypeError(
             "This implementation of Pajek format does not support saving "
             "networks with multiple edge types.")
     f = open(path, "wt") if isinstance(path, str) else path
     f.write(f'*Network "{network.name}"\n')
-    _write_vertices(f, network)
+    _write_vertices(f, network, labels)
     if network.edges:
         _write_edges(f, network)
     if f is not path:
         f.close()
 
 
-def _write_vertices(f, network):
+def _write_vertices(f, network, labels=None):
+    if labels is None:
+        labels = network.nodes
+
     f.write(f"*Vertices\t{network.number_of_nodes()}\n")
     if network.coordinates is not None:
         coords = network.coordinates
     else:
         coords = repeat(())
-    for i, label, coordinates in zip(count(start=1), network.nodes, coords):
-        f.write(f"{i:6} {label}\t" +
+    for i, label, coordinates in zip(count(start=1), labels, coords):
+        f.write(f'{i:6} "{label}"\t' +
                 f"{' '.join(f'{c:.4f}' for c in coordinates)}\n")
 
 
