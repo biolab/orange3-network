@@ -12,31 +12,38 @@ Community Detection in Graphs
 
 import random
 import itertools
+import numpy as np
 
 from Orange.data import Domain, Table, DiscreteVariable
 
 
 def add_results_to_items(G, labels, var_name):
     items = G.nodes
-    if items is not None and var_name in items.domain:
-        # a unique `var_name` is assumed to be obtained in OWNxClustering prior to calling this;
-        # only check metas to enable overriding results on multiple reruns
-        effective_metas = list(filter(lambda meta: meta.name != var_name, items.domain.metas))
 
-        domain = Domain(items.domain.attributes, items.domain.class_vars, effective_metas)
-        items = Table.from_table(domain, items)
+    new_attr = DiscreteVariable(
+        var_name, values=["C%d" % (x + 1) for x in set(labels.values())])
+    new_data = np.array(list(labels.values())).reshape(-1, 1)
 
-    attrs = [DiscreteVariable(
-        var_name,
-        values=["C%d" % (x + 1) for x in set(labels.values())])]
+    if items is not None:
+        # a unique `var_name` is assumed to be obtained in OWNxClustering prior
+        # to calling this; only check metas to enable overriding results on
+        # multiple reruns
+        effective_metas = [idx for idx, meta in enumerate(items.domain.metas)
+                           if meta.name != var_name]
+        metas = np.take(items.domain.metas, effective_metas).tolist()
+        metas.append(new_attr)
 
-    domain = Domain([], metas=attrs)
-    data = Table(domain, [[l] for l in labels.values()])
+        meta_data = items.metas[:, effective_metas]
+        meta_data = np.hstack((meta_data, new_data))
 
-    if items is None:
-        G.node = data
+        domain = Domain(items.domain.attributes, items.domain.class_vars, metas)
+        data = Table(domain, items.X, items.Y, meta_data, items.W)
+        G.nodes = data
     else:
-        G.nodes = Table.concatenate((items, data))
+        empty = np.array([[] for _ in range(new_data.shape[0])])
+        domain = Domain([], [], metas=[new_attr])
+        data = Table(domain, empty, empty, new_data)
+        G.node = data
 
 
 class CommunityDetection(object):
