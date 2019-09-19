@@ -179,12 +179,12 @@ class OWNxFile(OWWidget):
         self.Outputs.network.send(self.network)
         self.Outputs.items.send(self.network.nodes)
 
-        n_edges = self.network.number_of_nodes()
-        n_nodes = self.network.number_of_edges()
-        summary = f"{n_edges} nodes, {n_nodes} edges"
+        n_nodes = self.network.number_of_nodes()
+        n_edges = self.network.number_of_edges()
+        summary = f"{n_nodes} / {n_edges}"
         details = \
             ('Directed' if self.network.edges[0].directed else 'Undirected') \
-            + f" network with {n_nodes} nodes and {n_edges} edges."
+            + f" network with\n{n_nodes} nodes and {n_edges} edges."
         self.info.set_output_summary(summary, details)
 
     def set_network_nodes(self):
