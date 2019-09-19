@@ -1,3 +1,5 @@
+import unittest
+
 import numpy as np
 
 from orangecontrib.network.widgets.tests.utils import NetworkTest
@@ -49,8 +51,10 @@ class TestOWNxExplorer(NetworkTest):
         self.assertSetEqual(set(self.widget.get_reachable([GENES["PSMA2"]])),
                             {GENES["PSMA2"], GENES["PSMA4"], GENES["PSMA5"], GENES["PSMA6"]})
         # test that zero-weight edges do not get dropped due to sparse matrix representation
-        # (GH-128)
         self.assertSetEqual(set(self.widget.get_reachable([GENES["IDS"]])),
                             {GENES["IDS"], GENES["GNS"]})
         self.assertSetEqual(set(self.widget.get_reachable([GENES["BLVRB"]])),
                             {GENES["BLVRB"], GENES["HMOX1"], GENES["BLVRA"]})
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3,6 +3,7 @@ from typing import Sequence
 
 import numpy as np
 import scipy.sparse as sp
+from numpy.lib.stride_tricks import as_strided
 
 
 class Edges:
@@ -131,8 +132,34 @@ class UndirectedEdges(Edges):
                  edge_data: Sequence = None,
                  name: str = ""):
         super().__init__(edges, edge_data, name)
-        self.twoway_edges = self.edges + self.edges.transpose()
-        self.twoway_edges.sum_duplicates()
+        self.twoway_edges = self._make_twoway_edges()
+
+    def _make_twoway_edges(self):
+        edges = self.edges.copy()
+        n_edges = len(edges.data)
+        zero_strided = self.edges.data.strides == (0, )
+
+        if not n_edges:
+            return edges
+
+        # Replaces 0s with max + 1 so sparse operations don't remove them
+        if zero_strided:
+            max_weight = edges.data[0]
+            # Save (temporary) memory and CPU time
+            edges.data = as_strided(1, (n_edges, ), (0,))
+        else:
+            max_weight = np.max(edges.data)
+            edges.data[edges.data == 0] = max_weight + 1
+
+        twe = edges + edges.transpose()
+        twe.sum_duplicates()
+
+        if zero_strided:
+            # Save memory
+            twe.data = as_strided(max_weight, (n_edges, ), (0,))
+        else:
+            twe.data[twe.data > max_weight] = 0
+        return twe
 
     def degrees(self, *, weighted=False):
         return self._compute_degrees(self.twoway_edges, weighted)
