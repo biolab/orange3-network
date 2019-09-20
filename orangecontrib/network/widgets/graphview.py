@@ -306,9 +306,9 @@ class GraphView(OWScatterPlotBase):
         # Poor man's double click
         indices = [p.data() for p in points]
         last_time, last_indices = self.last_click
+        self.last_click = (time.time(), indices)
         if time.time() - last_time < 0.5 and indices == last_indices:
             indices = self.master.get_reachable(indices)
-        self.last_click = (time.time(), indices)
         self.select_by_indices(indices)
 
     def unselect_all(self):
