@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+<g>
+	<path fill="#5D5D5D" d="M37,6H7v36h34V9.993L37,6z M15,8h18v8.993L32,18H16l-1-1.007V8z M37,40H11V24h2.995h17.972H37V40z"/>
+	<polygon fill="#FFFFFF" points="13.995,24 11,24 11,40 37,40 37,24 31.967,24 	"/>
+	<path fill="#FFFFFF" d="M32,18l1-1.007V8H15v8.993L16,18H32z M27,9h4v8h-4V9z"/>
+	<rect x="27" y="9" fill="#5D5D5D" width="4" height="8"/>
+</g>
+<g>
+	<circle fill="#333333" stroke="#FFFFFF" stroke-miterlimit="10" cx="25.413" cy="23.482" r="4.61"/>
+	<circle fill="#333333" stroke="#FFFFFF" stroke-width="0.5" stroke-miterlimit="10" cx="30.51" cy="35.41" r="3.745"/>
+	<circle fill="#333333" stroke="#FFFFFF" stroke-miterlimit="10" cx="38.693" cy="28.753" r="3.744"/>
+	<circle fill="#333333" stroke="#FFFFFF" stroke-miterlimit="10" cx="14.255" cy="30.093" r="3.744"/>
+	<polyline fill="none" stroke="#333333" stroke-miterlimit="10" points="13.255,31.094 25.413,23.482 30.509,35.409 	"/>
+	<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="38.693" y1="28.753" x2="25.413" y2="23.482"/>
+</g>
+</svg>

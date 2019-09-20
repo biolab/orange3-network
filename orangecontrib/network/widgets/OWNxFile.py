@@ -3,9 +3,12 @@ from itertools import product
 from pkg_resources import load_entry_point
 from traceback import format_exception_only
 
+import numpy as np
+
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
-from Orange.data import Table
+from Orange.data import Table, Domain, StringVariable
+from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -206,10 +209,40 @@ class OWNxFile(OWWidget):
                 else:
                     if info_msg is not None:
                         info_msg()
-                    self.network.nodes = data_source
+                    self.network.nodes = self._combined_data(data_source)
                 break
         else:
+            self.network.nodes = self._label_to_tabel()
             self.Information.suggest_annotation()
+
+    def _combined_data(self, source):
+        nodes = np.array(self.original_nodes, dtype=str)
+        if nodes.ndim != 1:
+            return source
+        try:
+            nums = np.sort(np.array([int(x) for x in nodes]))
+        except ValueError:
+            pass
+        else:
+            if np.all(nums[1:] - nums[:-1] == 1):
+                return source
+
+        src_dom = source.domain
+        label_attr = StringVariable(get_unique_names(src_dom, "node_label"))
+        domain = Domain(src_dom.attributes, src_dom.class_vars,
+                        src_dom.metas + (label_attr, ))
+        data = source.transform(domain)
+        data.metas[:, -1] = nodes
+        return data
+
+    def _label_to_tabel(self):
+        domain = Domain([], [], [StringVariable("node_label")])
+        n = len(self.original_nodes)
+        data = Table.from_numpy(
+            domain, np.empty((n, 0)), np.empty((n, 0)),
+            np.array(self.original_nodes, dtype=str).reshape(-1, 1))
+        return data
+
 
     def sendReport(self):
         self.reportSettings(
