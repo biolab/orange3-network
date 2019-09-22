@@ -158,24 +158,34 @@ class TestTwoMode(unittest.TestCase):
         )
 
     def test_to_single_mode(self):
-        def assert_edges(actual, expected):
-            self.assertEqual(len(actual), len(expected))
-            self.assertEqual(set(actual), set(expected))
-
         net = self._create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
                                 (2, 4, 4), (2, 5, 2), (3, 6, 6)))
 
         net1 = tm.to_single_mode(
             net,
             np.array([True] * 4 + [False] * 3),
-            np.array([False] * 3 + [True] * 4),
+            np.array([False] * 4 + [True] * 3),
             tm.NoWeights)
 
         np.testing.assert_equal(
             net1.edges[0].edges.todense(),
-            np.array([[0, 1, 1],
-                      [0, 0, 1],
-                      [0, 0, 0]])
+            np.array([[0, 1, 1, 0],
+                      [0, 0, 1, 0],
+                      [0, 0, 0, 0],
+                      [0, 0, 0, 0]])
+        )
+
+        net = self._create_net(((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0), (2, 3, 1.0)), n=5)
+        net2 = tm.to_single_mode(
+            net,
+            np.array([True, False, False, True, False]),
+            np.array([False, False, True, False, True]),
+            tm.NoWeights
+        )
+        np.testing.assert_equal(
+            net2.edges[0].edges.todense(),
+            np.array([[0, 1],
+                      [0, 0]])
         )
 
 
