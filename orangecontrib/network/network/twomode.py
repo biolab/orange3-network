@@ -44,10 +44,10 @@ def _dot_edges(normalization):
         new_edges = np.dot(edges, edges.T).tocoo()
         mask = np.logical_and(
             new_edges.row < new_edges.col,  new_edges.data != 0)
-        n = np.sum(mask)
+
         return sp.csr_matrix(
             (new_edges.data[mask], (new_edges.row[mask], new_edges.col[mask])),
-            shape=(n, n))
+            shape=new_edges.shape)
     return norm_dot
 
 
