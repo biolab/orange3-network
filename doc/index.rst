@@ -7,14 +7,14 @@ Widgets
 .. toctree::
    :maxdepth: 1
 
-   widgets/networkfile.md
-   widgets/networkexplorer.md
-   widgets/networkgenerator.md
-   widgets/networkanalysis.md
-   widgets/networkclustering.md
-   widgets/networkofgroups.md
-   widgets/networkfromdistances.md
-   widgets/singlemode.md
+   widgets/networkfile
+   widgets/networkexplorer
+   widgets/networkgenerator
+   widgets/networkanalysis
+   widgets/networkclustering
+   widgets/networkofgroups
+   widgets/networkfromdistances
+   widgets/singlemode
 
 Indices and tables
 ==================

@@ -1,0 +1,70 @@
+[
+ [
+  "Networks",
+  [
+   {
+    "text": "Network File",
+    "doc": "widgets/networkfile.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkFile.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network Explorer",
+    "doc": "widgets/networkexplorer.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkExplorer.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network Generator",
+    "doc": "widgets/networkgenerator.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkGenerator.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network Analysis",
+    "doc": "widgets/networkanalysis.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkAnalysis.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network Clustering",
+    "doc": "widgets/networkclustering.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkClustering.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network Of Groups",
+    "doc": "widgets/networkofgroups",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkGroups.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Network from Distances",
+    "doc": "widgets/networkfromdistances.md",
+    "icon": "../orangecontrib/network/widgets/icons/NetworkFromDistances.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Single Mode",
+    "doc": "widgets/singlemode.md",
+    "icon": "../orangecontrib/network/widgets/icons/SingleMode.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   },
+   {
+    "text": "Save Network",
+    "doc": null,
+    "icon": "../orangecontrib/network/widgets/icons/NetworkSave.svg",
+    "background": "#C0FF97",
+    "keywords": []
+   }
+  ]
+ ]
+]
