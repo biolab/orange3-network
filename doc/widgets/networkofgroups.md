@@ -1,4 +1,4 @@
-Network of Groups
+Network Of Groups
 =================
 
 Group instances by feature and connect related groups.
