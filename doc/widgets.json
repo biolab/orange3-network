@@ -39,13 +39,13 @@
    },
    {
     "text": "Network Of Groups",
-    "doc": "widgets/networkofgroups",
+    "doc": "widgets/networkofgroups.md",
     "icon": "../orangecontrib/network/widgets/icons/NetworkGroups.svg",
     "background": "#C0FF97",
     "keywords": []
    },
    {
-    "text": "Network from Distances",
+    "text": "Network From Distances",
     "doc": "widgets/networkfromdistances.md",
     "icon": "../orangecontrib/network/widgets/icons/NetworkFromDistances.svg",
     "background": "#C0FF97",

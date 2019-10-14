@@ -26,7 +26,7 @@ class EdgeWeights:
 
 
 class OWNxFromDistances(widget.OWWidget):
-    name = "Network from Distances"
+    name = "Network From Distances"
     description = ('Constructs Graph object by connecting nodes from '
                    'data table where distance between them is between '
                    'given threshold.')
