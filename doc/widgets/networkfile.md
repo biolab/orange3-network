@@ -25,4 +25,4 @@ Example
 
 We loaded the *lastfm.net* from documentation data set (dropdown → Browse documentation networks). The nicest way to observe network data is with the [Network Explorer](networkexplorer.md) widget. **Network File** widget automatically matched the corresponding data file (*lastfm.net* with *lastfm.tab*), so node attributes are available in the widget.
 
-![](images/Network-File-Example.png)
+![](images/network-file-example.png)
