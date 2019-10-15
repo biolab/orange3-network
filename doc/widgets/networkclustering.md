@@ -13,7 +13,7 @@ Detect clusters in a network.
 
 **Network Clustering** widget finds clusters in a network. Clustering works with two algorithms, one from Raghavan et al. (2007), which uses label propagation to find appropriate clusters, and one from Leung et al. (2009), which builds upon the work from Raghavan and adds hop attenuation as a parameters for cluster formation.
 
-![](images/Network-Clustering-stamped.png)
+![](images/network-clustering-stamped.png)
 
 1. Max. iterations: maximum number of iteration allowed for the algorithm to run (can converge before reaching the maximum).
 2. Clustering method:
@@ -28,4 +28,4 @@ Example
 
 Keep in mind that **Network Explorer** will color the 10 largest clusters and color the rest as 'Other'.
 
-![](images/Network-Clustering-Example.png)
+![](images/network-clustering-example.png)

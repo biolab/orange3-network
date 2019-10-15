@@ -49,4 +49,4 @@ This simple example shows how **Network Analysis** can enrich the workflow. We h
 
 We can visualize the network in [Network Explorer](networkexplorer.md). In the widget we color by *best tag*, as is the default for this data set. But now we can also set the size of the nodes to correspond to the computed *Degree centrality*. This is a great way to visualize the properties of the network.
 
-![](images/Network-Analysis-Example.png)
+![](images/network-analysis-example.png)
