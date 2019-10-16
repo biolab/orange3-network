@@ -402,7 +402,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.set_mark_mode(0)
         self.positions = None
 
-        if not graph or graph.number_of_nodes == 0:
+        if not graph or graph.number_of_nodes() == 0:
             set_graph_none()
             return
         if graph.number_of_nodes() + graph.number_of_edges() > 30000:
