@@ -56,5 +56,11 @@ class TestOWNxExplorer(NetworkTest):
         self.assertSetEqual(set(self.widget.get_reachable([GENES["BLVRB"]])),
                             {GENES["BLVRB"], GENES["HMOX1"], GENES["BLVRA"]})
 
+    def test_empty_network(self):
+        net = Network([], [])
+        # should not crash
+        self.send_signal(self.widget.Inputs.network, net)
+
+
 if __name__ == "__main__":
     unittest.main()
