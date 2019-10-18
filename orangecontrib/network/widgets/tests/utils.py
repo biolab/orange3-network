@@ -1,10 +1,22 @@
 import os
+import numpy as np
+import scipy.sparse as sp
 
 import orangecontrib
 from Orange.data import Table
 
+from orangecontrib.network import Network
+from orangecontrib.network.network.base import DirectedEdges, UndirectedEdges
 from orangecontrib.network.widgets.OWNxFile import OWNxFile
 from orangewidget.tests.base import WidgetTest
+
+
+def _create_net(edges, n=None, directed=False):
+    edge_cons = DirectedEdges if directed else UndirectedEdges
+    row, col, data = zip(*edges)
+    if n is None:
+        n = max(*row, *col) + 1
+    return Network(np.arange(n), edge_cons(sp.coo_matrix((data, (row, col)), shape=(n, n))))
 
 
 class NetworkTest(WidgetTest):
