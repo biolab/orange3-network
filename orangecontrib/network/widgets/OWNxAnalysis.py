@@ -330,7 +330,7 @@ class OWNxAnalysis(widget.OWWidget):
         # This does not really work because functions called in those
         # threads do not observe the "is_terminated" flag and won't quit
         if name is None:
-            to_stop = [job.method.name for job in self.running_jobs]
+            to_stop = list(self.running_jobs.keys())
         elif name in self.running_jobs:
             to_stop = [name]
         else:
