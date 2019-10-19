@@ -27,6 +27,23 @@ def shortest_paths_nan_diag(network):
     diag[:] = np.nan
     return paths
 
+
+def density(network):
+    n = network.number_of_nodes()
+    if n < 2:
+        return 0.0
+
+    num = network.number_of_edges()
+    if not network.edges[0].directed:
+        num *= 2
+    return num / (n * (n - 1))
+
+
+def avg_degree(network):
+    m = network.number_of_edges()
+    n = max(network.number_of_nodes(), 1)
+    return m / n if network.edges[0].directed else 2 * m / n
+
 # TODO: adapt betweenness_centrality and perhaps other statistics from
 # https://github.com/networkdynamics/zenlib/blob/master/src/zen/algorithms/centrality.pyx
 
@@ -43,11 +60,8 @@ METHODS = (
 
     ("number_of_nodes", lambda n: n, "Number of nodes", GRAPHLEVEL),
     ("number_of_edges", lambda e: e, "Number of edges", GRAPHLEVEL),
-    ("average_degree",
-     lambda degrees: np.mean(degrees), "Average degree", GRAPHLEVEL),
-    ("density",
-     lambda n, e: 2 * (e - n + 1) / (n * (n - 3) + 2), # what if it's negative?! on last fm?!?!
-     "Density", GRAPHLEVEL),
+    ("average_degree", lambda network: avg_degree(network), "Average degree", GRAPHLEVEL),
+    ("density", lambda network: density(network), "Density", GRAPHLEVEL),
 
     ("shortest_paths", shortest_paths_nan_diag, "Shortest paths"),
     ("diameter",
