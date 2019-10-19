@@ -419,14 +419,12 @@ class OWNxAnalysis(widget.OWWidget):
                 self.set_label_for(name)
 
     def send_report(self):
-        self.report_items(
-            items=[(method.label, f"{self.known[attr]:.4g}")
-             for attr, method in METHODS.items()
-             if method.level == GRAPHLEVEL
-             and getattr(self, attr)
-             and attr in self.known
-             and isinstance(self.known[attr], (int, float))]
-        )
+        self.report_items("", items=[(method.label, f"{self.known[attr]:.4g}")
+                                     for attr, method in METHODS.items()
+                                     if method.level == GRAPHLEVEL
+                                     and getattr(self, attr)
+                                     and attr in self.known
+                                     and isinstance(self.known[attr], (int, float))])
 
 
 def main():
