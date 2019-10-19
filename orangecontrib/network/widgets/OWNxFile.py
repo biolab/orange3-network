@@ -5,6 +5,7 @@ from traceback import format_exception_only
 
 import numpy as np
 
+from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
 from Orange.data import Table, Domain, StringVariable
@@ -63,7 +64,7 @@ class OWNxFile(OWWidget):
         self.data = None
         self.net_index = 0
 
-        hb = gui.widgetBox(self.controlArea, orientation="horizontal")
+        hb = gui.widgetBox(self.controlArea, orientation=Qt.Horizontal)
         self.filecombo = gui.comboBox(
             hb, self, "net_index", callback=self.select_net_file,
             minimumWidth=250)
