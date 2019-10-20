@@ -48,9 +48,6 @@ def avg_degree(network):
 # TODO: adapt betweenness_centrality and perhaps other statistics from
 # https://github.com/networkdynamics/zenlib/blob/master/src/zen/algorithms/centrality.pyx
 
-# TODO: Add a flag telling whether the statistics is valid for directed,
-# undirected or both (default); show valid statistics
-
 # TODO: Combo that lets the user set edge types to use (or all)
 
 # Order of this list also defines execution priority
