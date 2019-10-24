@@ -183,11 +183,11 @@ def aggregate_over_edge_types(aggregate, arg_no=0):
         @wraps(f)
         def wrapper(graph, *args, **kwargs):
             if len(args) <= arg_no or args[arg_no] is None:
-                return aggregate(
+                return aggregate([
                     f(graph,
                       *args[:arg_no], edge_type, *args[arg_no + 1:],
                       **kwargs)
-                    for edge_type in range(len(graph.edges)))
+                    for edge_type in range(len(graph.edges))])
             else:
                 return f(graph, *args, **kwargs)
         return wrapper
