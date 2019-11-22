@@ -6,7 +6,7 @@ from AnyQt.QtCore import QLineF
 from AnyQt.QtGui import QPen, QBrush, QColor
 
 from Orange.widgets.tests.base import GuiTest
-from ..graphview import PlotVarWidthCurveItem
+from orangecontrib.network.widgets.graphview import PlotVarWidthCurveItem
 
 class TestPlotVarWidthCurveItem(GuiTest):
     def line_to_tuple(self, line: QLineF):

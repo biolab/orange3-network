@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QLineF, QSize
+from AnyQt.QtCore import QLineF, QSize, Qt
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QGridLayout
 from scipy.sparse import csgraph
@@ -90,7 +90,7 @@ class OWNxFromDistances(widget.OWWidget):
 
     def addHistogramControls(self):
         boxGeneral = gui.widgetBox(self.controlArea, box="Edges")
-        ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
+        ribg = gui.widgetBox(boxGeneral, None, orientation=Qt.Horizontal, addSpace=False)
         self.spin_high = gui.doubleSpin(boxGeneral, self, 'spinUpperThreshold',
                                         0, float('inf'), 0.001, decimals=3,
                                         label='Distance threshold',
@@ -99,19 +99,19 @@ class OWNxFromDistances(widget.OWWidget):
                                         controlWidth=60)
         self.histogram.region.sigRegionChangeFinished.connect(self.spinboxFromHistogramRegion)
 
-        ribg = gui.widgetBox(boxGeneral, None, orientation="horizontal", addSpace=False)
+        ribg = gui.widgetBox(boxGeneral, None, orientation=Qt.Horizontal, addSpace=False)
 
         gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1,
-                      label="Percentile", orientation='horizontal',
+                      label="Percentile", orientation=Qt.Horizontal,
                       callback=self.setPercentil,
                       callbackOnReturn=1, controlWidth=60)
 
-        hbox = gui.widgetBox(boxGeneral, orientation='horizontal')
+        hbox = gui.widgetBox(boxGeneral, orientation=Qt.Horizontal)
         knn_cb = gui.checkBox(hbox, self, 'include_knn',
                               label='Include closest neighbors',
                               callback=self.generateGraph)
         knn = gui.spin(hbox, self, "kNN", 1, 1000, 1,
-                       orientation='horizontal',
+                       orientation=Qt.Horizontal,
                        callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
         knn_cb.disables = [knn]
         knn_cb.makeConsistent()
@@ -145,7 +145,7 @@ class OWNxFromDistances(widget.OWWidget):
         ribg = gui.radioButtonsInBox(self.controlArea, self, "edge_weights",
                                      box="Edge weights",
                                      callback=self.generateGraph)
-        hb = gui.widgetBox(ribg, None, orientation="horizontal", addSpace=False)
+        hb = gui.widgetBox(ribg, None, orientation=Qt.Horizontal, addSpace=False)
         gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
         gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
 
