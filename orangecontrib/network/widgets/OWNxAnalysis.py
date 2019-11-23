@@ -363,8 +363,10 @@ class OWNxAnalysis(widget.OWWidget):
         for name in to_stop:
             job = self.running_jobs[name]
             job.is_terminated = True
+            job.finished.disconnect()
             job.quit()
         for name in to_stop:
+            job = self.running_jobs[name]
             job.wait()
             setattr(self, "lbl_" + name, "terminated")
             del self.running_jobs[name]
