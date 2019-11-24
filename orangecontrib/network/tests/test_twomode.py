@@ -6,6 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 import orangecontrib.network.network.twomode as tm
 from orangecontrib.network import Network
+from orangecontrib.network.widgets.tests.utils import _create_net
 
 
 class TestTwoMode(unittest.TestCase):
@@ -73,14 +74,6 @@ class TestTwoMode(unittest.TestCase):
              (1, 2, 5 / 10 * 4 / 10 + 3 / 8 * 2 / 6))
         )
 
-    @staticmethod
-    def _create_net(edges, n=None):
-        row, col, data = zip(*edges)
-        if n is None:
-            n = max(*row, *col) + 1
-        return Network(np.arange(n),
-                       sp.coo_matrix((data, (row, col)), shape=(n, n)))
-
     def test_filtered_edges(self):
         def assert_edges(actual, expected):
             self.assertEqual(len(actual.data), len(expected))
@@ -88,8 +81,8 @@ class TestTwoMode(unittest.TestCase):
             self.assertEqual(
                 set(zip(actual.row, actual.col, actual.data)), set(expected))
 
-        net = self._create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
-                                (2, 4, 4), (2, 5, 2), (3, 6, 6)))
+        net = _create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
+                           (2, 4, 4), (2, 5, 2), (3, 6, 6)))
 
         # All edges
         assert_edges(
@@ -158,8 +151,8 @@ class TestTwoMode(unittest.TestCase):
         )
 
     def test_to_single_mode(self):
-        net = self._create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
-                                (2, 4, 4), (2, 5, 2), (3, 6, 6)))
+        net = _create_net(((0, 4, 1.), (4, 1, 5), (1, 5, 3),
+                           (2, 4, 4), (2, 5, 2), (3, 6, 6)))
 
         net1 = tm.to_single_mode(
             net,
@@ -175,7 +168,7 @@ class TestTwoMode(unittest.TestCase):
                       [0, 0, 0, 0]])
         )
 
-        net = self._create_net(((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0), (2, 3, 1.0)), n=5)
+        net = _create_net(((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0), (2, 3, 1.0)), n=5)
         net2 = tm.to_single_mode(
             net,
             np.array([True, False, False, True, False]),

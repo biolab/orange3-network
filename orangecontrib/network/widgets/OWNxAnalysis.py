@@ -14,6 +14,7 @@ from Orange.widgets.widget import Input, Output, Msg
 from orangecontrib.network.network import Network
 
 NODELEVEL, GRAPHLEVEL, INTERNAL = range(3)
+UNDIRECTED, DIRECTED, GENERAL = range(3)
 
 ERRORED = object()
 TERMINATED = object()
@@ -27,11 +28,25 @@ def shortest_paths_nan_diag(network):
     diag[:] = np.nan
     return paths
 
+
+def density(network):
+    n = network.number_of_nodes()
+    if n < 2:
+        return 0.0
+
+    num = network.number_of_edges()
+    if not network.edges[0].directed:
+        num *= 2
+    return num / (n * (n - 1))
+
+
+def avg_degree(network):
+    m = network.number_of_edges()
+    n = max(network.number_of_nodes(), 1)
+    return m / n if network.edges[0].directed else 2 * m / n
+
 # TODO: adapt betweenness_centrality and perhaps other statistics from
 # https://github.com/networkdynamics/zenlib/blob/master/src/zen/algorithms/centrality.pyx
-
-# TODO: Add a flag telling whether the statistics is valid for directed,
-# undirected or both (default); show valid statistics
 
 # TODO: Combo that lets the user set edge types to use (or all)
 
@@ -39,62 +54,59 @@ def shortest_paths_nan_diag(network):
 METHODS = (
     ("n", lambda network: network.number_of_nodes()),
     ("e", lambda network: network.number_of_edges()),
-    ("degrees", lambda network: network.degrees(), "Degree", NODELEVEL),
+    ("degrees", lambda network: network.degrees(), "Degree", NODELEVEL, GENERAL),
 
-    ("number_of_nodes", lambda n: n, "Number of nodes", GRAPHLEVEL),
-    ("number_of_edges", lambda e: e, "Number of edges", GRAPHLEVEL),
-    ("average_degree",
-     lambda degrees: np.mean(degrees), "Average degree", GRAPHLEVEL),
-    ("density",
-     lambda n, e: 2 * (e - n + 1) / (n * (n - 3) + 2), # what if it's negative?! on last fm?!?!
-     "Density", GRAPHLEVEL),
+    ("number_of_nodes", lambda n: n, "Number of nodes", GRAPHLEVEL, GENERAL),
+    ("number_of_edges", lambda e: e, "Number of edges", GRAPHLEVEL, GENERAL),
+    ("average_degree", lambda network: avg_degree(network), "Average degree", GRAPHLEVEL, GENERAL),
+    ("density", lambda network: density(network), "Density", GRAPHLEVEL, GENERAL),
 
     ("shortest_paths", shortest_paths_nan_diag, "Shortest paths"),
     ("diameter",
-     lambda shortest_paths: np.nanmax(shortest_paths), "Diameter", GRAPHLEVEL),
+     lambda shortest_paths: np.nanmax(shortest_paths), "Diameter", GRAPHLEVEL, GENERAL),
     ("radius",
      lambda shortest_paths: np.nanmin(np.nanmax(shortest_paths, axis=1)),
-     "Radius", GRAPHLEVEL),
+     "Radius", GRAPHLEVEL, GENERAL),
     ("average_shortest_path_length",
      lambda shortest_paths: np.nanmean(shortest_paths),
-     "Average shortest path length", GRAPHLEVEL),
+     "Average shortest path length", GRAPHLEVEL, GENERAL),
 
     ("number_strongly_connected_components", lambda network:
          csgraph.connected_components(network.edges[0].edges, False)[0],
-         "Number of strongly connected components", GRAPHLEVEL),
+         "Number of strongly connected components", GRAPHLEVEL, DIRECTED),
     ("number_weakly_connected_components", lambda network:
          csgraph.connected_components(network.edges[0].edges, True)[0],
-         "Number of weakly connected components", GRAPHLEVEL),
+         "Number of weakly connected components", GRAPHLEVEL, DIRECTED),
 
-    ("in_degrees", lambda network: network.in_degrees(), "In-degree", NODELEVEL),
-    ("out_degrees", lambda network: network.out_degrees(), "Out-degree", NODELEVEL),
+    ("in_degrees", lambda network: network.in_degrees(), "In-degree", NODELEVEL, GENERAL),
+    ("out_degrees", lambda network: network.out_degrees(), "Out-degree", NODELEVEL, GENERAL),
     ("average_neighbour_degrees",
      lambda network, degrees: np.fromiter(
          (np.mean(degrees[network.neighbours(i)]) if degree else np.nan
           for i, degree in enumerate(degrees)),
          dtype=np.float, count=len(degrees)),
-     "Average neighbor degree", NODELEVEL),
+     "Average neighbor degree", NODELEVEL, GENERAL),
     ("degree_centrality",
      lambda degrees, n: n and degrees / (n - 1) if n > 1 else 0,
-     "Degree centrality", NODELEVEL),
+     "Degree centrality", NODELEVEL, GENERAL),
     ("in_degree_centrality",
      lambda in_degrees, n: in_degrees / (n - 1) if n > 1 else 0,
-     "In-degree centrality", NODELEVEL),
+     "In-degree centrality", NODELEVEL, GENERAL),
     ("out_degree_centrality",
      lambda out_degrees, n: out_degrees / (n - 1) if n > 1 else 0,
-     "Out-degree centrality", NODELEVEL),
+     "Out-degree centrality", NODELEVEL, GENERAL),
     ("closeness_centrality",
      lambda shortest_paths: 1 / np.nanmean(shortest_paths, axis=1),
-     "Closeness centrality", NODELEVEL)
+     "Closeness centrality", NODELEVEL, GENERAL)
 )
 
 MethodDefinition = namedtuple(
     "MethodDefinition",
-    ["name", "func", "label", "level", "args"])
+    ["name", "func", "label", "level", "edge_constraint", "args"])
 
 
 METHODS = {definition[0]:
-    MethodDefinition(*(definition + ("", None, "", INTERNAL)[len(definition):]),
+    MethodDefinition(*(definition + ("", None, "", INTERNAL, GENERAL)[len(definition):]),
                      inspect.getfullargspec(definition[1]).args)
     for definition in METHODS}
 
@@ -208,6 +220,7 @@ class OWNxAnalysis(widget.OWWidget):
         graph_indices = gui.createTabPage(tabs, "Graph-level indices")
         node_indices = gui.createTabPage(tabs, "Node-level indices")
 
+        self.method_cbs = {}
         for method in METHODS.values():
             if method.level == INTERNAL:
                 continue
@@ -216,10 +229,12 @@ class OWNxAnalysis(widget.OWWidget):
 
             box = gui.hBox(
                 node_indices if method.level == NODELEVEL else graph_indices)
-            gui.checkBox(
+            cb = gui.checkBox(
                 box, self, method.name, method.label,
                 callback=lambda attr=method.name: self.method_clicked(attr)
             )
+            self.method_cbs[method.name] = cb
+
             box.layout().addStretch(1)
             lbl = gui.label(box, self, f"%(lbl_{method.name})s")
             setattr(self, "tool_" + method.name, lbl)
@@ -232,8 +247,28 @@ class OWNxAnalysis(widget.OWWidget):
         self.cancel_job()
         self.graph = graph
 
+        allowed_edge_types = {GENERAL, DIRECTED, UNDIRECTED}
+        if graph is not None:
+            allowed_edge_types.remove(UNDIRECTED if self.graph.edges[0].directed else DIRECTED)
+
         self.known = {}
         for name in METHODS:
+            curr_method = METHODS[name]
+            if curr_method.level == INTERNAL:
+                continue
+
+            lbl_obj = getattr(self, "tool_{}".format(name))
+            cb_obj = self.method_cbs[name]
+
+            # disable/re-enable valid graph indices
+            if curr_method.edge_constraint not in allowed_edge_types:
+                lbl_obj.setDisabled(True)
+                cb_obj.setChecked(False)
+                cb_obj.setEnabled(False)
+            else:
+                lbl_obj.setDisabled(False)
+                cb_obj.setEnabled(True)
+
             setattr(self, f"lbl_{name}", "")
 
         if graph is not None:
@@ -316,7 +351,7 @@ class OWNxAnalysis(widget.OWWidget):
         # This does not really work because functions called in those
         # threads do not observe the "is_terminated" flag and won't quit
         if name is None:
-            to_stop = [job.method.name for job in self.running_jobs]
+            to_stop = list(self.running_jobs.keys())
         elif name in self.running_jobs:
             to_stop = [name]
         else:
@@ -328,8 +363,10 @@ class OWNxAnalysis(widget.OWWidget):
         for name in to_stop:
             job = self.running_jobs[name]
             job.is_terminated = True
+            job.finished.disconnect()
             job.quit()
         for name in to_stop:
+            job = self.running_jobs[name]
             job.wait()
             setattr(self, "lbl_" + name, "terminated")
             del self.running_jobs[name]
@@ -381,14 +418,12 @@ class OWNxAnalysis(widget.OWWidget):
                 self.set_label_for(name)
 
     def send_report(self):
-        self.report_items(
-            items=[(method.label, f"{self.known[attr]:.4g}")
-             for attr, method in METHODS.items()
-             if method.level == GRAPHLEVEL
-             and getattr(self, attr)
-             and attr in self.known
-             and isinstance(self.known[attr], (int, float))]
-        )
+        self.report_items("", items=[(method.label, f"{self.known[attr]:.4g}")
+                                     for attr, method in METHODS.items()
+                                     if method.level == GRAPHLEVEL
+                                     and getattr(self, attr)
+                                     and attr in self.known
+                                     and isinstance(self.known[attr], (int, float))])
 
 
 def main():

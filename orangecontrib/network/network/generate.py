@@ -52,9 +52,21 @@ def cycle(n):
     return np.arange(n), np.arange(1, n + 1) % n
 
 
-@from_dense
+@from_csr
 def complete(n):
-    return 1 - np.eye(n)
+    if n < 5_000:
+        return sp.triu(np.ones((n, n)), k=1, format="csr")
+
+    # manually construct sparse matrix elements to avoid storing a dense (n x n) matrix in memory
+    indptr = [0]
+    for n_above_diag in range(n - 1, 0, -1):
+        indptr.append(indptr[-1] + n_above_diag)
+    indptr.append(indptr[-1])
+    indptr = np.array(indptr)
+    indices = np.concatenate([np.arange(row, n) for row in range(1, n)])
+    data = np.ones(n * (n - 1) // 2)
+
+    return sp.csr_matrix((data, indices, indptr), shape=(n, n))
 
 
 @from_row_col
