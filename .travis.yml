@@ -43,6 +43,7 @@ before_install:
     # Orange requires numpy>=1.16 but cannot update it itself
     # matplotlib needs certifi>=2020.06.20 but cannot update it itself
     - pip install -U numpy certifi
+    - pip install --ignore-installed gensim
     - mkdir -p /home/travis/.local/share/Orange  # create orange app dir
 
 install:
