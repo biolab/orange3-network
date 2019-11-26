@@ -1,7 +1,7 @@
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QThread
 from Orange.data import Table
 from Orange.widgets.widget import OWWidget
-from orangewidget import gui, settings
+from orangewidget import gui, settings, widget
 from orangewidget.utils.signals import Input, Output
 
 from orangecontrib.network import Network
@@ -12,10 +12,23 @@ METHOD_NAMES = ["node2vec"]
 NODE2VEC = 0
 
 
+class EmbedderThread(QThread):
+    def __init__(self, func):
+        super().__init__()
+        self.func = func
+        self.result = None
+
+    def __del__(self):
+        self.quit()
+
+    def run(self):
+        self.result = self.func()
+
+
 class OWNxEmbedding(OWWidget):
     name = "Network Embeddings"
     description = "Embed network elements"
-    icon = "icons/NetworkFile.svg"
+    icon = "icons/NetworkFile.svg"  # TODO: a proper icon
     priority = 6450
 
     class Inputs:
@@ -24,11 +37,8 @@ class OWNxEmbedding(OWWidget):
     class Outputs:
         items = Output("Items", Table)
 
-    class Warning(OWWidget.Warning):
-        pass
-
-    class Error(OWWidget.Error):
-        pass
+    class Information(OWWidget.Information):
+        work_in_progress = widget.Msg("Computation in progress...")
 
     resizing_enabled = False
     want_main_area = False
@@ -49,6 +59,7 @@ class OWNxEmbedding(OWWidget):
         super().__init__()
         self.network = None
         self.embedder = None
+        self._worker_thread = None
 
         def commit():
             return self.commit()
@@ -83,7 +94,14 @@ class OWNxEmbedding(OWWidget):
         self.commit()
 
     def commit(self):
+        self.Warning.clear()
         self.info_label.setText("")
+
+        # cancel existing computation if running
+        if self._worker_thread is not None:
+            self._worker_thread.finished.disconnect()
+            self._worker_thread.quit()
+            self._worker_thread = None
 
         if self.network is None:
             self.Outputs.items.send(None)
@@ -93,7 +111,15 @@ class OWNxEmbedding(OWWidget):
             self.embedder = embeddings.Node2Vec(self.p, self.q, self.walk_len, self.num_walks,
                                                 self.emb_size, self.window_size, self.num_epochs)
 
-        output = self.embedder(self.network)
+        self._worker_thread = EmbedderThread(lambda: self.embedder(self.network))
+        self._worker_thread.finished.connect(self.on_finished)
+        self.Information.work_in_progress()
+        self._worker_thread.start()
+
+    def on_finished(self):
+        output = self._worker_thread.result
+        self.Information.work_in_progress.clear()
+        self._worker_thread = None
         self.Outputs.items.send(output)
 
 
