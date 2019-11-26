@@ -97,7 +97,8 @@ def normalize(probas, norm_const):
 
 
 class Node2Vec:
-    def __init__(self, p=0.8, q=0.7, walk_len=80, num_walks=10, emb_size=50, window_size=5, num_epochs=1, prefix=None):
+    def __init__(self, p=0.8, q=0.7, walk_len=80, num_walks=10, emb_size=50, window_size=5, num_epochs=1, prefix=None,
+                 callbacks=()):
         self.p = p
         self.q = q
         self.walk_len = walk_len
@@ -105,6 +106,7 @@ class Node2Vec:
         self.emb_size = emb_size
         self.window_size = window_size
         self.num_epochs = num_epochs
+        self.callbacks = callbacks
 
         self._node_probas = {}
         self._edge_probas = {}
@@ -130,7 +132,7 @@ class Node2Vec:
         walks = [list(map(str, walk)) for walk in walks]
 
         model = Word2Vec(walks, size=self.emb_size, window=self.window_size, min_count=0, sg=1, workers=4,
-                         iter=self.num_epochs)
+                         iter=self.num_epochs, callbacks=self.callbacks)
 
         items = G.nodes
         new_attrs = {}

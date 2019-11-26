@@ -1,6 +1,7 @@
 from AnyQt.QtCore import Qt, QThread
 from Orange.data import Table
 from Orange.widgets.widget import OWWidget
+from gensim.models.callbacks import CallbackAny2Vec
 from orangewidget import gui, settings, widget
 from orangewidget.utils.signals import Input, Output
 
@@ -25,6 +26,19 @@ class EmbedderThread(QThread):
         self.result = self.func()
 
 
+class ProgressBarUpdater(CallbackAny2Vec):
+    def __init__(self, widget, num_epochs):
+        self.widget = widget
+        self.curr_epoch = 0
+        self.num_epochs = num_epochs
+
+    def on_epoch_begin(self, model):
+        self.widget.progressBarSet(100 * (self.curr_epoch / self.num_epochs))
+
+    def on_epoch_end(self, model):
+        self.curr_epoch += 1
+
+
 class OWNxEmbedding(OWWidget):
     name = "Network Embeddings"
     description = "Embed network elements"
@@ -36,9 +50,6 @@ class OWNxEmbedding(OWWidget):
 
     class Outputs:
         items = Output("Items", Table)
-
-    class Information(OWWidget.Information):
-        work_in_progress = widget.Msg("Computation in progress...")
 
     resizing_enabled = False
     want_main_area = False
@@ -60,6 +71,7 @@ class OWNxEmbedding(OWWidget):
         self.network = None
         self.embedder = None
         self._worker_thread = None
+        self._progress_updater = None
 
         def commit():
             return self.commit()
@@ -107,19 +119,23 @@ class OWNxEmbedding(OWWidget):
             self.Outputs.items.send(None)
             return
 
+        self._progress_updater = ProgressBarUpdater(self, self.num_epochs)
         if self.method == NODE2VEC:
             self.embedder = embeddings.Node2Vec(self.p, self.q, self.walk_len, self.num_walks,
-                                                self.emb_size, self.window_size, self.num_epochs)
+                                                self.emb_size, self.window_size, self.num_epochs,
+                                                callbacks=[self._progress_updater])
 
         self._worker_thread = EmbedderThread(lambda: self.embedder(self.network))
         self._worker_thread.finished.connect(self.on_finished)
-        self.Information.work_in_progress()
+        self.progressBarInit()
+        self.progressBarSet(1e-5)
         self._worker_thread.start()
 
     def on_finished(self):
         output = self._worker_thread.result
-        self.Information.work_in_progress.clear()
         self._worker_thread = None
+        self._progress_updater = None
+        self.progressBarFinished()
         self.Outputs.items.send(output)
 
 
