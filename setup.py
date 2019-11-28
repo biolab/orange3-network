@@ -16,7 +16,8 @@ DOCUMENTATION_NAME = 'Orange Network'
 VERSION = '1.4.2'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
-LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
+LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__),
+                                      'README.pypi')).read()
 AUTHOR = 'Laboratory of Bioinformatics, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'https://github.com/biolab/orange3-network'
