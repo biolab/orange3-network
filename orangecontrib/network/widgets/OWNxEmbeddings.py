@@ -138,6 +138,12 @@ class OWNxEmbedding(OWWidget):
         self.progressBarFinished()
         self.Outputs.items.send(output)
 
+    def onDeleteWidget(self):
+        if self._worker_thread is not None:
+            self._worker_thread.finished.disconnect()
+            self._worker_thread.quit()
+        super().onDeleteWidget()
+
 
 if __name__ == "__main__":
     from AnyQt.QtWidgets import QApplication
