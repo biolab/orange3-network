@@ -130,7 +130,7 @@ class OWNxSingleMode(OWWidget):
         self.connector_value = 0
         if variable is not None:
             cb_connect.addItems(variable.values)
-            cb_connector.addItems(["(all others)"] + variable.values)
+            cb_connector.addItems(["(all others)"] + list(variable.values))
             self.connector_value = len(variable.values) == 2 and 2
 
     def update_output(self):
