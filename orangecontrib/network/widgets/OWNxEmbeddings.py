@@ -9,10 +9,6 @@ from orangecontrib.network import Network
 from orangecontrib.network.network import embeddings, readwrite
 from orangewidget.utils.widgetpreview import WidgetPreview
 
-SPIN_WIDTH = 75
-METHOD_NAMES = ["node2vec"]
-NODE2VEC = 0
-
 
 class EmbedderThread(QThread):
     def __init__(self, func):
@@ -55,8 +51,6 @@ class OWNxEmbedding(OWWidget):
     resizing_enabled = False
     want_main_area = False
 
-    method = settings.Setting(NODE2VEC)
-
     p = settings.Setting(1.0)
     q = settings.Setting(1.0)
     walk_len = settings.Setting(50)
@@ -77,26 +71,23 @@ class OWNxEmbedding(OWWidget):
         def commit():
             return self.commit()
 
-        gui.comboBox(self.controlArea, self, "method", label="Method: ",
-                     items=[method for method in METHOD_NAMES], callback=commit)
-
-        box = gui.widgetBox(self.controlArea, "Method parameters")
-        gui.spin(box, self, "p", 0.0, 10.0, 0.1, label="Return parameter (p): ", spinType=float,
-                 controlWidth=SPIN_WIDTH, callback=commit)
-        gui.spin(box, self, "q", 0.0, 10.0, 0.1, label="In-out parameter (q): ", spinType=float,
-                 controlWidth=SPIN_WIDTH, callback=commit)
+        box = gui.widgetBox(self.controlArea, box=True)
+        kwargs = dict(controlWidth=75, alignment=Qt.AlignRight, callback=commit)
+        gui.spin(box, self, "p", 0.0, 10.0, 0.1, label="Return parameter (p): ",
+                 spinType=float, **kwargs)
+        gui.spin(box, self, "q", 0.0, 10.0, 0.1, label="In-out parameter (q): ",
+                 spinType=float, **kwargs)
         gui.spin(box, self, "walk_len", 1, 100_000, 1, label="Walk length: ",
-                 controlWidth=SPIN_WIDTH, callback=commit)
+                 **kwargs)
         gui.spin(box, self, "num_walks", 1, 10_000, 1, label="Walks per node: ",
-                 controlWidth=SPIN_WIDTH, callback=commit)
+                 **kwargs)
         gui.spin(box, self, "emb_size", 1, 10_000, 1, label="Embedding size: ",
-                 controlWidth=SPIN_WIDTH, callback=commit)
+                 **kwargs)
         gui.spin(box, self, "window_size", 1, 20, 1, label="Context size: ",
-                 controlWidth=SPIN_WIDTH, callback=commit)
+                 **kwargs)
         gui.spin(box, self, "num_epochs", 1, 100, 1, label="Number of epochs: ",
-                 controlWidth=SPIN_WIDTH, callback=commit)
+                 **kwargs)
 
-        self.info_label = gui.widgetLabel(self.controlArea, "")
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit",
                         checkbox_label="Auto-commit", orientation=Qt.Horizontal)
         commit()
@@ -108,7 +99,6 @@ class OWNxEmbedding(OWWidget):
 
     def commit(self):
         self.Warning.clear()
-        self.info_label.setText("")
 
         # cancel existing computation if running
         if self._worker_thread is not None:
@@ -121,10 +111,9 @@ class OWNxEmbedding(OWWidget):
             return
 
         self._progress_updater = ProgressBarUpdater(self, self.num_epochs)
-        if self.method == NODE2VEC:
-            self.embedder = embeddings.Node2Vec(self.p, self.q, self.walk_len, self.num_walks,
-                                                self.emb_size, self.window_size, self.num_epochs,
-                                                callbacks=[self._progress_updater])
+        self.embedder = embeddings.Node2Vec(self.p, self.q, self.walk_len, self.num_walks,
+                                            self.emb_size, self.window_size, self.num_epochs,
+                                            callbacks=[self._progress_updater])
 
         self._worker_thread = EmbedderThread(lambda: self.embedder(self.network))
         self._worker_thread.finished.connect(self.on_finished)
