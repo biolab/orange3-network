@@ -2,11 +2,12 @@ from AnyQt.QtCore import Qt, QThread
 from Orange.data import Table
 from Orange.widgets.widget import OWWidget
 from gensim.models.callbacks import CallbackAny2Vec
-from orangewidget import gui, settings, widget
+from orangewidget import gui, settings
 from orangewidget.utils.signals import Input, Output
 
 from orangecontrib.network import Network
-from orangecontrib.network.network import embeddings
+from orangecontrib.network.network import embeddings, readwrite
+from orangewidget.utils.widgetpreview import WidgetPreview
 
 SPIN_WIDTH = 75
 METHOD_NAMES = ["node2vec"]
@@ -146,21 +147,8 @@ class OWNxEmbedding(OWWidget):
 
 
 if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication([])
-    ow = OWNxEmbedding()
-    ow.show()
-
-    def set_network(data, id=None):
-        ow.set_network(data)
-
-    import OWNxFile
     from os.path import join, dirname
-    owFile = OWNxFile.OWNxFile()
-    owFile.Outputs.network.send = set_network
-    owFile.open_net_file(join(dirname(dirname(__file__)), "networks", "davis.net"))
-
-    a.exec_()
-    ow.saveSettings()
-    owFile.saveSettings()
+    davis = join(dirname(__file__), "..", "networks", "davis.net")
+    network = readwrite.read_pajek(davis)
+    WidgetPreview(OWNxEmbedding).run(network)
 
