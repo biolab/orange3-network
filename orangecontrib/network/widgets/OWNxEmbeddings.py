@@ -30,6 +30,9 @@ class ProgressBarUpdater(CallbackAny2Vec):
         self.num_epochs = num_epochs
 
     def on_epoch_begin(self, model):
+        if self.widget is None:
+            return
+
         self.widget.progressBarSet(100 * (self.curr_epoch / self.num_epochs))
 
     def on_epoch_end(self, model):
@@ -130,6 +133,8 @@ class OWNxEmbedding(OWWidget):
 
     def onDeleteWidget(self):
         if self._worker_thread is not None:
+            # prevent the callback from trying to access deleted widget object
+            self._progress_updater.widget = None
             self._worker_thread.finished.disconnect()
             self._worker_thread.quit()
         super().onDeleteWidget()
