@@ -329,6 +329,32 @@ class TestOWNxSingleMode(NetworkTest):
         self._set_graph(self.table)
         self.widget.send_report()
 
+    def test_missing_data(self):
+        widget = self.widget
+        network = self._read_network("davis.net")
+        num_total = len(network.nodes)
+        network.nodes.X[0, 1] = np.nan  # hide a node's role (= person in this case)
+        self.send_signal(widget.Inputs.network, network)
+
+        # Feature: role, Connect: person
+        widget.variable = network.nodes.domain.attributes[1]
+        widget.connect_value = 1
+        widget.connector_value = 1
+        widget.update_output()
+        self.assertTrue(widget.Warning.ignoring_missing.is_shown())
+        person_network = self.get_output(widget.Outputs.network)
+        num_persons = len(person_network.nodes)
+
+        # Feature: role, Connect: event
+        widget.connect_value = 0
+        widget.connector_value = 2
+        widget.update_output()
+        event_network = self.get_output(widget.Outputs.network)
+        num_events = len(event_network.nodes)
+
+        # Make sure the node with missing data is ignored for both modes
+        self.assertEqual(num_persons + num_events, num_total - 1)
+
 
 if __name__ == "__main__":
     unittest.main()
