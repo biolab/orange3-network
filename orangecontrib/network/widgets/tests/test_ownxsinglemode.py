@@ -71,12 +71,12 @@ class TestOWNxSingleMode(NetworkTest):
         self.assertFalse(widget.Error.no_categorical.is_shown())
         self.assertFalse(widget.Error.same_values.is_shown())
 
-        self._set_graph(Table(Domain([], [], [self.a, self.c])))
+        self._set_graph(Table.from_domain(Domain([], [], [self.a, self.c])))
         self.assertSequenceEqual(model, [self.a, self.c])
         self.assertIs(widget.variable, self.a)
 
     def test_no_single_valued_vars(self):
-        self._set_graph(Table(Domain([self.a, self.b, self.c, self.d])))
+        self._set_graph(Table.from_domain(Domain([self.a, self.b, self.c, self.d])))
 
     def test_show_errors(self):
         widget = self.widget
@@ -88,19 +88,19 @@ class TestOWNxSingleMode(NetworkTest):
         no_categorical = widget.Error.no_categorical.is_shown
         same_values = widget.Error.same_values.is_shown
 
-        self._set_graph(Table(Domain([a, b, c, d])))
+        self._set_graph(Table.from_domain(Domain([a, b, c, d])))
         self.assertSequenceEqual(model, [a, c])
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertFalse(same_values())
 
-        self._set_graph(Table(Domain([b, d])))
+        self._set_graph(Table.from_domain(Domain([b, d])))
         self.assertSequenceEqual(model, [])
         self.assertFalse(no_data())
         self.assertTrue(no_categorical())
         self.assertFalse(same_values())
 
-        self._set_graph(Table(Domain([a, b, c, d])))
+        self._set_graph(Table.from_domain(Domain([a, b, c, d])))
         self.assertSequenceEqual(model, [a, c])
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
@@ -118,21 +118,21 @@ class TestOWNxSingleMode(NetworkTest):
         self.assertFalse(no_categorical())
         self.assertFalse(same_values())
 
-        self._set_graph(Table(Domain([a, b, c, d])))
+        self._set_graph(Table.from_domain(Domain([a, b, c, d])))
         widget.connector_value = widget.connect_value + 1
         self.send_signal(widget.Inputs.network, None)
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertFalse(same_values())
 
-        self._set_graph(Table(Domain([a, b, c, d])))
+        self._set_graph(Table.from_domain(Domain([a, b, c, d])))
         widget.connector_value = widget.connect_value + 1
         cb_connector.activated[int].emit(widget.connector_value)
         self.assertFalse(no_data())
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
 
-        self._set_graph(Table(Domain([b, d])))
+        self._set_graph(Table.from_domain(Domain([b, d])))
         self.assertFalse(no_data())
         self.assertTrue(no_categorical())
         self.assertFalse(same_values())
@@ -143,7 +143,7 @@ class TestOWNxSingleMode(NetworkTest):
         cb_kept = widget.controls.connect_value
         a, c = self.a, self.c
 
-        self._set_graph(Table(Domain([a, c])))
+        self._set_graph(Table.from_domain(Domain([a, c])))
         self.assertEqual(len(cb_kept), 2)
         widget.update_output.assert_called()
         widget.update_output.reset_mock()
@@ -171,7 +171,7 @@ class TestOWNxSingleMode(NetworkTest):
 
         self.assertFalse(cb_connector.isEnabled())
 
-        self._set_graph(Table(Domain([a, c])))
+        self._set_graph(Table.from_domain(Domain([a, c])))
         self.assertFalse(cb_connector.isEnabled())
         self.assertEqual(widget.connector_value, 2)
 
@@ -197,7 +197,7 @@ class TestOWNxSingleMode(NetworkTest):
         send = widget.Outputs.network.send = Mock()
         update = widget.update_output = Mock(side_effect=widget.update_output)
 
-        self._set_graph(Table(Domain([self.c])))
+        self._set_graph(Table.from_domain(Domain([self.c])))
         update.assert_called()
         update.reset_mock()
         send.assert_called()
