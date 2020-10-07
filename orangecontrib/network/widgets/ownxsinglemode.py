@@ -141,6 +141,7 @@ class OWNxSingleMode(OWWidget):
 
     def update_output(self):
         """Output the network on the output"""
+        self.Warning.ignoring_missing.clear()
         self.Error.same_values.clear()
         new_net = None
         if self.network is not None:
@@ -156,7 +157,6 @@ class OWNxSingleMode(OWWidget):
 
     def _mode_masks(self):
         """Return indices of nodes in the two modes"""
-        self.Warning.ignoring_missing.clear()
         data = self.network.nodes
         col_view = data.get_column_view(self.variable)[0]
         column = col_view.astype(int)
