@@ -28,7 +28,7 @@ class TestOWNxSingleMode(NetworkTest):
             [0, 0, 1]
         ]))
 
-        self.d = DiscreteVariable("d", values=["d0"])
+        self.d = DiscreteVariable("d", values=("d0", ))
 
     def _set_graph(self, data, edges=None):
         net = Network(
