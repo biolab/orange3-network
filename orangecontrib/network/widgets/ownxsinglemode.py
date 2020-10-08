@@ -1,5 +1,6 @@
 from itertools import chain
 
+import numpy as np
 from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import DiscreteVariable, Table
@@ -9,6 +10,7 @@ from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.widget import OWWidget, Msg
+
 from orangecontrib.network import Network
 from orangecontrib.network.network import twomode
 
@@ -32,6 +34,9 @@ class OWNxSingleMode(OWWidget):
 
     class Outputs:
         network = Output("Network", Network)
+
+    class Warning(OWWidget.Warning):
+        ignoring_missing = Msg("Nodes with missing data are being ignored.")
 
     class Error(OWWidget.Error):
         no_data = Msg("Network has additional data.")
@@ -68,6 +73,7 @@ class OWNxSingleMode(OWWidget):
     def set_network(self, network):
         self.closeContext()
 
+        self.Warning.clear()
         self.Error.clear()
         if network is not None:
             if not isinstance(network.nodes, Table):
@@ -135,6 +141,7 @@ class OWNxSingleMode(OWWidget):
 
     def update_output(self):
         """Output the network on the output"""
+        self.Warning.ignoring_missing.clear()
         self.Error.same_values.clear()
         new_net = None
         if self.network is not None:
@@ -151,12 +158,19 @@ class OWNxSingleMode(OWWidget):
     def _mode_masks(self):
         """Return indices of nodes in the two modes"""
         data = self.network.nodes
-        column = data.get_column_view(self.variable)[0].astype(int)
+        col_view = data.get_column_view(self.variable)[0]
+        column = col_view.astype(int)
+        # Note: conversion required to handle empty (object) arrays
+        missing_mask = np.isnan(col_view.astype(float))
+        if np.any(missing_mask):
+            column[missing_mask] = -1
+            self.Warning.ignoring_missing()
+
         mode_mask = column == self.connect_value
         if self.connector_value:
             conn_mask = column == self.connector_value - 1
         else:
-            conn_mask = column != self.connect_value
+            conn_mask = np.logical_and(column != self.connect_value, np.logical_not(missing_mask))
         return mode_mask, conn_mask
 
     def _set_output_msg(self, out_network=None):
