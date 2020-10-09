@@ -2,6 +2,18 @@ language: python
 
 dist: xenial
 
+
+addons:
+    apt:
+        packages:
+            - libxkbcommon-x11-0  # for PyQt 5.12
+            - libxcb-icccm4
+            - libxcb-image0
+            - libxcb-keysyms1
+            - libxcb-randr0
+            - libxcb-render-util0
+            - libxcb-xinerama0
+
 matrix:
     include:
 #        - &python36
@@ -28,13 +40,13 @@ before_install:
     - source $TRAVIS_BUILD_DIR/.travis/util.sh
     - pip install -U setuptools pip wheel
     - pip install codecov
-    # Orange requires numpy>=1.16 but cannot update it itself?
-    - pip install -U numpy
+    # Orange requires numpy>=1.16 but cannot update it itself
+    # matplotlib needs certifi>=2020.06.20 but cannot update it itself
+    - pip install -U numpy certifi
     - mkdir -p /home/travis/.local/share/Orange  # create orange app dir
 
 install:
     - source $TRAVIS_BUILD_DIR/.travis/install_orange.sh
-    - pip install sip pyqt5==5.11.*
     - python setup.py develop   # assure version.py is present; required for imports
 
 script:
