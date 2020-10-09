@@ -16,12 +16,15 @@ addons:
 
 matrix:
     include:
-#        - &python36
-#          python: '3.6'
-#          env: ORANGE="release"
-#        - &python37
-#          python: '3.7'
-#          env: ORANGE="release"
+        - &python36
+          python: '3.6'
+          env: ORANGE="release"
+        - &python37
+          python: '3.7'
+          env: ORANGE="release"
+        - &python38
+          python: '3.8'
+          env: ORANGE="release"
         - &master
           python: '3.7'
           env: ORANGE="master"
