@@ -31,6 +31,26 @@ class TestOWNxFromDistances(WidgetTest):
         self.assertTrue(net)
         self.assertEqual(net.number_of_nodes(), 36)
 
+    def test_no_crash_on_zero_distance(self):
+        """ Test that minimum distance 0 does not make the widget automatically set the distance threshold under 0,
+        causing no nodes to satisfy condition"""
+        dist = Euclidean(self.data, axis=1)
+
+        self.widget.percentil = 100.0
+        self.send_signal(self.widget.Inputs.distances, dist)
+        net = self.get_output(self.widget.Outputs.network)
+        self.assertTrue(net)
+        self.assertEqual(net.number_of_nodes(), len(self.data))
+
+    def test_no_crash_on_single_instance(self):
+        """Test that single instance does not crash widget due to distance matrix having no valid distances"""
+        dist = Euclidean(self.data[:1], axis=1)
+
+        self.send_signal(self.widget.Inputs.distances, dist)
+        net = self.get_output(self.widget.Outputs.network)
+        self.assertTrue(net)
+        self.assertEqual(net.number_of_nodes(), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
