@@ -24,6 +24,7 @@ class EdgeWeights:
     PROPORTIONAL, \
     INVERSE = range(2)
 
+PERCENTIL_STEP = 0.1
 
 class OWNxFromDistances(widget.OWWidget):
     name = "Network From Distances"
@@ -101,7 +102,7 @@ class OWNxFromDistances(widget.OWWidget):
 
         ribg = gui.widgetBox(boxGeneral, None, orientation=Qt.Horizontal, addSpace=False)
 
-        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, 0.1,
+        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, PERCENTIL_STEP,
                       label="Percentile", orientation=Qt.Horizontal,
                       callback=self.setPercentil,
                       callbackOnReturn=1, controlWidth=60)
@@ -150,11 +151,18 @@ class OWNxFromDistances(widget.OWWidget):
         gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
 
     def setPercentil(self):
-        if self.matrix is None or self.percentil <= 0:
+        # Correct 0th and 100th percentile to min and max
+        if self.percentil < (0 + PERCENTIL_STEP):
+            self.percentil = 1 / self.matrix.shape[0] * 100.0
+        elif self.percentil > (100 - PERCENTIL_STEP):
+            self.percentil = (self.matrix.shape[0] - 1) / self.matrix.shape[0] * 100.0
+
+        if self.matrix is None:
             return
-        # flatten matrix, sort values and remove identities (self.matrix[i][i])
-        ind = int(len(self.matrix_values) * self.percentil / 100)
-        self.spinUpperThreshold = self.matrix_values[ind]
+        if len(self.matrix_values) > 0:
+            # flatten matrix, sort values and remove identities (self.matrix[i][i])
+            ind = int(len(self.matrix_values) * self.percentil / 100)
+            self.spinUpperThreshold = self.matrix_values[ind]
         self.generateGraph()
 
     @Inputs.distances
@@ -175,11 +183,14 @@ class OWNxFromDistances(widget.OWWidget):
         self.histogram.setValues(values)
 
         # Magnitude of the spinbox's step is data-dependent
-        low, upp = values[0], values[-1]
+        if len(values) == 0:
+            low, upp = 0, 0
+        else:
+            low, upp = values[0], values[-1]
         step = (upp - low) / 20
         self.spin_high.setSingleStep(step)
 
-        self.spinUpperThreshold = low - (0.03 * (upp - low))
+        self.spinUpperThreshold = max(0, low - (0.03 * (upp - low)))
 
         self.setPercentil()
         self.generateGraph()
@@ -239,9 +250,7 @@ class OWNxFromDistances(widget.OWWidget):
             if items is None:
                 items = list(range(self.matrix.shape[0]))
             if not isinstance(items, Table):
-                items = Table(
-                    Domain([], metas=[StringVariable('label')]),
-                    items)
+                items = Table.from_list(Domain([], metas=[StringVariable('label')]), items)
 
             # set the threshold
             # set edges where distance is lower than threshold
