@@ -61,6 +61,23 @@ class TestOWNxExplorer(NetworkTest):
         # should not crash
         self.send_signal(self.widget.Inputs.network, net)
 
+    def test_edge_weights(self):
+        self.send_signal(self.widget.Inputs.network, self._read_network("davis.net"))
+        self.widget.graph.show_edge_weights = True
+
+        # Mark nodes with many connections (multiple): should show the weights for edges between marked nodes only
+        self.widget.mark_min_conn = 8
+        self.widget.set_mark_mode(8)
+        self.assertEqual(len(self.widget.graph.edge_labels), 12)
+
+        # Reset to default (no selection) and check that the labels disappear
+        self.widget.set_mark_mode(0)
+        self.assertEqual(len(self.widget.graph.edge_labels), 0)
+
+        # Mark nodes with most connections (single): should show all its edges' weights
+        self.widget.set_mark_mode(9)
+        self.assertEqual(len(self.widget.graph.edge_labels), 14)
+
 
 if __name__ == "__main__":
     unittest.main()
