@@ -215,7 +215,11 @@ class GraphView(OWScatterPlotBase):
         srcs, dests, weights = edges.row, edges.col, edges.data
         if self.label_selected_edges:
             selected = self._selected_and_marked()
-            selected_edges = selected[srcs] | selected[dests]
+            num_selected = np.sum(selected)
+            if num_selected >= 2:
+                selected_edges = selected[srcs] & selected[dests]
+            else:
+                selected_edges = selected[srcs] | selected[dests]
             srcs = srcs[selected_edges]
             dests = dests[selected_edges]
             weights = weights[selected_edges]
@@ -291,6 +295,7 @@ class GraphView(OWScatterPlotBase):
             self.scatterplot_marked.setZValue(-5)
             self.plot_widget.addItem(self.scatterplot_marked)
 
+        self.update_edge_labels()
         marked = self.master.get_marked_nodes()
         if marked is None:
             self.scatterplot_marked.setData([], [])
