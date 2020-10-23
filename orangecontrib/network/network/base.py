@@ -100,7 +100,7 @@ class DirectedEdges(Edges):
 
     def degrees(self, *, weighted=False):
         return self._compute_degrees(self.edges, weighted) \
-               + self.compute_degrees(self.in_edges, weighted)
+               + self._compute_degrees(self.in_edges, weighted)
 
     def out_degree(self, node, *, weighted=False):
         return self._compute_degree(self.edges, node, weighted)
