@@ -15,6 +15,9 @@ class TestOWNxExplorer(NetworkTest):
         self.network = self._read_network("lastfm.net")
         self.data = self._read_items("lastfm.tab")
 
+        self.davis_net = self._read_network("davis.net")
+        self.davis_data = self._read_items("davis.tsv")
+
     def test_minimum_size(self):
         # Disable this test from the base test class
         pass
@@ -62,7 +65,7 @@ class TestOWNxExplorer(NetworkTest):
         self.send_signal(self.widget.Inputs.network, net)
 
     def test_edge_weights(self):
-        self.send_signal(self.widget.Inputs.network, self._read_network("davis.net"))
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
         self.widget.graph.show_edge_weights = True
 
         # Mark nodes with many connections (multiple): should show the weights for edges between marked nodes only
@@ -77,6 +80,21 @@ class TestOWNxExplorer(NetworkTest):
         # Mark nodes with most connections (single): should show all its edges' weights
         self.widget.set_mark_mode(9)
         self.assertEqual(len(self.widget.graph.edge_labels), 14)
+
+    def test_input_subset(self):
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        self.send_signal(self.widget.Inputs.node_data, self.davis_data)
+        sub_mask = self.widget.get_subset_mask()
+        self.assertIsNone(sub_mask)
+
+        self.send_signal(self.widget.Inputs.node_subset, self.davis_data[:3])
+        sub_mask = self.widget.get_subset_mask()
+        num_subset_nodes = np.sum(sub_mask)
+        self.assertEqual(num_subset_nodes, 3)
+
+        self.send_signal(self.widget.Inputs.node_subset, None)
+        sub_mask = self.widget.get_subset_mask()
+        self.assertIsNone(sub_mask)
 
 
 if __name__ == "__main__":

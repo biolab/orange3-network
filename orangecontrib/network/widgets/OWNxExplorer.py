@@ -375,6 +375,7 @@ class OWNxExplorer(OWDataProjectionWidget):
     @Inputs.node_subset
     def set_node_subset(self, data):
         super().set_subset_data(data)
+        super()._handle_subset_data()
 
     @Inputs.node_distances
     def set_items_distance_matrix(self, matrix):
