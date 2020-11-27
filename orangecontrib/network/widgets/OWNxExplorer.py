@@ -489,6 +489,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         self.stop_optimization_and_wait()
         set_actual_data()
+        super()._handle_subset_data()
         if self.positions is None:
             set_actual_edges()
             self.set_random_positions()
