@@ -351,7 +351,7 @@ class OWNxAnalysis(widget.OWWidget):
         # This does not really work because functions called in those
         # threads do not observe the "is_terminated" flag and won't quit
         if name is None:
-            to_stop = list(self.running_jobs.keys())
+            to_stop = list(self.running_jobs)
         elif name in self.running_jobs:
             to_stop = [name]
         else:
@@ -371,6 +371,10 @@ class OWNxAnalysis(widget.OWWidget):
             setattr(self, "lbl_" + name, "terminated")
             del self.running_jobs[name]
         self.show_computing()
+
+    def onDeleteWidget(self):
+        self.cancel_job()
+        super().onDeleteWidget()
 
     def send_data(self):
         if self.running_jobs:
