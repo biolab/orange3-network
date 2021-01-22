@@ -90,9 +90,9 @@ class TestOWNxGroups(NetworkTest):
 
     def test_send_report(self):
         self.send_signal(self.widget.Inputs.network, self._read_network())
-        self.widget.report_button.click()
+        self.widget.send_report()
         self.send_signal(self.widget.Inputs.network, None)
-        self.widget.report_button.click()
+        self.widget.send_report()
 
 
 if __name__ == "__main__":
