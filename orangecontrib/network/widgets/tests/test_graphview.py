@@ -15,38 +15,46 @@ class TestPlotVarWidthCurveItem(GuiTest):
     def test_coordinates(self):
         curve = PlotVarWidthCurveItem(
             directed=False,
-            x=np.arange(4, dtype=float), y=np.arange(10, 14, dtype=float),
-            size=np.zeros(4))
+            x=np.array([0, 18, 2, 2]), y=np.array([10, 10, 20, 40]),
+            size=np.ones(4))
         painter = Mock()
         painter.worldTransform = Mock()
         painter.worldTransform.return_value.m11 = Mock(return_value=1)
         painter.worldTransform.return_value.m22 = Mock(return_value=1)
 
+        curve.pen.width = lambda: 3
         curve.paint(painter, None, None)
+        # coordinates are moved by sizes + width / 3 = 1 + 1 = 5
         self.assertEqual(
             [self.line_to_tuple(call[0][0])
              for call in painter.drawLine.call_args_list],
-            [(0, 10, 1, 11), (2, 12, 3, 13)])
+            [(2, 10, 16, 10), (2, 22, 2, 38)])
 
         painter.reset_mock()
+        curve.pen.width = lambda: 6
         curve.setData(
-            x=np.arange(2, dtype=float), y=np.arange(10, 12, dtype=float),
-            size=np.zeros(2))
+            x=np.array([2, 2]), y=np.array([3, 20]),
+            size=np.ones(2))
         curve.paint(painter, None, None)
         self.assertEqual(
             [self.line_to_tuple(call[0][0])
              for call in painter.drawLine.call_args_list],
-            [(0, 10, 1, 11)])
+            [(2, 6, 2, 17)])
 
         painter.reset_mock()
+        s = np.arange(100) / 120
         curve.setData(
             np.arange(100, dtype=float), np.arange(100, 200, dtype=float),
-            size=np.zeros(100))
+            size=s)
         curve.paint(painter, None, None)
-        self.assertEqual(
-            [self.line_to_tuple(call[0][0])
-             for call in painter.drawLine.call_args_list],
-            [(2 * x, 2 * x + 100, 2 * x + 1, 2 * x + 101) for x in range(50)])
+        s2 = np.sqrt(2) / 2
+        exp = np.array([self.line_to_tuple(call[0][0])
+                        for call in painter.drawLine.call_args_list])
+        act = np.array([(2 * x + (2 + s[2 * x]) * s2,
+                         2 * x + 100 + (2 + s[2 * x]) * s2,
+                         2 * x + 1 - (2 + s[2 * x + 1]) * s2,
+                         2 * x + 101 - (2 + s[2 * x + 1]) * s2) for x in range(50)])
+        np.testing.assert_almost_equal(exp, act)
 
         painter.reset_mock()
         curve.setData(None, None)
@@ -79,7 +87,7 @@ class TestPlotVarWidthCurveItem(GuiTest):
 
         curve.setData(
             np.arange(100, dtype=float), np.arange(100, 200, dtype=float),
-            widths=np.arange(1000, 1100), size=np.ones(100))
+            widths=np.arange(1000, 1050), size=np.ones(100))
         pens = []
         curve.paint(painter, None, None)
         self.assertEqual(pens, list(range(1000, 1050)))

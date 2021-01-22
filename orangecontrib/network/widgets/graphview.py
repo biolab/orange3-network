@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pyqtgraph as pg
 
-from AnyQt.QtCore import QLineF
+from AnyQt.QtCore import QLineF, Qt
 from AnyQt.QtGui import QPen
 
 from Orange.util import scale
@@ -15,8 +15,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, directed, *args, **kwargs):
         self.directed = directed
         self.widths = kwargs.pop("widths", None)
-        self.pen = kwargs.pop("pen", pg.mkPen(0.0))
-        self.setPen(self.pen)
+        self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
         self.sizes = kwargs.pop("size", None)
         self.coss = self.sins = None
         super().__init__(*args, **kwargs)
@@ -27,85 +26,110 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
 
     def setPen(self, pen):
         self.pen = pen
+        self.pen.setCapStyle(Qt.RoundCap)
 
     def setData(self, *args, **kwargs):
         self.widths = kwargs.pop("widths", self.widths)
-        self.pen = kwargs.pop("pen", self.pen)
+        self.setPen(kwargs.pop("pen", self.pen))
         self.sizes = kwargs.pop("size", self.sizes)
         super().setData(*args, **kwargs)
 
     def paint(self, p, opt, widget):
         def get_arrows():
-            cos12 = 10 * np.cos(np.pi / 12)
-            sin12 = 10 * np.sin(np.pi / 12)
+            # Compute (n, 4) array of coordinates of arrows' ends
+            # Arrows are at 15 degrees; length is 10, clipped to edge length
+            x0, y0, x1, y1 = edge_coords.T
+            arr_len = np.clip(lengths - sizes1 - w3, 0, 10)
+            cos12 = arr_len * np.cos(np.pi / 12)
+            sin12 = arr_len * np.sin(np.pi / 12)
 
-            # cos(a ± 12) = cos(a) cos(12) ∓ sin(a) sin(12)
+            # cos(a ± 15) = cos(a) cos(15) ∓ sin(a) sin(15)
             tx = sins * (fx * sin12)
-            xa1s = x1s - coss * (fx * cos12)
-            xa2s = xa1s - tx
-            xa1s += tx
+            x1a = x1 - coss * (fx * cos12)
+            x2a = x1a - tx
+            x1a += tx
 
-            # sin(a ± 12) = sin(a) cos(12) ± sin(12) cos(a)
+            # sin(a ± 15) = sin(a) cos(15) ± sin(15) cos(a)
             ty = (fy * sin12) * coss
-            ya1s = y1s + sins * (fy * cos12)
-            ya2s = ya1s - ty
-            ya1s += ty
-            return xa1s, ya1s, xa2s, ya2s
+            y1a = y1 + sins * (fy * cos12)
+            y2a = y1a - ty
+            y1a += ty
+            return np.vstack((x1a, y1a, x2a, y2a)).T
 
-        def get_angles():
-            angles = np.arctan2(-(y1s - y0s) / fy, (x1s - x0s) / fx)
-            return np.cos(angles), np.sin(angles)
-            """
-            # This below faster. Uncomment and check that it works
-            diffx, diffy = (x1s - x0s) / fx, (y1s - y0s) / fy
-            norm = np.sqrt(diffx ** 2 + diffy ** 2)
-            self.coss = np.nan_to_num(diffx / norm)
-            self.sins = np.nan_to_num(diffy / norm)
-            """
-
-        def shorter_edges():
-            nonlocal x0s, x1s, y0s, y1s
-            sizes0, sizes1 = self.sizes[::2], self.sizes[1::2]
-            return (x0s + fx * sizes0 * coss, y0s - fy * sizes0 * sins,
-                    x1s - fx * sizes1 * coss, y1s + fy * sizes1 * sins)
+        def get_short_edge_coords():
+            # Compute the target-side coordinates of edges with arrows
+            # Such edges are shorted by 8 pixels + width / 3
+            off = 8 + w3
+            return edge_coords[:, 2:] + (off * np.vstack((-fxcos, fysin))).T
 
         if self.xData is None or len(self.xData) == 0:
             return
+
+        # Widths of edges, divided by 3; used for adjusting sizes
+        w3 = (self.widths if self.widths is not None else self.pen.width()) / 3
+
+        # Sizes of source and target nodes; they are used for adjusting the
+        # edge lengths, so we increase the sizes by edge widths / 3
+        sizes0, sizes1 = self.sizes[::2] + w3, self.sizes[1::2] + w3
+
+        # Coordinates of vertices for all end points (in real world)
         x0s, x1s = self.xData[::2], self.xData[1::2]
         y0s, y1s = self.yData[::2], self.yData[1::2]
+
+        # Factors for transforming real-worlds coordinates into pixels
         fx = 1 / p.worldTransform().m11()
         fy = 1 / p.worldTransform().m22()
-        coss, sins = get_angles()
-        endpoints = x0s, y0s, x1s, y1s = shorter_edges()
+
+        # Computations of angles (lengths are also used to clip the arrows)
+        # We need sine and cosine of angles, and never the actual angles.
+        # Sine and cosine are compute as ratios in triangles rather than with
+        # trigonometric functions
+        diffx, diffy = (x1s - x0s) / fx, -(y1s - y0s) / fy
+        lengths = np.sqrt(diffx ** 2 + diffy ** 2)
+        coss, sins = np.nan_to_num(diffx / lengths), np.nan_to_num(diffy / lengths)
+
+        # A slower version of the above, with trigonometry
+        #  angles = np.arctan2(-(y1s - y0s) / fy, (x1s - x0s) / fx)
+        #  return np.cos(angles), np.sin(angles)
+
+        # Sin and cos are mostly used as mulitplied with fx and fy; precompute
+        fxcos, fysin = fx * coss, fy * sins
+
+        # Coordinates of edges' end points: coordinates of vertices, adjusted
+        # by sizes. When drawing arraws, the target coordinate is used for
+        # the tip of the arrow, not the edge
+        edge_coords = np.vstack((x0s + fxcos * sizes0, y0s - fysin * sizes0,
+                                 x1s - fxcos * sizes1, y1s + fysin * sizes1)).T
 
         p.setRenderHint(p.Antialiasing, True)
         p.setCompositionMode(p.CompositionMode_SourceOver)
         if self.widths is None:
             p.setPen(self.pen)
             if self.directed:
-                for x0, y0, x1, y1, xa1, ya1, xa2, ya2 in zip(
-                        *endpoints, *get_arrows()):
-                    p.drawLine(QLineF(x0, y0, x1, y1))
+                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2) in zip(
+                        edge_coords, get_short_edge_coords(), get_arrows()):
+                    p.drawLine(QLineF(x0, y0, x1w, y1w))
                     p.drawLine(QLineF(xa1, ya1, x1, y1))
                     p.drawLine(QLineF(xa2, ya2, x1, y1))
             else:
-                for x0, y0, x1, y1 in zip(*endpoints):
-                    p.drawLine(QLineF(x0, y0, x1, y1))
+                for ecoords in edge_coords:
+                    p.drawLine(QLineF(*ecoords))
         else:
             pen = QPen(self.pen)
             if self.directed:
-                for x0, y0, x1, y1, xa1, ya1, xa2, ya2, w in zip(
-                        *endpoints, *get_arrows(), self.widths):
+                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), w in zip(
+                        edge_coords, get_short_edge_coords(), get_arrows(),
+                        self.widths):
                     pen.setWidth(w)
                     p.setPen(pen)
-                    p.drawLine(QLineF(x0, y0, x1, y1))
+                    p.drawLine(QLineF(x0, y0, x1w, y1w))
                     p.drawLine(QLineF(xa1, ya1, x1, y1))
                     p.drawLine(QLineF(xa2, ya2, x1, y1))
             else:
-                for x0, y0, x1, y1, w in zip(*endpoints, self.widths):
+                for ecoords, w in zip(edge_coords, self.widths):
                     pen.setWidth(w)
                     p.setPen(pen)
-                    p.drawLine(QLineF(x0, y0, x1, y1))
+                    p.drawLine(QLineF(*ecoords))
 
 
 class GraphView(OWScatterPlotBase):
