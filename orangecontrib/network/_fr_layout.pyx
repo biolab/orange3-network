@@ -16,6 +16,7 @@ http://emr.cs.iit.edu/~reingold/force-directed.pdf
 
 cimport numpy as np
 import numpy as np
+import time
 
 from libc.math cimport exp, log, sqrt, fabs, ceil
 from libc.stdlib cimport rand
@@ -32,8 +33,9 @@ def fruchterman_reingold_layout(G,
                                 k=None,
                                 pos=None,
                                 fixed=None,
-                                iterations=50,
+                                allowed_time=10,
                                 sample_ratio=0.1,
+                                init_temp=0.05,
                                 weight='weight',
                                 callback=None,
                                 callback_rate=0.25):
@@ -97,7 +99,8 @@ def fruchterman_reingold_layout(G,
     # Run...
     pos = np.asarray(fruchterman_reingold(Edata, Erow, Ecol,
                                           k, pos_arr, fixed,
-                                          iterations, sample_ratio,
+                                          allowed_time, sample_ratio,
+                                          0.05,
                                           callback, callback_rate))
     return pos
 
@@ -143,17 +146,17 @@ def fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
 						double k,
 						arr_f2_t pos,
 						arr_i1_t fixed,
-						int iterations,
+						int allowed_time,
 						double sample_ratio,
+                        double init_temp,
 						callback,
-								double callback_rate):
+						double callback_rate):
     cdef:
         double GRAVITY = 20
-        arr_f1_t temperature = np.linspace(.05, .001, iterations)
         arr_f2_t disp = np.empty((pos.shape[0], pos.shape[1]))
         arr_f1_t delta = np.empty(pos.shape[1])
         double mag, adj, weight, temp
-        Py_ssize_t row, col, i, j, d, iteration, s
+        Py_ssize_t row, col, i, j, d, s
         Py_ssize_t n_nodes = pos.shape[0]
         Py_ssize_t n_edges = Edata.shape[0]
         Py_ssize_t n_dim = pos.shape[1]
@@ -161,9 +164,17 @@ def fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
         Py_ssize_t sample_size = max(int(round(n_nodes*sample_ratio)), 1)
         arr_i1_t sample = np.zeros(sample_size, dtype=np.int32)
         int callback_freq = int(round(1/callback_rate))
+
+        int TEST_ITERATIONS = 10
+        double last_perc = 0, perc
+        int iterations = TEST_ITERATIONS
+        int iteration = 0
+        arr_f1_t temperature = np.linspace(init_temp, 0.01, TEST_ITERATIONS)
+        double start_time = time.process_time()
+        double elapsed_time
+
     with nogil:
-        for iteration in range(iterations):
-            temp = temperature[iteration]
+        while iteration < iterations:
             disp[:, :] = 0
             for i in range(sample_size):
                 sample[i] = rand() % n_nodes
@@ -199,14 +210,32 @@ def fruchterman_reingold(arr_f1_t Edata,  # COO matrix constituents
                 for d in range(n_dim):
                     disp[i, d] = 0
             # Limit the maximum displacement
+            temp = temperature[iteration]
             for i in range(n_nodes):
                 mag = magnitude2(disp, i)
                 if mag == 0: continue
                 for d in range(n_dim):
                     pos[i, d] += disp[i, d] / mag * min(fabs(disp[i, d]), temp)
+
+            # increase iteration count; if this is the end of test iterations,
+            # set the actual number of iterations according to allowed time
+            iteration += 1
+            if iteration == TEST_ITERATIONS:
+                with gil:
+                    elapsed_time = time.process_time() - start_time
+                    if elapsed_time < allowed_time:
+                        iterations = min(
+                            100 * n_nodes,
+                            int(allowed_time / (elapsed_time / TEST_ITERATIONS))
+                        )
+                        temperature = np.linspace(0.1, 0.015, iterations) ** 2
+
             # Optionally call back with the new positions
             if iteration % callback_freq == 0 and have_callback:
                 with gil:
-                    if not callback(np.asarray(pos), (iteration+1.0)/iterations):
+                    perc = float(iteration) / iterations * 100
+                    if not callback(np.asarray(pos), perc - last_perc):
                         break
+                    last_perc = perc
+
     return pos
