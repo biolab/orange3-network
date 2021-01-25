@@ -51,13 +51,12 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
-PACKAGES = find_packages(
-    exclude = ('*.tests', '*.tests.*', 'tests.*', 'tests'),
-)
+PACKAGES = find_packages()
 
 PACKAGE_DATA = {
     'orangecontrib.network': ['networks/*'],
-    'orangecontrib.network.widgets': ['icons/*']
+    'orangecontrib.network.widgets': ['icons/*'],
+    'orangecontrib.network.widgets.tests': ['networks/*']
 }
 
 SETUP_REQUIRES = (
@@ -79,6 +78,9 @@ EXTRAS_REQUIRE = {
     'reST': (
         'numpydoc',
     ),
+    'test': (
+        'coverage',
+    ),
 }
 
 DEPENDENCY_LINKS = (
@@ -99,7 +101,7 @@ ENTRY_POINTS = {
     )
 }
 
-NAMESPACES = ["orangecontrib"]
+NAMESPACES = ['orangecontrib']
 
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration

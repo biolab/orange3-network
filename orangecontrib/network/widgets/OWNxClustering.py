@@ -1,11 +1,10 @@
-from AnyQt.QtCore import Qt
-
 from Orange.data import Table
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import Input, Output
 from orangecontrib.network import Network
 from orangecontrib.network.network import community as cd
+from orangewidget.settings import rename_setting
 
 
 class OWNxClustering(widget.OWWidget):
@@ -24,61 +23,56 @@ class OWNxClustering(widget.OWWidget):
     resizing_enabled = False
     want_main_area = False
 
-    want_control_area = True
-    want_main_area = False
-
-    method = settings.Setting(0)
+    settings_version = 2
+    attenuate = settings.Setting(False)
     iterations = settings.Setting(1000)
     use_random_state = settings.Setting(False)
     hop_attenuation = settings.Setting(0.1)
-    autoApply = settings.Setting(True)
+    auto_apply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
         self.net = None
         self.cluster_feature = None
-        commit = lambda: self.commit()
-        gui.spin(self.controlArea, self, "iterations", 1,
-                   100000, 1, label="Max. iterations:",
-                   callback=commit)
-        self.random_state = gui.checkBox(self.controlArea, self, "use_random_state",
-                                         label="Replicable clustering",
-                                         callback=commit)
-        ribg = gui.radioButtonsInBox(
-            self.controlArea, self, "method",
-            btnLabels=["Label propagation clustering (Raghavan et al., 2007)",
-                       "Label propagation clustering (Leung et al., 2009)"],
-            box="Clustering method", callback=commit)
 
-        gui.doubleSpin(gui.indentedBox(ribg), self, "hop_attenuation",
-                         0, 1, 0.01, label="Hop attenuation (delta): ")
+        box = gui.vBox(self.controlArea, "Label Propagation")
+        gui.spin(
+            box, self, "iterations", 1, 100000, 1,
+            label="Max. iterations: ", callback=self.commit)
+        gui.doubleSpin(box, self, "hop_attenuation", 0, 1, 0.01,
+                       label="Apply hop attenuation: ",
+                       checked="attenuate", callback=self.commit)
+        self.random_state = gui.checkBox(
+            box, self, "use_random_state",
+            label="Replicable clustering", callback=self.commit)
 
-        self.infolabel = gui.widgetLabel(self.controlArea, ' ')
-
-        gui.auto_commit(self.controlArea, self, "autoApply", 'Commit',
-                        checkbox_label='Auto-commit', orientation=Qt.Horizontal)
-        commit()
+        gui.auto_apply(self.controlArea, self)
 
     @Inputs.network
     def set_network(self, net):
         self.net = net
+        if net is None:
+            self.info.set_input_summary(self.info.NoInput)
+        else:
+            nnodes, nedges = net.number_of_nodes(), net.number_of_edges()
+            self.info.set_input_summary(
+                f"{nnodes}/{nedges}",
+                f"{nnodes} nodes, {nedges} edges")
         self.commit()
 
     def commit(self):
-        self.infolabel.setText(' ')
-
         kwargs = {'iterations': self.iterations}
-        if self.method == 0:
-            alg = cd.label_propagation
-
-        elif self.method == 1:
+        if self.attenuate:
             alg = cd.label_propagation_hop_attenuation
             kwargs['delta'] = self.hop_attenuation
+        else:
+            alg = cd.label_propagation
 
         if self.net is None:
             self.Outputs.items.send(None)
             self.Outputs.network.send(None)
             self.cluster_feature = None
+            self.info.set_output_summary(self.info.NoOutput)
             return
 
         if self.use_random_state:
@@ -91,26 +85,27 @@ class OWNxClustering(widget.OWWidget):
             self.cluster_feature = get_unique_names(domain, 'Cluster')
         cd.add_results_to_items(self.net, labels, self.cluster_feature)
 
-        self.infolabel.setText('%d clusters found' % len(set(labels.values())))
         self.Outputs.items.send(self.net.nodes)
         self.Outputs.network.send(self.net)
 
+        nclusters = len(set(labels.values()))
+        self.info.set_output_summary(nclusters, f"{nclusters} clusters")
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            rename_setting(settings, "autoApply", "auto_apply")
+            if hasattr(settings, "method"):
+                rename_setting(settings, "method", "attenuate")
+
 
 if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication([])
-    ow = OWNxClustering()
-    ow.show()
-
-    def set_network(data, id=None):
-        ow.set_network(data)
-
-    import OWNxFile
+    from Orange.widgets.utils.widgetpreview import WidgetPreview
+    from orangecontrib.network.network.readwrite \
+        import read_pajek, transform_data_to_orange_table
     from os.path import join, dirname
-    owFile = OWNxFile.OWNxFile()
-    owFile.Outputs.network.send = set_network
-    owFile.open_net_file(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
 
-    a.exec_()
-    ow.saveSettings()
-    owFile.saveSettings()
+    fname = join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net')
+    network = read_pajek(fname)
+    transform_data_to_orange_table(network)
+    WidgetPreview(OWNxClustering).run(set_network=network)
