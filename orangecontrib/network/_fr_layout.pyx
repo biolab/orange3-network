@@ -18,7 +18,7 @@ cimport numpy as np
 import numpy as np
 import time
 
-from libc.math cimport exp, log, sqrt, fabs, ceil
+from libc.math cimport sqrt, fabs
 from libc.stdlib cimport rand
 
 
@@ -26,83 +26,6 @@ ctypedef np.float64_t   double
 ctypedef np.int32_t[:]  arr_i1_t
 ctypedef double[:, :]   arr_f2_t
 ctypedef double[:]      arr_f1_t
-
-
-def fruchterman_reingold_layout(G,
-                                dim=2,
-                                k=None,
-                                pos=None,
-                                fixed=None,
-                                allowed_time=10,
-                                sample_ratio=0.1,
-                                init_temp=0.05,
-                                weight='weight',
-                                callback=None,
-                                callback_rate=0.25):
-    """
-    Position nodes using Fruchterman-Reingold force-directed algorithm.
-
-    The parameters are equal to those of networkx.spring_layout(), with the
-    following exceptions:
-
-    Parameters
-    ----------
-    sample_ratio: float
-        Use a sample of size `sample_ratio` * `n` to estimate repulsive forces
-        acting on each node. Results in a (1 / `sample_ratio`)-times speed-up.
-    weight: str or np.ndarray
-        The string attribute of the graph's edges that represents edge weights,
-        or a 2D distance matrix.
-    callback: callable
-        A function accepting `pos` ndarray to call after each iteration.
-        The algorithm is stopped if the return value is ``False``-ish.
-    callback_rate: float
-        Call the `callback` function only every 1 / `callback_rate` iteration.
-        Overall, the `callback` is called `callback_rate` * `iterations` times.
-    """
-
-    if G is None or len(G) == 0: return {}
-    if len(G) == 1: return {G.nodes()[0]: [.5, .5]}
-
-    # Determine initial positions
-    pos_arr = np.random.random((len(G), dim))
-    if isinstance(pos, dict):
-        for i, n in enumerate(G):
-            if n in pos:
-                pos_arr[i] = np.asarray(pos[n])
-    elif isinstance(pos, np.ndarray):
-        pos_arr = pos
-    fixed = np.array(fixed or [], dtype=np.int32)
-
-    # Prepare edges info as sparse COO matrix parts
-    nodelist = sorted(G)
-    index = dict(zip(nodelist, range(len(nodelist))))
-    try:
-        if isinstance(weight, str):
-            Erow, Ecol, Edata = zip(*[(index[u], index[v], w or 0)  # 0 if None
-                                      for u, v, w in G.edges(nodelist, data=weight)])
-        elif isinstance(weight, np.ndarray):
-            Erow, Ecol, Edata = zip(*[(index[u], index[v], weight[u, v])
-                                      for u, v in G.edges(nodelist)])
-        else: raise TypeError('weight must be str or ndarray')
-        # Don't allow zero weights
-        try: min_w = np.min([i for i in Edata if i])
-        except ValueError: min_w = 1
-        Edata = np.clip(Edata, min_w, np.inf)
-    except ValueError:  # No edges
-        Erow, Ecol, Edata = [], [], []
-    Erow = np.asarray(Erow, dtype=np.int32)
-    Ecol = np.asarray(Ecol, dtype=np.int32)
-    Edata = np.asarray(Edata, dtype=np.float64)
-    # Optimal distance between nodes
-    k = k or 1 / sqrt(pos_arr.shape[0])
-    # Run...
-    pos = np.asarray(fruchterman_reingold(Edata, Erow, Ecol,
-                                          k, pos_arr, fixed,
-                                          allowed_time, sample_ratio,
-                                          0.05,
-                                          callback, callback_rate))
-    return pos
 
 
 cdef inline void diff(arr_f2_t pos,
