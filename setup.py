@@ -2,13 +2,23 @@
 
 import os
 import sys
+from setuptools import setup
+
+from distutils.command.build_ext import build_ext
+from distutils.core import Extension
 
 from setuptools import find_packages
+
+import numpy
 
 if sys.version_info < (3, 6):
     sys.exit('Orange3-Network requires Python >= 3.6')
 
-from numpy.distutils.core import setup
+try:
+    from Cython.Distutils.build_ext import new_build_ext as build_ext
+    have_cython = True
+except ImportError:
+    have_cython = False
 
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
@@ -103,6 +113,30 @@ ENTRY_POINTS = {
 
 NAMESPACES = ['orangecontrib']
 
+class build_ext_error(build_ext):
+    def initialize_options(self):
+        raise SystemExit(
+            "Cannot compile extensions. numpy and cython are required to "
+            "build Orange."
+        )
+
+def ext_modules():
+    includes = [numpy.get_include()]
+    libraries = []
+
+    if os.name == 'posix':
+        libraries.append("m")
+
+    return [
+        # Cython extensions. Will be automatically cythonized.
+        Extension(
+            "*",
+            ["orangecontrib/network/network/layout/*.pyx"],
+            include_dirs=includes,
+            libraries=libraries,
+        )
+    ]
+
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None)
@@ -115,27 +149,39 @@ def configuration(parent_package='', top_path=None):
 
 
 if __name__ == '__main__':
+    cmdclass = {}
+    if have_cython:
+        cmdclass["build_ext"] = build_ext
+    else:
+        # substitute a build_ext command with one that raises an error when
+        # building. In order to fully support `pip install` we need to
+        # survive a `./setup egg_info` without numpy so pip can properly
+        # query our install dependencies
+        cmdclass["build_ext"] = build_ext_error
+
     setup(
         configuration=configuration,
-        name = NAME,
-        version = VERSION,
-        description = DESCRIPTION,
-        long_description = LONG_DESCRIPTION,
+        name=NAME,
+        version=VERSION,
+        description=DESCRIPTION,
+        long_description=LONG_DESCRIPTION,
         long_description_content_type='text/markdown',
-        author = AUTHOR,
-        author_email = AUTHOR_EMAIL,
-        url = URL,
-        license = LICENSE,
-        keywords = KEYWORDS,
-        classifiers = CLASSIFIERS,
-        packages = PACKAGES,
-        package_data = PACKAGE_DATA,
-        setup_requires = SETUP_REQUIRES,
-        install_requires = INSTALL_REQUIRES,
-        extras_require = EXTRAS_REQUIRE,
-        dependency_links = DEPENDENCY_LINKS,
-        entry_points = ENTRY_POINTS,
+        author=AUTHOR,
+        author_email=AUTHOR_EMAIL,
+        url=URL,
+        license=LICENSE,
+        keywords=KEYWORDS,
+        classifiers=CLASSIFIERS,
+        packages=PACKAGES,
+        ext_modules=ext_modules(),
+        package_data=PACKAGE_DATA,
+        setup_requires=SETUP_REQUIRES,
+        install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
+        dependency_links=DEPENDENCY_LINKS,
+        entry_points=ENTRY_POINTS,
         namespace_packages=NAMESPACES,
-        include_package_data = True,
-        zip_safe = False,
+        include_package_data=True,
+        zip_safe=False,
+        cmdclass=cmdclass
     )
