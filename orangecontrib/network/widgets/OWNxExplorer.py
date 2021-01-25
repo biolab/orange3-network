@@ -12,7 +12,7 @@ from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
 
 from orangecontrib.network.network.base import Network
-from orangecontrib.network._fr_layout import fruchterman_reingold
+from orangecontrib.network.network.layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
 FR_ALLOWED_TIME = 30
@@ -639,21 +639,14 @@ class OWNxExplorer(OWDataProjectionWidget):
                 widget = self.widget
                 edges = widget.edges
                 nnodes = widget.number_of_nodes
-                inittemp = 0.01 if restart else 0.2
-                if widget.observe_weights:
-                    edge_weights = edges.data
-                else:
-                    edge_weights = np.ones(edges.data.shape)
-                positions = np.array(fruchterman_reingold(
-                    edge_weights, edges.row, edges.col,
-                    widget.layout_density / 10 / np.sqrt(nnodes),  # k
-                    widget.positions,
-                    np.array([], dtype=np.int32),  # fixed
-                    FR_ALLOWED_TIME,
-                    min(1, 1000 / nnodes),  # sample ratio
-                    inittemp,
-                    self.send_update, 0.25))
-                self.done.emit(positions)
+                init_temp = 0.05 if restart else 0.2
+                k = widget.layout_density / 10 / np.sqrt(nnodes)
+                sample_ratio =  None if nnodes < 1000 else 1000 / nnodes
+                fruchterman_reingold(
+                    widget.positions, edges, widget.observe_weights,
+                    FR_ALLOWED_TIME, k, init_temp, sample_ratio,
+                    callback_step=4, callback=self.send_update)
+                self.done.emit(widget.positions)
                 self.stopped.emit()
 
         def update(positions, progress):
