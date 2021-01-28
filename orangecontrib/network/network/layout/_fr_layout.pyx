@@ -17,7 +17,7 @@ http://emr.cs.iit.edu/~reingold/force-directed.pdf
 cimport numpy as np
 import numpy as np
 
-from libc.math cimport sqrt
+from libc.math cimport sqrt, fabs
 
 
 ctypedef np.float64_t   double
@@ -145,9 +145,15 @@ cpdef void gravity(arr_f2_t pos, double k, arr_f2_t disp) nogil:
         Py_ssize_t i
 
     for i in range(pos.shape[0]):
+        """
+        Circular gravity; gravity along axes (below) seems to work better
         f = k * GRAVITY * sqrt(sqr(pos[i, 0]) + sqr(pos[i, 1]))
         disp[i, 0] -= f * pos[i, 0]
         disp[i, 1] -= f * pos[i, 1]
+        """
+        f = k * GRAVITY
+        disp[i, 0] -= f * fabs(pos[i, 0]) * pos[i, 0]
+        disp[i, 1] -= f * fabs(pos[i, 1]) * pos[i, 1]
 
 
 cpdef void move(arr_f2_t pos, arr_f2_t disp, double temp) nogil:
