@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pyqtgraph as pg
 
-from AnyQt.QtCore import QLineF, Qt
+from AnyQt.QtCore import QLineF, Qt, QRectF
 from AnyQt.QtGui import QPen
 
 from Orange.util import scale
@@ -86,6 +86,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         # trigonometric functions
         diffx, diffy = (x1s - x0s) / fx, -(y1s - y0s) / fy
         lengths = np.sqrt(diffx ** 2 + diffy ** 2)
+        arcs = lengths == 0
         coss, sins = np.nan_to_num(diffx / lengths), np.nan_to_num(diffy / lengths)
 
         # A slower version of the above, with trigonometry
@@ -101,35 +102,70 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         edge_coords = np.vstack((x0s + fxcos * sizes0, y0s - fysin * sizes0,
                                  x1s - fxcos * sizes1, y1s + fysin * sizes1)).T
 
+        pen = QPen(self.pen)
         p.setRenderHint(p.Antialiasing, True)
         p.setCompositionMode(p.CompositionMode_SourceOver)
         if self.widths is None:
-            p.setPen(self.pen)
+            p.setPen(pen)
             if self.directed:
-                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2) in zip(
-                        edge_coords, get_short_edge_coords(), get_arrows()):
-                    p.drawLine(QLineF(x0, y0, x1w, y1w))
-                    p.drawLine(QLineF(xa1, ya1, x1, y1))
-                    p.drawLine(QLineF(xa2, ya2, x1, y1))
+                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), arc in zip(
+                        edge_coords, get_short_edge_coords(), get_arrows(), arcs):
+                    if not arc:
+                        p.drawLine(QLineF(x0, y0, x1w, y1w))
+                        p.drawLine(QLineF(xa1, ya1, x1, y1))
+                        p.drawLine(QLineF(xa2, ya2, x1, y1))
             else:
-                for ecoords in edge_coords:
+                for ecoords in edge_coords[~arcs]:
                     p.drawLine(QLineF(*ecoords))
         else:
-            pen = QPen(self.pen)
             if self.directed:
-                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), w in zip(
+                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), w, arc in zip(
                         edge_coords, get_short_edge_coords(), get_arrows(),
-                        self.widths):
-                    pen.setWidth(w)
-                    p.setPen(pen)
-                    p.drawLine(QLineF(x0, y0, x1w, y1w))
-                    p.drawLine(QLineF(xa1, ya1, x1, y1))
-                    p.drawLine(QLineF(xa2, ya2, x1, y1))
+                        self.widths, arcs):
+                    if not arc:
+                        pen.setWidth(w)
+                        p.setPen(pen)
+                        p.drawLine(QLineF(x0, y0, x1w, y1w))
+                        p.drawLine(QLineF(xa1, ya1, x1, y1))
+                        p.drawLine(QLineF(xa2, ya2, x1, y1))
             else:
-                for ecoords, w in zip(edge_coords, self.widths):
+                for ecoords, w in zip(edge_coords[~arcs], self.widths[~arcs]):
                     pen.setWidth(w)
                     p.setPen(pen)
                     p.drawLine(QLineF(*ecoords))
+
+        # This part is not so optimized because there can't be that many loops
+        if np.any(arcs):
+            xs, ys = self.xData[::2][arcs], self.yData[1::2][arcs]
+            sizes = self.sizes[::2][arcs] + w3[arcs]
+            # if radius of loop would be size, then distance betwween
+            # vertex and loop centers would be
+            # d = np.sqrt(size ** 2 - r ** 2 / 2) + r / np.sqrt(2) + r / 2
+            ds = sizes * (1 + np.sqrt(2) / 4)
+            rxs = xs - ds * fx
+            rys = ys - ds * fy
+            rfxs = sizes * fx
+            rfys = sizes * fy
+
+            ax0o = 6 * np.cos(np.pi * 5 / 6) * fx
+            ax1o = 6 * np.cos(np.pi * 7 / 12) * fx
+            ay0o = 6 * np.sin(np.pi * 5 / 6) * fy
+            ay1o = 6 * np.sin(np.pi * 7 / 12) * fy
+
+            if self.widths is None:
+                widths = np.full(len(rxs), pen.width())
+            else:
+                widths = self.widths[arcs]
+            for rx, ry, rfx, rfy, w in zip(rxs, rys, rfxs, rfys, widths):
+                rect = QRectF(rx, ry, rfx, rfy)
+                pen.setWidth(w)
+                p.setPen(pen)
+                p.drawArc(rect, 100 * 16, 250 * 16)
+                if self.directed:
+                    rx += 1.1 * rfx
+                    ry += rfy / 2
+                    p.drawLine(QLineF(rx, ry, rx + ax0o, ry - ay0o))
+                    p.drawLine(QLineF(rx, ry, rx + ax1o, ry - ay1o))
 
 
 class GraphView(OWScatterPlotBase):
