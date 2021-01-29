@@ -65,16 +65,16 @@ def read_edges(id_idx, lines, nvertices):
 
 
 def read_edges_list(id_idx, lines, nvertices):
-    indptr = []
-    indices = []
-    lines = sorted((id_idx[source], [id_idx[t] for t in targets])
-                   for source, *targets in (line.split() for line in lines))
+    lines = {id_idx[source]: [id_idx[t] for t in targets]
+             for source, *targets in (line.split() for line in lines)}
     # Todo: We can avoid using potentially long Python list by writing directly
     # into np.arrays
-    for source, targets in lines:
-        indptr += [len(indices)] * (source - len(indptr))
+    indptr = np.zeros(nvertices + 1, dtype=int)
+    indices = []
+    for idx in range(nvertices):
+        targets = lines.get(idx, ())
         indices += targets
-    indptr += [len(indices)] * (nvertices - len(indptr) + 1)
+        indptr[idx + 1] = len(indices)
     indices = np.array(indices, dtype=int)
     data = np.lib.stride_tricks.as_strided(np.ones(1), (len(indices), ), (0, ))
     data.flags.writeable = False

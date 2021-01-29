@@ -61,6 +61,17 @@ class TestReadPajek(unittest.TestCase):
         with NamedTemporaryFile("wt", suffix=".net") as f:
             self.assertRaises(TypeError, readwrite.write_pajek, f, net)
 
+    def test_edge_list(self):
+        net = readwrite.read_pajek(_fullpath("test-arcslist.net"))
+        neighs = [(1, (2, 3, 6)),
+                  (2, (1, 4, 5, 6)),
+                  (5, (1, 2)),
+                  (6, (2, 3, 4))]
+        self.assertEqual(net.number_of_edges(), sum(len(y) for _, y in neighs))
+        self.assertTrue(net.edges[0].directed)
+        for x, y in neighs:
+            np.testing.assert_equal(net.outgoing(x - 1), np.array(y) - 1)
+
 
 if __name__ == "__main__":
     unittest.main()
