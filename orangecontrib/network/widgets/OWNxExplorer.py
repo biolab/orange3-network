@@ -129,6 +129,8 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.set_mark_mode()
         self.setMinimumWidth(600)
 
+        self._invalidated = False
+
     def sizeHint(self):
         return QSize(800, 600)
 
@@ -495,6 +497,19 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.nodes_per_edge = \
                 self.number_of_nodes / max(1, self.number_of_edges)
 
+        if not self._invalidated:
+            if (self.network is None) != (graph is None):
+                self._invalidated = True
+            elif graph is not None:
+                edges1 = graph.edges[0].edges
+                edges2 = self.network.edges[0].edges
+                self._invalidated = \
+                    edges1.shape != edges2.shape \
+                    or (edges1 != edges2).nnz != 0
+
+        if self._invalidated:
+            self.clear()
+
         self.mark_text = ""
         self.set_mark_mode(0)
         self.positions = None
@@ -512,6 +527,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def handleNewSignals(self):
         network = self.network
+        self._invalidated = False
 
         def set_actual_data():
             self.closeContext()
@@ -520,6 +536,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             if network is None:
                 if self.node_data is not None:
                     self.Warning.no_graph_found()
+                self.init_attr_values()
                 return
             n_nodes = len(self.network.nodes)
             if self.node_data is not None:
@@ -543,10 +560,10 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 else:
                     self.data = None
 
+            self.init_attr_values()
             if self.data is not None:
                 # Replicate the necessary parts of set_data
                 self.valid_data = np.full(len(self.data), True, dtype=bool)
-                self.init_attr_values()
                 self.openContext(self.data)
                 self.cb_class_density.setEnabled(self.can_draw_density())
 
@@ -590,6 +607,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             if np.allclose(self.edges.data, 0):
                 self.edges.data[:] = 1
 
+        def set_edge_combos():
             def _retrieve(model, hint):
                 model.set_domain(domain)
                 for var in model:
@@ -611,18 +629,21 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         super()._handle_subset_data()
         if self.positions is None:
             set_actual_edges()
+            set_edge_combos()
             self.set_random_positions()
-            self.graph.reset_graph()
+            self.setup_plot()
             self.relayout(True)
         else:
             self.graph.update_point_props()
         self.update_marks()
         self.update_selection_buttons()
+        self.commit.now()
 
     def init_attr_values(self):
         super().init_attr_values()
         if self.node_data is None \
                 and self.data is not None \
+                and self.network is not None \
                 and isinstance(self.network.nodes, np.ndarray):
             assert len(self.data.domain.metas) == 1
             self.attr_label = self.data.domain.metas[0]
@@ -669,6 +690,10 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             Outputs.distances.send(None)
         else:
             Outputs.distances.send(distances.submatrix(sorted(selected_indices)))
+
+    def clear(self):
+        super().clear()
+        self.nSelected = 0
 
     def get_coordinates_data(self):
         if self.positions is not None:
