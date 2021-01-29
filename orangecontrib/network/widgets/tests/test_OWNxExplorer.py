@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -36,7 +37,6 @@ class TestOWNxExplorer(NetworkTest):
 
     def test_subset_selection(self):
         # test if selecting from the graph works
-
         self.send_signal(self.widget.Inputs.network, self.network)
         self.assertEqual(self.widget.nSelected, 0)
         self.send_signal(self.widget.Inputs.node_data, self.data)
@@ -95,6 +95,17 @@ class TestOWNxExplorer(NetworkTest):
         self.send_signal(self.widget.Inputs.node_subset, None)
         sub_mask = self.widget.get_subset_mask()
         self.assertIsNone(sub_mask)
+
+    def test_clear_selection_on_no_data(self):
+        self.widget.relayout = Mock()
+        self.send_signal(self.widget.Inputs.network, self.network)
+        self.widget.graph.selection_select(np.arange(0, 5))
+        self.assertEqual(self.widget.nSelected, 5)
+        self.assertIsNotNone(self.widget.selection)
+        self.send_signal(self.widget.Inputs.network, None)
+        self.assertEqual(self.widget.nSelected, 0)
+        self.assertIsNone(self.widget.selection)
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
 
 if __name__ == "__main__":
