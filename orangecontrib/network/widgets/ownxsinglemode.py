@@ -23,7 +23,8 @@ class OWNxSingleMode(OWWidget):
 
     want_main_area = False
 
-    settingsHandler = DomainContextHandler(match_values=True)
+    settingsHandler = DomainContextHandler(
+        match_values=DomainContextHandler.MATCH_VALUES_ALL)
     variable = ContextSetting(None)
     connect_value = ContextSetting(0)
     connector_value = ContextSetting(0)
