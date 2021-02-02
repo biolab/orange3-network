@@ -12,10 +12,10 @@ from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
 
 from orangecontrib.network.network.base import Network
-from orangecontrib.network._fr_layout import fruchterman_reingold
+from orangecontrib.network.network.layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 
-FR_ITERATIONS = 250
+FR_ALLOWED_TIME = 30
 
 
 class OWNxExplorer(OWDataProjectionWidget):
@@ -43,7 +43,9 @@ class OWNxExplorer(OWDataProjectionWidget):
     GRAPH_CLASS = GraphView
     graph = SettingProvider(GraphView)
 
-    randomizePositions = Setting(True)
+    layout_density = Setting(10)
+    observe_weights = Setting(True)
+
     mark_hops = Setting(1)
     mark_min_conn = Setting(5)
     mark_max_conn = Setting(5)
@@ -121,12 +123,23 @@ class OWNxExplorer(OWDataProjectionWidget):
             "Edges: %(number_of_edges)i (%(edges_per_node).2f per node)")
         lbox = gui.hBox(info)
         self.relayout_button = gui.button(
-            lbox, self, 'Re-layout', callback=self.relayout, autoDefault=False)
+            lbox, self, 'Improve', callback=self.improve, autoDefault=False,
+            tooltip="Optimize the current layout, with a small initial jerk")
         self.stop_button = gui.button(
             lbox, self, 'Stop', callback=self.stop_relayout, autoDefault=False,
             hidden=True)
-        self.randomize_cb = gui.checkBox(
-            lbox, self, "randomizePositions", "Randomize positions")
+        self.randomize_button = gui.button(
+            lbox, self, 'Re-layout', callback=self.restart, autoDefault=False,
+            tooltip="Restart laying out from random positions")
+        gui.hSlider(info, self, "layout_density", minValue=1, maxValue=50,
+                    label="Gravity", orientation=Qt.Horizontal,
+                    callback_finished=self.improve,
+                    tooltip="Lower values improve optimization,\n"
+                            "higher work better for graph with many small "
+                            "components")
+        gui.checkBox(info, self, "observe_weights",
+                     label="Make edges with large weights shorter",
+                     callback=self.improve)
 
     def _add_effects_box(self):
         gbox = self.gui.create_gridbox(self.controlArea, True)
@@ -494,7 +507,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             set_actual_edges()
             self.set_random_positions()
             self.graph.reset_graph()
-            self.relayout()
+            self.relayout(True)
         else:
             self.graph.update_point_props()
         self.update_marks()
@@ -507,6 +520,10 @@ class OWNxExplorer(OWDataProjectionWidget):
                 and isinstance(self.network.nodes, np.ndarray):
             assert len(self.data.domain.metas) == 1
             self.attr_label = self.data.domain.metas[0]
+
+    def randomize(self):
+        self.set_random_positions()
+        self.graph.update_coordinates()
 
     def set_random_positions(self):
         if self.network is None:
@@ -573,18 +590,25 @@ class OWNxExplorer(OWDataProjectionWidget):
     def set_buttons(self, running):
         self.stop_button.setHidden(not running)
         self.relayout_button.setHidden(running)
+        self.randomize_button.setHidden(running)
 
     def stop_relayout(self):
         self._stop_optimization = True
         self.set_buttons(running=False)
 
+    def restart(self):
+        self.relayout(restart=True)
+
+    def improve(self):
+        self.relayout(restart=False)
+
     # TODO: Stop relayout if new data is received
-    def relayout(self):
+    def relayout(self, restart):
         if self.edges is None:
             return
-        if self.randomizePositions or self.positions is None:
+        if restart or self.positions is None:
             self.set_random_positions()
-        self.progressbar = gui.ProgressBar(self, FR_ITERATIONS)
+        self.progressbar = gui.ProgressBar(self, 100)
         self.set_buttons(running=True)
         self._stop_optimization = False
 
@@ -593,10 +617,9 @@ class OWNxExplorer(OWDataProjectionWidget):
             Simplifications.NoDensity
             + Simplifications.NoLabels * (len(self.graph.labels) > 20)
             + Simplifications.NoEdgeLabels * (len(self.graph.edge_labels) > 20)
-            + Simplifications.NoEdges * (self.number_of_edges > 1000))
+            + Simplifications.NoEdges * (self.number_of_edges > 30000))
 
-        large_graph = self.number_of_nodes + self.number_of_edges > 20000
-        iterations = 5 if large_graph else FR_ITERATIONS
+        large_graph = self.number_of_nodes + self.number_of_edges > 30000
 
         class LayoutOptimizer(QObject):
             update = Signal(np.ndarray, float)
@@ -615,15 +638,15 @@ class OWNxExplorer(OWDataProjectionWidget):
             def run(self):
                 widget = self.widget
                 edges = widget.edges
-                positions = np.array(fruchterman_reingold(
-                    edges.data, edges.row, edges.col,
-                    1 / np.sqrt(widget.number_of_nodes),  # k
-                    widget.positions,
-                    np.array([], dtype=np.int32),  # fixed
-                    iterations,
-                    0.1,  # sample ratio
-                    self.send_update, 0.25))
-                self.done.emit(positions)
+                nnodes = widget.number_of_nodes
+                init_temp = 0.05 if restart else 0.2
+                k = widget.layout_density / 10 / np.sqrt(nnodes)
+                sample_ratio =  None if nnodes < 1000 else 1000 / nnodes
+                fruchterman_reingold(
+                    widget.positions, edges, widget.observe_weights,
+                    FR_ALLOWED_TIME, k, init_temp, sample_ratio,
+                    callback_step=4, callback=self.send_update)
+                self.done.emit(widget.positions)
                 self.stopped.emit()
 
         def update(positions, progress):
@@ -690,6 +713,7 @@ def main():
     from os.path import join, dirname
 
     network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'davis.net'))
     #transform_data_to_orange_table(network)
     WidgetPreview(OWNxExplorer).run(set_graph=network)
 
