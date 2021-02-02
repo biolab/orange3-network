@@ -87,35 +87,9 @@ cpdef void repulse_sampled(arr_f2_t pos, arr_i1_t sample,
 
 
 cpdef void attract(arr_f2_t pos,
-                   arr_i1_t edge_src,  arr_i1_t edge_dst,
+                   arr_i1_t edge_src,  arr_i1_t edge_dst, arr_f1_t edge_weights,
                    double k,
                    arr_f2_t disp) nogil:
-    cdef:
-        Py_ssize_t n_edges = edge_src.shape[0]
-
-        double dx, dy, f, mag2
-        Py_ssize_t i, j, e
-
-        double inv_k = 1 / k
-
-    for e in range(n_edges):
-        i, j = edge_src[e], edge_dst[e]
-        dx = pos[i][0] - pos[j][0]
-        dy = pos[i][1] - pos[j][1]
-        mag2 = sqr(dx) + sqr(dy)
-        f = sqrt(mag2) * inv_k
-        dx *= f
-        dy *= f
-        disp[i, 0] -= dx
-        disp[i, 1] -= dy
-        disp[j, 0] += dx
-        disp[j, 1] += dy
-
-
-cpdef void attract_weighted(arr_f2_t pos,
-                       arr_i1_t edge_src,  arr_i1_t edge_dst, arr_f1_t edge_weights,
-                       double k,
-                       arr_f2_t disp) nogil:
     cdef:
         Py_ssize_t n_edges = edge_src.shape[0]
 
@@ -123,14 +97,17 @@ cpdef void attract_weighted(arr_f2_t pos,
         Py_ssize_t i, j, e
 
         double inv_k = 1 / k
+        int weighted = edge_weights.shape[0] != 0
 
     # TODO are weights in any way normalized?!
     for e in range(n_edges):
-        i, j, weight = edge_src[e], edge_dst[e], edge_weights[e]
+        i, j = edge_src[e], edge_dst[e],
         dx = pos[i][0] - pos[j][0]
         dy = pos[i][1] - pos[j][1]
         mag2 = sqr(dx) + sqr(dy)
-        f = sqrt(mag2) * inv_k * weight
+        f = sqrt(mag2) * inv_k
+        if weighted:
+            f *= edge_weights[e]
         dx *= f
         dy *= f
         disp[i, 0] -= dx
@@ -196,10 +173,7 @@ def fruchterman_reingold_step(arr_f2_t pos,
 
     with nogil:
         disp[:, :] = 0
-        if edge_weights.shape[0] == 0:
-            attract(pos, edge_src, edge_dst, k, disp)
-        else:
-            attract_weighted(pos, edge_src, edge_dst, edge_weights, k, disp)
+        attract(pos, edge_src, edge_dst, edge_weights, k, disp)
         if  sample.shape[0] == 0:
             repulse(pos, k, disp)
         else:
