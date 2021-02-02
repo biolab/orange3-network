@@ -49,10 +49,10 @@ def fruchterman_reingold(pos,
         sample_size = 0
 
     temperatures = np.linspace(init_temp, 0.01, TEST_ITERATIONS)
-    start_time = time.process_time()
+    start_time = time.perf_counter()
     if not run_iterations(TEST_ITERATIONS, temperatures):
         return
-    elapsed_time = time.process_time() - start_time
+    elapsed_time = time.perf_counter() - start_time
 
     iterations = int(allowed_time / (elapsed_time / TEST_ITERATIONS))
     if TEST_ITERATIONS > iterations:
