@@ -211,7 +211,7 @@ class OWNxFile(OWWidget):
                     if info_msg is not None:
                         info_msg()
                     self.network.nodes = self._combined_data(data_source)
-                break
+                    break
         else:
             self.network.nodes = self._label_to_tabel()
             self.Information.suggest_annotation()
