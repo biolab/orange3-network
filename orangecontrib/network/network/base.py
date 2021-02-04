@@ -285,7 +285,7 @@ class Network:
             coordinates = self.coordinates[mask]
         else:
             coordinates = None
-        if mask.dtype is not np.bool:
+        if mask.dtype != bool:
             mask1 = np.full((self.number_of_nodes(),), False)
             mask1[mask] = True
             mask = mask1
