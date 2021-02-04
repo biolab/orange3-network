@@ -1,4 +1,6 @@
 import unittest
+from unittest.mock import Mock
+from math import sqrt
 
 import numpy as np
 
@@ -93,6 +95,32 @@ class TestOWNxGroups(NetworkTest):
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.network, None)
         self.widget.send_report()
+
+    def test_disable_normalize(self):
+        widget = self.widget
+        buttons = widget.controls.weighting.buttons
+        normalize = widget.controls.normalize
+
+        buttons[widget.NoWeights].click()
+        self.assertFalse(normalize.isEnabled())
+        buttons[widget.WeightByDegrees].click()
+        self.assertFalse(normalize.isEnabled())
+        buttons[widget.WeightByWeights].click()
+        self.assertTrue(normalize.isEnabled())
+        buttons[widget.WeightByDegrees].click()
+        self.assertFalse(normalize.isEnabled())
+
+    def test_commit_on_normalization_change(self):
+        widget = self.widget
+        check = widget.controls.normalize
+        widget.commit = Mock()
+
+        check.click()
+        widget.commit.assert_called()
+        widget.commit.reset_mock()
+
+        check.click()
+        widget.commit.assert_called()
 
 
 if __name__ == "__main__":

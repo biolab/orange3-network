@@ -66,11 +66,13 @@ class OWNxGroups(OWWidget):
             self.controlArea, self, "weighting", box="Output weights",
             btnLabels=self.weight_labels, callback=self.__feature_combo_changed
         )
-        gui.separator(radios)
         gui.checkBox(
-            radios, self, "normalize", "Normalize by geometric mean",
-            callback=self.__feature_combo_changed
+            gui.indentedBox(radios),
+            self, "normalize", "Normalize by geometric mean",
+            callback=self.__normalization_changed
         )
+        self.controls.normalize.setEnabled(
+            self.weighting == self.WeightByWeights)
 
     def _set_input_label_text(self):
         if self.network is None:
@@ -93,6 +95,11 @@ class OWNxGroups(OWWidget):
             )
 
     def __feature_combo_changed(self):
+        self.controls.normalize.setEnabled(
+            self.weighting == self.WeightByWeights)
+        self.commit()
+
+    def __normalization_changed(self):
         self.commit()
 
     @Inputs.network
