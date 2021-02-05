@@ -230,7 +230,7 @@ class OWNxGroups(OWWidget):
                 ("Number of edges", self.out_edges)])
 
 
-def main():
+def main():  # pragma: no cover
     from orangecontrib.network.network.readwrite import read_pajek
     from os.path import join, dirname
     from orangewidget.utils.widgetpreview import WidgetPreview
@@ -242,5 +242,5 @@ def main():
     WidgetPreview(OWNxGroups).run(set_network=network, set_data=data)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
