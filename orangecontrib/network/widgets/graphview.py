@@ -263,7 +263,7 @@ class GraphView(OWScatterPlotBase):
         if self.selection is None:
             selection = np.zeros(len(self.scatterplot_item.data), dtype=bool)
         else:
-            selection = np.array(self.selection, dtype=np.bool)
+            selection = np.array(self.selection, dtype=bool)
         marked = self.master.get_marked_nodes()
         if marked is not None:
             selection[marked] = 1

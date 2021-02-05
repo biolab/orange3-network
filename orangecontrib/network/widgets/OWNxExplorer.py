@@ -463,7 +463,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
             if self.data is not None:
                 # Replicate the necessary parts of set_data
-                self.valid_data = np.full(len(self.data), True, dtype=np.bool)
+                self.valid_data = np.full(len(self.data), True, dtype=bool)
                 self.init_attr_values()
                 self.openContext(self.data)
                 self.cb_class_density.setEnabled(self.can_draw_density())
