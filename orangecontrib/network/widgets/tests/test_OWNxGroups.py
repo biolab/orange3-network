@@ -1,8 +1,11 @@
 import unittest
+from unittest.mock import Mock
+from math import sqrt
 
 import numpy as np
+from scipy import sparse as sp
 
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import simulate
 
 from orangecontrib.network import Network
@@ -93,6 +96,82 @@ class TestOWNxGroups(NetworkTest):
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.network, None)
         self.widget.send_report()
+
+    def test_disable_normalize(self):
+        widget = self.widget
+        buttons = widget.controls.weighting.buttons
+        normalize = widget.controls.normalize
+
+        buttons[widget.NoWeights].click()
+        self.assertFalse(normalize.isEnabled())
+        buttons[widget.WeightByDegrees].click()
+        self.assertFalse(normalize.isEnabled())
+        buttons[widget.WeightByWeights].click()
+        self.assertTrue(normalize.isEnabled())
+        buttons[widget.WeightByDegrees].click()
+        self.assertFalse(normalize.isEnabled())
+
+    def test_commit_on_normalization_change(self):
+        widget = self.widget
+        check = widget.controls.normalize
+        widget.commit = Mock()
+
+        check.click()
+        widget.commit.assert_called()
+        widget.commit.reset_mock()
+
+        check.click()
+        widget.commit.assert_called()
+
+    def test_weights(self):
+        label_var = DiscreteVariable("label", values=tuple("abcde"))
+        domain = Domain([label_var], [])
+        items = Table.from_numpy(domain, np.array([[0, 0, 1, 3, 4, 0, 1, 2, 4]]).T)
+        src, dst, weights = np.array(
+            [[0, 1, 5],
+             [1, 2, 4],
+             [3, 4, 6],
+             [0, 5, 3],
+             [1, 6, 1],
+             [2, 7, 2],
+             [3, 8, 8],
+             [4, 8, 7],
+             [5, 6, 2]]).T
+        edges = sp.coo_matrix((weights.astype(float), (src, dst)), shape=(9, 9))
+        network = Network(items, edges)
+        expected = np.zeros((5, 5), dtype=float)
+
+        widget = self.widget
+        buttons = widget.controls.weighting.buttons
+        self.send_signal(widget.Inputs.network, network)
+
+        buttons[widget.NoWeights].click()
+        groups = widget._map_network()
+        for i, j in [(0, 1), (1, 2), (3, 4)]:
+            expected[i, j] = 1
+        np.testing.assert_equal(groups.edges[0].edges.todense(), expected)
+
+        buttons[widget.WeightByDegrees].click()
+        groups = widget._map_network()
+        expected[0, 1] = 3
+        expected[1, 2] = 1
+        expected[3, 4] = 2
+        np.testing.assert_equal(groups.edges[0].edges.todense(), expected)
+
+        buttons[widget.WeightByWeights].click()
+        widget.normalize = False
+        groups = widget._map_network()
+        expected[0, 1] = 7
+        expected[1, 2] = 2
+        expected[3, 4] = 14
+        np.testing.assert_equal(groups.edges[0].edges.todense(), expected)
+
+        widget.normalize = True
+        groups = widget._map_network()
+        expected[0, 1] = 1 / sqrt(10 * 3) + 4 / sqrt(10 * 6) + 2 / sqrt(5 * 3)
+        expected[1, 2] = 2 / sqrt(6 * 2)
+        expected[3, 4] = 6 / sqrt(14 * 13) + 8 / sqrt(14 * 15)
+        np.testing.assert_equal(groups.edges[0].edges.todense(), expected)
 
 
 if __name__ == "__main__":

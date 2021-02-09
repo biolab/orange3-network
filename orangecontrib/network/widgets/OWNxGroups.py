@@ -66,11 +66,13 @@ class OWNxGroups(OWWidget):
             self.controlArea, self, "weighting", box="Output weights",
             btnLabels=self.weight_labels, callback=self.__feature_combo_changed
         )
-        gui.separator(radios)
         gui.checkBox(
-            radios, self, "normalize", "Normalize by geometric mean",
-            callback=self.__feature_combo_changed
+            gui.indentedBox(radios),
+            self, "normalize", "Normalize by geometric mean",
+            callback=self.__normalization_changed
         )
+        self.controls.normalize.setEnabled(
+            self.weighting == self.WeightByWeights)
 
     def _set_input_label_text(self):
         if self.network is None:
@@ -93,6 +95,11 @@ class OWNxGroups(OWWidget):
             )
 
     def __feature_combo_changed(self):
+        self.controls.normalize.setEnabled(
+            self.weighting == self.WeightByWeights)
+        self.commit()
+
+    def __normalization_changed(self):
         self.commit()
 
     @Inputs.network
@@ -223,26 +230,17 @@ class OWNxGroups(OWWidget):
                 ("Number of edges", self.out_edges)])
 
 
-def main():
+def main():  # pragma: no cover
+    from orangecontrib.network.network.readwrite import read_pajek
     from os.path import join, dirname
-    from AnyQt.QtWidgets import QApplication
-    from orangecontrib.network.widgets.OWNxFile import OWNxFile
+    from orangewidget.utils.widgetpreview import WidgetPreview
 
-    app = QApplication([])
-    ow = OWNxGroups()
-    ow.show()
+    path = join(dirname(__file__), "..", "networks")
+    network = read_pajek(join(path, 'airtraffic.net'))
+    data = Table(join(path, 'airtraffic_items.tab'))
 
-    def set_network(data):
-        ow.set_network(data)
-
-    ow_file = OWNxFile()
-    ow_file.Outputs.network.send = set_network
-    ow_file.open_net_file(join(dirname(dirname(__file__)),
-                             "networks", "airtraffic.net"))
-    ow.handleNewSignals()
-    app.exec_()
-    ow.saveSettings()
+    WidgetPreview(OWNxGroups).run(set_network=network, set_data=data)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
