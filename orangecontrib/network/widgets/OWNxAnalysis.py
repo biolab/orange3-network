@@ -4,7 +4,7 @@ from collections import namedtuple
 import numpy as np
 from scipy.sparse import csgraph
 
-from AnyQt.QtCore import QThread
+from AnyQt.QtCore import QThread, Qt
 from AnyQt.QtWidgets import QWidget, QGridLayout
 
 from Orange.data import ContinuousVariable, Table, Domain
@@ -217,8 +217,19 @@ class OWNxAnalysis(widget.OWWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         tabs = gui.tabWidget(self.controlArea)
         tabs.setMinimumWidth(450)
-        graph_indices = gui.createTabPage(tabs, "Graph-level indices")
-        node_indices = gui.createTabPage(tabs, "Node-level indices")
+        graph_indices = gui.createTabPage(tabs, "Graph-level indices",
+                                          orientation=Qt.Horizontal)
+        node_indices = gui.createTabPage(tabs, "Node-level indices",
+                                         orientation=Qt.Horizontal)
+
+        graph_methods = gui.vBox(graph_indices)
+        gui.rubber(graph_indices)
+        graph_labels = gui.vBox(graph_indices)
+
+        node_methods = gui.vBox(node_indices)
+        gui.rubber(node_indices)
+        node_labels = gui.vBox(node_indices)
+        graph_labels.layout().setAlignment(Qt.AlignRight)
 
         self.method_cbs = {}
         for method in METHODS.values():
@@ -227,16 +238,17 @@ class OWNxAnalysis(widget.OWWidget):
             setattr(self, method.name, method.name in self.enabled_methods)
             setattr(self, "lbl_" + method.name, "")
 
-            box = gui.hBox(
-                node_indices if method.level == NODELEVEL else graph_indices)
+            methods = node_methods if method.level == NODELEVEL else graph_methods
+            labels = node_labels if method.level == NODELEVEL else graph_labels
+
             cb = gui.checkBox(
-                box, self, method.name, method.label,
+                methods, self, method.name, method.label,
                 callback=lambda attr=method.name: self.method_clicked(attr)
             )
             self.method_cbs[method.name] = cb
 
-            box.layout().addStretch(1)
-            lbl = gui.label(box, self, f"%(lbl_{method.name})s")
+            lbl = gui.label(labels, self, f"%(lbl_{method.name})s")
+            labels.layout().setAlignment(lbl, Qt.AlignRight)
             setattr(self, "tool_" + method.name, lbl)
             # todo: is this accessible through controls?
         graph_indices.layout().addStretch(1)
