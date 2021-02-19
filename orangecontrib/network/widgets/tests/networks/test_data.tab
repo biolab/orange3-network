@@ -1,0 +1,11 @@
+id	with_extras	label	duplicates	missing
+c	string	string	string
+	meta	meta	meta
+3	bb	cc	cc	cc
+6	ee	ff	ff	
+7	ff	gg	gg	gg
+1	ii	aa	aa	aa
+2	aa	bb	bb	bb
+4	cc	dd	dd	dd
+8	gg		cc	
+5	dd	ee	ee	ee

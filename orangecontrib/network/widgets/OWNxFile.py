@@ -11,10 +11,47 @@ from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
+from Orange.widgets.settings import ContextHandler
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from orangecontrib.network.network import Network
 from orangecontrib.network.network.readwrite import read_pajek
+
+
+class NxFileContextHandler(ContextHandler):
+    def new_context(self, useful_vars):
+        context = super().new_context()
+        context.useful_vars = {var.name for var in useful_vars}
+        context.label_variable = None
+        return context
+
+    # noinspection PyMethodOverriding
+    def match(self, context, useful_vars):
+        useful_vars = {var.name for var in useful_vars}
+        if context.useful_vars == useful_vars:
+            return self.PERFECT_MATCH
+        # context.label_variable can also be None; this would always match,
+        # so ignore it
+        elif context.label_variable in useful_vars:
+            return self.MATCH
+        else:
+            return self.NO_MATCH
+
+    def settings_from_widget(self, widget, *_):
+        context = widget.current_context
+        if context is not None:
+            context.label_variable = \
+                widget.label_variable and widget.label_variable.name
+
+    def settings_to_widget(self, widget, useful_vars):
+        context = widget.current_context
+        widget.label_variable = None
+        if context.label_variable is not None:
+            for var in useful_vars:
+                if var.name == context.label_variable:
+                    widget.label_variable = var
+                    break
 
 
 class OWNxFile(OWWidget):
@@ -30,6 +67,8 @@ class OWNxFile(OWWidget):
         network = Output("Network", Network)
         items = Output("Items", Table)
 
+    settingsHandler = NxFileContextHandler()
+    label_variable: StringVariable = settings.ContextSetting(None)
     recentFiles = settings.Setting([])
 
     class Information(OWWidget.Information):
@@ -38,13 +77,6 @@ class OWNxFile(OWWidget):
         suggest_annotation = Msg(
             'Add optional data input to annotate nodes')
 
-    class Warning(OWWidget.Warning):
-        auto_mismatched_lengths = Msg(
-            'Data file with the same name is not used.\n'
-            'The number of instances does not match the number of nodes.')
-        mismatched_lengths = Msg(
-            'Data size does not match the number of nodes.')
-
     class Error(OWWidget.Error):
         io_error = Msg('Error reading file "{}"\n{}')
         error_parsing_file = Msg('Error reading file "{}"')
@@ -52,6 +84,10 @@ class OWNxFile(OWWidget):
             "Attempt to read {} failed\n"
             "The widget tried to annotated nodes with data from\n"
             "a file with the same name.")
+        mismatched_lengths = Msg(
+            "Data size does not match the number of nodes.\n"
+            "Select a data column whose values can be matched with network "
+            "labels")
 
     want_main_area = False
 
@@ -77,12 +113,20 @@ class OWNxFile(OWWidget):
             icon=self.style().standardIcon(QStyle.SP_BrowserReload),
             sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
 
+        self.label_model = VariableListModel(placeholder="(Match by rows)")
+        self.label_model[:] = [None]
+        gui.comboBox(
+            self.controlArea, self, "label_variable", box=True,
+            label="Match node labels to data column: ", orientation=Qt.Horizontal,
+            model=self.label_model, callback=self.label_changed)
+
         self.populate_comboboxes()
         self.reload()
 
     @Inputs.items
     def set_data(self, data):
         self.data = data
+        self.update_label_combo()
         self.send_output()
 
     def populate_comboboxes(self):
@@ -149,6 +193,7 @@ class OWNxFile(OWWidget):
         else:
             self.original_nodes = self.network.nodes
             self.read_auto_data(filename)
+        self.update_label_combo()
         self.send_output()
 
     def read_auto_data(self, filename):
@@ -171,9 +216,42 @@ class OWNxFile(OWWidget):
             if errored_file:
                 self.Error.auto_data_failed(errored_file)
 
-    def send_output(self):
+    def update_label_combo(self):
+        self.closeContext()
+        data = self.data if self.data is not None else self.auto_data
+        if self.network is None or data is None:
+            self.label_model[:] = [None]
+        else:
+            best_var, useful_vars = self._vars_for_label(data)
+            self.label_model[:] = [None] + useful_vars
+            self.label_variable = best_var
+            self.openContext(useful_vars)
         self.set_network_nodes()
 
+    def _vars_for_label(self, data: Table):
+        vars_and_overs = []
+        original_nodes = set(self.original_nodes)
+        for var in data.domain.metas:
+            if not isinstance(var, StringVariable):
+                continue
+            values, _ = data.get_column_view(var)
+            values = values[values != ""]
+            set_values = set(values)
+            if len(values) != len(set_values) \
+                    or not original_nodes <= set_values:
+                continue
+            vars_and_overs.append((len(set_values - original_nodes), var))
+        if not vars_and_overs:
+            return None, []
+        _, best_var = min(vars_and_overs)
+        useful_string_vars = [var for _, var in vars_and_overs]
+        return best_var, useful_string_vars
+
+    def label_changed(self):
+        self.set_network_nodes()
+        self.send_output()
+
+    def send_output(self):
         if self.network is None:
             self.Outputs.network.send(None)
             self.Outputs.items.send(None)
@@ -192,29 +270,32 @@ class OWNxFile(OWWidget):
         self.info.set_output_summary(summary, details)
 
     def set_network_nodes(self):
-        self.Warning.mismatched_lengths.clear()
-        self.Warning.auto_mismatched_lengths.clear()
+        self.Error.mismatched_lengths.clear()
         self.Information.auto_annotation.clear()
         self.Information.suggest_annotation.clear()
         if self.network is None:
             return
 
-        self.network.nodes = self.original_nodes
-        for data_source, warning_msg, info_msg in (
-            (self.data, self.Warning.mismatched_lengths, None),
-            (self.auto_data, self.Warning.auto_mismatched_lengths,
-             self.Information.auto_annotation)):
-            if data_source is not None:
-                if len(data_source) != self.network.number_of_nodes():
-                    warning_msg()
-                else:
-                    if info_msg is not None:
-                        info_msg()
-                    self.network.nodes = self._combined_data(data_source)
-                    break
-        else:
-            self.network.nodes = self._label_to_tabel()
+        data = self.data if self.data is not None else self.auto_data
+        if data is None:
             self.Information.suggest_annotation()
+        elif self.label_variable is None \
+                and len(data) != self.network.number_of_nodes():
+            self.Error.mismatched_lengths()
+            data = None
+
+        if data is None:
+            self.network.nodes = self._label_to_tabel()
+        elif self.label_variable is None:
+            self.network.nodes = self._combined_data(data)
+        else:
+            self.network.nodes = self._data_by_labels(data)
+
+    def _data_by_labels(self, data):
+            data_col, _ = data.get_column_view(self.label_variable)
+            data_rows = {label: row for row, label in enumerate(data_col)}
+            indices = [data_rows[label] for label in self.original_nodes]
+            return data[indices]
 
     def _combined_data(self, source):
         nodes = np.array(self.original_nodes, dtype=str)
