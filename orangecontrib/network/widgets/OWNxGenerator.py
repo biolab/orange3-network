@@ -1,7 +1,9 @@
-from functools import reduce
+import string
+from collections import defaultdict
 
 import numpy as np
 
+from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QSpinBox
 
 from Orange.data import Table, Domain, StringVariable
@@ -36,27 +38,31 @@ class OWNxGenerator(widget.OWWidget):
     priority = 6420
 
     GRAPH_TYPES = (
-        ("Path", path, {"Path of length": 10}, ""),
-        ("Cycle", cycle, {"Cycle with": 10}, "nodes"),
-        ("Complete", complete, {"Complete with": 5}, "nodes"),
-        ("Complete bipartite", complete_bipartite,
-         {"Complete bipartite with": 5, "and": 8}, "nodes"),
-        ("Barbell", barbell, {"Barbell with": 5, "and": 8}, "nodes"),
-        ("Ladder", ladder, {"Ladder with": 10}, "steps"),
-        ("Circular ladder", circular_ladder,
-         {"Circular ladder with": 8}, "steps"),
-        ("Grid", grid, {"Grid of height": 4, "and width": 5}, ""),
-        ("Hypercube", hypercube, {"Hypercube,": 4}, "dimensional"),
-        ("Star", star, {"Star with": 10}, "edges"),
-        ("Lollipop", lollipop,
-         {"Lollipop with": 5, "nodes, stem of": 5}, "nodes"),
-        ("Geometric", geometric,
-         {"Geometric with": 20, "nodes, ": 50}, "edges", True)
+        (path, "Path",
+         "of length", (10, 2, 100)),
+        (cycle, "Cycle",
+         "with", (10, 3, 100), "nodes"),
+        (complete, "Complete",
+         "with", (5, 1, 100), "nodes"),
+        (complete_bipartite, "Complete bipartite",
+         "with", (5, 1, 100), "and", (8, 1, 100), "nodes"),
+        (barbell, "Barbell",
+         "with", (5, 1, 100), "and", (8, 1, 100), "nodes"),
+        (ladder, "Ladder",
+         "with", (10, 2, 100), "steps"),
+        (circular_ladder, "Circular ladder",
+         "with", (8, 2, 100), "steps"),
+        (grid, "Grid",
+         ", height", (4, 2, 100), "and width", (5, 2, 100)),
+        (hypercube, "Hypercube",
+         ", ", (4, 1, 14), "dimensional"),
+        (star, "Star", "with", (10, 1, 1000), "edges"),
+        (lollipop, "Lollipop",
+         "with", (5, 3, 30), "nodes, stem of", (5, 3, 100), "nodes"),
+        (geometric, "Geometric",
+         "with", (20, 2, 100), "nodes, ", (50, 1, 10000), "edges")
     )
-
-    mins_maxs = {
-        "Geometric": ((5, 1000), (20, 10000))
-    }
+    RANDOM_TYPES = ("Geometric", )
 
     class Outputs:
         network = Output("Network", Network)
@@ -66,37 +72,54 @@ class OWNxGenerator(widget.OWWidget):
 
     graph_type = settings.Setting(7)
     arguments = settings.Setting(
-        reduce(lambda x, y: {**x, **y},
-               ({_ctrl_name(name, arg): val for arg, val in defaults.items()}
-                for name, _, defaults, *_1 in GRAPH_TYPES)))
+        {name: [args[0] for args in defaults if isinstance(args, tuple)]
+         for _, name, *defaults in GRAPH_TYPES})
+    settings_version = 2
 
     want_main_area = False
     resizing_enabled = False
 
     def __init__(self):
+        def space(a, b):
+            if not isinstance(a, str) or a[-1] in string.ascii_letters \
+                    and not isinstance(b, str) or b[0] in string.ascii_letters:
+                return " "
+            else:
+                return ""
+
         super().__init__()
         rb = self.radios = gui.radioButtons(
             self.controlArea, self, "graph_type",
-            box="Graph type",
+            box=True,
             callback=self.on_type_changed
         )
+        rb.layout().setSpacing(6)
         self.arg_spins = {}
-        for name, _, arguments, post, *_ in self.GRAPH_TYPES:
+        for (_1, name, _2, *arguments), defaults \
+                in zip(self.GRAPH_TYPES, self.arguments.values()):
             argbox = gui.hBox(rb)
-            gui.appendRadioButton(rb, name, argbox)
+            argbox.layout().setSpacing(0)
+            rbb = gui.appendRadioButton(rb, name, argbox)
+            rbb.setAttribute(Qt.WA_LayoutUsesWidgetRect)
+            argbox.setAttribute(Qt.WA_LayoutUsesWidgetRect)
             self.arg_spins[name] = box = []
-            min_max = self.mins_maxs.get(name, ((1, 100),) * len(arguments))
-            for arg, (minv, maxv) in zip(arguments, min_max):
-                box.append(gui.widgetLabel(argbox, arg))
-                spin = QSpinBox(value=self.arguments[_ctrl_name(name, arg)],
-                                minimum=minv, maximum=maxv)
-                argbox.layout().addWidget(spin)
-                spin.valueChanged.connect(
-                    lambda value, name=name, arg=arg:
-                    self.update_arg(value, name, arg))
-                box.append(spin)
-            if post:
-                box.append(gui.widgetLabel(gui.hBox(argbox), post))
+            values = iter(defaults)
+            argno = 0
+            for prev, arg, post in \
+                    zip([""] + arguments, arguments, arguments + [""]):
+                if isinstance(arg, str):
+                    label = space(prev, arg) + arg + space(arg, post)
+                    box.append(gui.widgetLabel(argbox, label))
+                else:
+                    assert isinstance(arg, tuple)
+                    _value, minv, maxv = arg
+                    spin = QSpinBox(value=next(values), minimum=minv, maximum=maxv)
+                    argbox.layout().addWidget(spin)
+                    spin.valueChanged.connect(
+                        lambda value, name=name, argidx=argno:
+                        self.update_arg(value, name, argidx))
+                    argno += 1
+                    box.append(spin)
 
         self.bt_generate = gui.button(
             self.controlArea, self, "Regenerate Network",
@@ -105,24 +128,27 @@ class OWNxGenerator(widget.OWWidget):
 
     def on_type_changed(self):
         cur_def = self.GRAPH_TYPES[self.graph_type]
-        cur_name = cur_def[0]
-        for (name, spins), radio in zip(self.arg_spins.items(), self.radios.buttons):
-            radio.setText(name * (cur_name != name))
-            for spin in spins:
-                spin.setHidden(name != cur_name)
+        cur_name = cur_def[1]
+        for (name, widgets), (_1, _2, name_add, *_), radio in \
+                zip(self.arg_spins.items(), self.GRAPH_TYPES, self.radios.buttons):
+            selected = name == cur_name
+            radio.setText(name
+                + (" " * (name_add and name_add[0] in string.ascii_letters)
+                   + name_add) * selected)
+            for spin in widgets:
+                spin.setHidden(not selected)
 
-        is_random = len(cur_def) >= 5 and cur_def[4]
-        self.bt_generate.setEnabled(is_random)
+        self.bt_generate.setEnabled(cur_name in self.RANDOM_TYPES)
 
         self.generate()
 
-    def update_arg(self, value, name, arg):
-        self.arguments[_ctrl_name(name, arg)] = value
+    def update_arg(self, value, name, argidx):
+        self.arguments[name][argidx] = value
         self.generate()
 
     def generate(self):
-        name, func, args, *_ = self.GRAPH_TYPES[self.graph_type]
-        args = tuple(self.arguments[_ctrl_name(name, arg)] for arg in args)
+        func, name, args, *_ = self.GRAPH_TYPES[self.graph_type]
+        args = self.arguments[name]
         self.Error.generation_error.clear()
         try:
             network = func(*args)
@@ -136,6 +162,13 @@ class OWNxGenerator(widget.OWWidget):
                                   np.arange(n).reshape((n, 1)))
         self.Outputs.network.send(network)
 
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            arguments = defaultdict(list)
+            for name, value in settings_.pop("arguments", {}):
+                arguments[name.split("__")[0]].append(value)
+            settings_["arguments"] = dict(arguments)
 
 def main():
     def send(graph):
@@ -148,8 +181,8 @@ def main():
     ow = OWNxGenerator()
     owe = OWNxExplorer()
     ow.Outputs.network.send = send
-    ow.show()
     owe.show()
+    ow.show()
     a.exec_()
     ow.saveSettings()
 
