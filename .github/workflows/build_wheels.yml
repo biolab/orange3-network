@@ -34,6 +34,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+          name: bdist_files
 
   build_sdist:
     name: Build source distribution
@@ -53,5 +54,27 @@ jobs:
       - name: Upload sdist
         uses: actions/upload-artifact@v2
         with:
-          name: dist
+          name: sdist_file
           path: dist/*.tar.gz
+
+  upload_release_assets:
+    name:  Upload Release Assets
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Download bdist files
+        id: download_artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: bdist_files
+          path: ~/downloads
+      
+      - name: List downloaded artifacts
+        run: ls -la ~/downloads
+
+      - name: Upload to release
+        uses: shogo82148/actions-upload-release-asset@v1.2.3
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.download.outputs.download-path }}/*.whl
