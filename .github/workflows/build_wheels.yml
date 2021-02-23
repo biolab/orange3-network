@@ -59,7 +59,7 @@ jobs:
 
   upload_release_assets:
     name:  Upload Release Assets
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels]
     runs-on: ubuntu-20.04
 
     steps:
@@ -77,4 +77,4 @@ jobs:
         uses: shogo82148/actions-upload-release-asset@v1.2.3
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.download.outputs.download-path }}/*.whl
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}/*.whl
