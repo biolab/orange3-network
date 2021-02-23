@@ -45,9 +45,10 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
 
-      - name: Build sdist
+      - name: Build sdist (pep517)
         run: |
-          python setup.py sdist
+          python -m pip install pep517v
+          python -m pep517.build -s .
 
       - name: Upload sdist
         uses: actions/upload-artifact@v2
