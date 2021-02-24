@@ -54,7 +54,7 @@ jobs:
       - name: Upload sdist
         uses: actions/upload-artifact@v2
         with:
-          name: sdist_file
+          name: sdist_files
           path: dist/*.tar.gz
 
   upload_release_assets:
@@ -78,3 +78,33 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ steps.download_artifact.outputs.download-path }}/*.whl
+
+  pypi_publish:
+    name:  PyPI Publish
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Download bdist files
+        uses: actions/download-artifact@v2
+        with:
+          name: bdist_files
+          path: downloads/
+
+      - name: Download sdist files
+        uses: actions/download-artifact@v2
+        with:
+          name: sdist_files
+          path: downloads/
+
+      - name: Display structure of downloaded files
+        run: ls -R downloads/
+
+      - name: Publish packages to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: downloads/
+          # repository_url: https://test.pypi.org/legacy/
+          # verbose: true
