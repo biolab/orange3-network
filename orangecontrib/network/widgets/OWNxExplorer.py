@@ -104,11 +104,6 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.gui.point_properties_box(self.controlArea)
         self._add_effects_box()
         self.gui.plot_properties_box(self.controlArea)
-        gui.rubber(self.controlArea)
-        self.gui.box_zoom_select(self.controlArea)
-        gui.auto_commit(
-            self.controlArea, self, "auto_commit",
-            "Send Selection", "Send Automatically")
         self._add_mark_box()
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
