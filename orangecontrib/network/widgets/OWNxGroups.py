@@ -139,7 +139,7 @@ class OWNxGroups(OWWidget):
     def set_feature_model(self):
         data = self.effective_data
         feature_model = self.controls.feature.model()
-        feature_model.set_domain(data and data.domain)
+        feature_model.set_domain(data.domain if data else None)
         self.feature = feature_model[0] if feature_model else None
 
     def commit(self):
