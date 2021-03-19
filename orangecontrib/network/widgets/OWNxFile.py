@@ -1,6 +1,5 @@
 from os import path
 from itertools import product
-from pkg_resources import load_entry_point
 from traceback import format_exception_only
 
 import numpy as np
@@ -8,6 +7,7 @@ import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QStyle, QSizePolicy, QFileDialog
 
+from Orange.util import get_entry_point
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
@@ -52,6 +52,11 @@ class NxFileContextHandler(ContextHandler):
                 if var.name == context.label_variable:
                     widget.label_variable = var
                     break
+
+
+demos_path = next(
+    get_entry_point("Orange3-Network", "orange.data.io.search_paths", "network")
+    ())[1]
 
 
 class OWNxFile(OWWidget):
@@ -139,10 +144,7 @@ class OWNxFile(OWWidget):
     def browse_net_file(self, browse_demos=False):
         """user pressed the '...' button to manually select a file to load"""
         if browse_demos:
-            startfile = next(load_entry_point(
-                "Orange3-Network",
-                "orange.data.io.search_paths",
-                "network")())[1]
+            startfile = demos_path
         else:
             startfile = self.recentFiles[0] if self.recentFiles else '.'
 
