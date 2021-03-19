@@ -1,10 +1,11 @@
 import numpy as np
 import scipy.sparse as sp
+from scipy.sparse import csgraph
+
+import pyqtgraph as pg
 
 from AnyQt.QtCore import QLineF, QSize, Qt
-import pyqtgraph as pg
-from PyQt5.QtWidgets import QGridLayout
-from scipy.sparse import csgraph
+from AnyQt.QtWidgets import QGridLayout, QLabel
 
 from Orange.data import Domain, StringVariable, Table
 from Orange.distance import Euclidean
@@ -90,34 +91,40 @@ class OWNxFromDistances(widget.OWWidget):
         self.resize(700, 100)
 
     def addHistogramControls(self):
-        boxGeneral = gui.widgetBox(self.controlArea, box="Edges")
-        ribg = gui.widgetBox(boxGeneral, None, orientation=Qt.Horizontal, addSpace=False)
-        self.spin_high = gui.doubleSpin(boxGeneral, self, 'spinUpperThreshold',
+        # gui.spin and gui.doubleSpin cannot not be inserted somewhere, thus
+        # we insert them into controlArea and then move to grid
+        grid = QGridLayout()
+        gui.widgetBox(self.controlArea, box="Edges", orientation=grid)
+        self.spin_high = gui.doubleSpin(self.controlArea, self, 'spinUpperThreshold',
                                         0, float('inf'), 0.001, decimals=3,
-                                        label='Distance threshold',
                                         callback=self.changeUpperSpin,
                                         keyboardTracking=False,
-                                        controlWidth=60)
+                                        controlWidth=60,
+                                        addToLayout=False)
+        grid.addWidget(QLabel("Distance threshold"), 0, 0)
+        grid.addWidget(self.spin_high, 0, 1)
+
         self.histogram.region.sigRegionChangeFinished.connect(self.spinboxFromHistogramRegion)
 
-        ribg = gui.widgetBox(boxGeneral, None, orientation=Qt.Horizontal, addSpace=False)
-
-        gui.doubleSpin(boxGeneral, self, "percentil", 0, 100, PERCENTIL_STEP,
+        spin = gui.doubleSpin(self.controlArea, self, "percentil", 0, 100, PERCENTIL_STEP,
                       label="Percentile", orientation=Qt.Horizontal,
                       callback=self.setPercentil,
                       callbackOnReturn=1, controlWidth=60)
+        grid.addWidget(QLabel("Percentile"), 1, 0)
+        grid.addWidget(spin, 1, 1)
 
-        hbox = gui.widgetBox(boxGeneral, orientation=Qt.Horizontal)
-        knn_cb = gui.checkBox(hbox, self, 'include_knn',
+        knn_cb = gui.checkBox(self.controlArea, self, 'include_knn',
                               label='Include closest neighbors',
                               callback=self.generateGraph)
-        knn = gui.spin(hbox, self, "kNN", 1, 1000, 1,
+        knn = gui.spin(self.controlArea, self, "kNN", 1, 1000, 1,
                        orientation=Qt.Horizontal,
                        callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
+        grid.addWidget(knn_cb, 2, 0)
+        grid.addWidget(knn, 2, 1)
+
         knn_cb.disables = [knn]
         knn_cb.makeConsistent()
 
-        ribg.layout().addStretch(1)
         # Options
         ribg = gui.radioButtonsInBox(self.controlArea, self, "node_selection",
                                      box="Node selection",
@@ -146,7 +153,7 @@ class OWNxFromDistances(widget.OWWidget):
         ribg = gui.radioButtonsInBox(self.controlArea, self, "edge_weights",
                                      box="Edge weights",
                                      callback=self.generateGraph)
-        hb = gui.widgetBox(ribg, None, orientation=Qt.Horizontal, addSpace=False)
+        hb = gui.widgetBox(ribg, None, addSpace=False)
         gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
         gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
 
