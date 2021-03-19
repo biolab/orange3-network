@@ -75,8 +75,6 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
-    'pyqtgraph>=0.9.10',
-    'numpy>=1.8.0',
     'gensim',
     'Orange3>=3.28'
 ),
