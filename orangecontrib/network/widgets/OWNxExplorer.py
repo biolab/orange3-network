@@ -113,7 +113,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
     def _add_info_box(self):
-        info = gui.vBox(self.controlArea, True)
+        info = gui.vBox(self.controlArea, box="Layout")
         gui.label(
             info, self,
             "Nodes: %(number_of_nodes)i (%(nodes_per_edge).2f per edge); "
@@ -142,7 +142,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                      callback=self.improve)
 
     def _add_effects_box(self):
-        gbox = self.gui.create_gridbox(self.controlArea, True)
+        gbox = self.gui.create_gridbox(self.controlArea, box="Widths and Sizes")
         self.gui.add_widget(self.gui.PointSize, gbox)
         gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
         self.gui.add_control(
