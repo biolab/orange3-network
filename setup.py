@@ -75,8 +75,12 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
+    'anyqt',
     'gensim',
-    'Orange3>=3.28'
+    'Orange3>=3.28',
+    'orange-widget-base',
+    'scipy',
+    'scikit-learn',
 ),
 
 EXTRAS_REQUIRE = {
