@@ -22,6 +22,7 @@ class OWNxSingleMode(OWWidget):
     priority = 7000
 
     want_main_area = False
+    resizing_enabled = False
 
     settingsHandler = DomainContextHandler(
         match_values=DomainContextHandler.MATCH_VALUES_ALL)
