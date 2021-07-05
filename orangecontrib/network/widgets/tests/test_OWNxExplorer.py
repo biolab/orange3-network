@@ -96,6 +96,15 @@ class TestOWNxExplorer(NetworkTest):
         sub_mask = self.widget.get_subset_mask()
         self.assertIsNone(sub_mask)
 
+    def test_report(self):
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.node_data, self.davis_data)
+        self.widget.send_report()
+
 
 if __name__ == "__main__":
     unittest.main()
