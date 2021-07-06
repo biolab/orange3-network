@@ -11,8 +11,8 @@ from setuptools import find_packages
 
 import numpy
 
-if sys.version_info < (3, 6):
-    sys.exit('Orange3-Network requires Python >= 3.6')
+if sys.version_info < (3, 7):
+    sys.exit('Orange3-Network requires Python >= 3.7')
 
 try:
     from Cython.Distutils.build_ext import new_build_ext as build_ext
@@ -75,8 +75,12 @@ SETUP_REQUIRES = (
 )
 
 INSTALL_REQUIRES = (
+    'anyqt',
     'gensim',
-    'Orange3>=3.28'
+    'Orange3>=3.29',
+    'orange-widget-base',
+    'scipy',
+    'scikit-learn',
 ),
 
 EXTRAS_REQUIRE = {

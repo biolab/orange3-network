@@ -1,6 +1,7 @@
 import numpy as np
-from Orange.data import ContinuousVariable, Table, Domain
+import gensim
 from gensim.models import Word2Vec
+from Orange.data import ContinuousVariable, Table, Domain
 
 from orangecontrib.network.network.base import DirectedEdges
 
@@ -97,7 +98,8 @@ def normalize(probas, norm_const):
 
 
 class Node2Vec:
-    def __init__(self, p=0.8, q=0.7, walk_len=80, num_walks=10, emb_size=50, window_size=5, num_epochs=1, prefix=None,
+    def __init__(self, p=0.8, q=0.7, walk_len=80, num_walks=10, emb_size=50,
+                 window_size=5, num_epochs=1, prefix=None,
                  callbacks=()):
         self.p = p
         self.q = q
@@ -131,8 +133,17 @@ class Node2Vec:
         walks = self._simulate_walks(G)
         walks = [list(map(str, walk)) for walk in walks]
 
-        model = Word2Vec(walks, size=self.emb_size, window=self.window_size, min_count=0, sg=1, workers=4,
-                         iter=self.num_epochs, callbacks=self.callbacks)
+        # gensim changed "size" param to "vector_size" in v. 4.0.0
+        # https://github.com/RaRe-Technologies/gensim/wiki/Migrating-from-Gensim-3.x-to-4
+        params = dict(window=self.window_size, min_count=0, sg=1, workers=4,
+                      callbacks=self.callbacks)
+        if gensim.__version__ < "4.0.0":
+            params["size"] = self.emb_size
+            params["iter"] = self.num_epochs
+        else:
+            params["vector_size"] = self.emb_size
+            params["epochs"] = self.num_epochs
+        model = Word2Vec(walks, **params)
 
         items = G.nodes
         new_attrs = {}

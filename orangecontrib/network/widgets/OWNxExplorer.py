@@ -382,7 +382,12 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     @Inputs.node_subset
     def set_node_subset(self, data):
-        super().set_subset_data(data)
+        # It would be better to call super, but this fails because super
+        # is decorated to set the partial summary for signal "Subset Data",
+        # which does not exist for this widget (OWNxExplorer.Inputs is not
+        # derived from OWDataProjectionWidget.Inputs in order to rename the
+        # signal)
+        self.subset_data = data
 
     @Inputs.node_distances
     def set_items_distance_matrix(self, matrix):
