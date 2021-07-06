@@ -95,6 +95,7 @@ class OWNxFile(OWWidget):
             "labels")
 
     want_main_area = False
+    mainArea_width_height_ratio = None
 
     def __init__(self):
         super().__init__()
@@ -126,6 +127,7 @@ class OWNxFile(OWWidget):
             model=self.label_model, callback=self.label_changed)
 
         self.populate_comboboxes()
+        self.setFixedHeight(self.sizeHint().height())
         self.reload()
 
     @Inputs.items
