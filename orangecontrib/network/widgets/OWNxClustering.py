@@ -51,13 +51,6 @@ class OWNxClustering(widget.OWWidget):
     @Inputs.network
     def set_network(self, net):
         self.net = net
-        if net is None:
-            self.info.set_input_summary(self.info.NoInput)
-        else:
-            nnodes, nedges = net.number_of_nodes(), net.number_of_edges()
-            self.info.set_input_summary(
-                f"{nnodes}/{nedges}",
-                f"{nnodes} nodes, {nedges} edges")
         self.commit()
 
     def commit(self):
@@ -72,7 +65,6 @@ class OWNxClustering(widget.OWWidget):
             self.Outputs.items.send(None)
             self.Outputs.network.send(None)
             self.cluster_feature = None
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         if self.use_random_state:
@@ -89,7 +81,6 @@ class OWNxClustering(widget.OWWidget):
         self.Outputs.network.send(self.net)
 
         nclusters = len(set(labels.values()))
-        self.info.set_output_summary(nclusters, f"{nclusters} clusters")
 
     @classmethod
     def migrate_settings(cls, settings, version):

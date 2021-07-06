@@ -92,16 +92,6 @@ class OWNxSave(OWSaveBase):
         except IOError as err_value:
             self.Error.general_error(str(err_value))
 
-    def update_status(self):
-        net = self.data
-        if net is None:
-            self.info.set_input_summary(self.info.NoInput)
-        else:
-            self.info.set_input_summary(
-                str(net.number_of_nodes()),
-                f"Network with {net.number_of_nodes()} nodes "
-                f"and {net.number_of_edges(0)} edges.")
-
     def send_report(self):
         self.report_items((
             ("Node labels",
