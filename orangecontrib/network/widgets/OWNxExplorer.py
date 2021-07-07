@@ -506,12 +506,14 @@ class OWNxExplorer(OWDataProjectionWidget):
         if self.positions is None:
             set_actual_edges()
             self.set_random_positions()
+            self.clear()
             self.graph.reset_graph()
             self.relayout(True)
         else:
             self.graph.update_point_props()
         self.update_marks()
         self.update_selection_buttons()
+        self.unconditional_commit()
 
     def init_attr_values(self):
         super().init_attr_values()
@@ -527,7 +529,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def set_random_positions(self):
         if self.network is None:
-            self.position = None
+            self.positions = None
         else:
             self.positions = np.random.uniform(size=(self.number_of_nodes, 2))
 
@@ -563,6 +565,10 @@ class OWNxExplorer(OWDataProjectionWidget):
             Outputs.distances.send(None)
         else:
             Outputs.distances.send(distances.submatrix(sorted(selected_indices)))
+
+    def clear(self):
+        super().clear()
+        self.nSelected = 0
 
     def get_coordinates_data(self):
         if self.positions is not None:
