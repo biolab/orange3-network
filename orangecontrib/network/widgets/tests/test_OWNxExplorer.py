@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -21,6 +22,19 @@ class TestOWNxExplorer(NetworkTest):
     def test_minimum_size(self):
         # Disable this test from the base test class
         pass
+
+
+class TestOWNxExplorerWithLayout(TestOWNxExplorer):
+    def test_empty_network(self):
+        net = Network([], [])
+        # should not crash
+        self.send_signal(self.widget.Inputs.network, net)
+
+
+class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
+    def setUp(self):
+        super().setUp()
+        self.widget.relayout = Mock()
 
     def test_too_many_labels(self):
         # check that Warning is shown when attribute
@@ -59,11 +73,6 @@ class TestOWNxExplorer(NetworkTest):
         self.assertSetEqual(set(self.widget.get_reachable([GENES["BLVRB"]])),
                             {GENES["BLVRB"], GENES["HMOX1"], GENES["BLVRA"]})
 
-    def test_empty_network(self):
-        net = Network([], [])
-        # should not crash
-        self.send_signal(self.widget.Inputs.network, net)
-
     def test_edge_weights(self):
         self.send_signal(self.widget.Inputs.network, self.davis_net)
         self.widget.graph.show_edge_weights = True
@@ -95,6 +104,15 @@ class TestOWNxExplorer(NetworkTest):
         self.send_signal(self.widget.Inputs.node_subset, None)
         sub_mask = self.widget.get_subset_mask()
         self.assertIsNone(sub_mask)
+
+    def test_report(self):
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.node_data, self.davis_data)
+        self.widget.send_report()
 
 
 if __name__ == "__main__":

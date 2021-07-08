@@ -688,13 +688,17 @@ class OWNxExplorer(OWDataProjectionWidget):
         super().onDeleteWidget()
 
     def send_report(self):
+        if self.network is None:
+            return
+
         self.report_items('Graph info', [
             ("Number of vertices", self.network.number_of_nodes()),
             ("Number of edges", self.network.number_of_edges()),
             ("Vertices per edge", round(self.nodes_per_edge, 3)),
             ("Edges per vertex", round(self.edges_per_node, 3)),
         ])
-        self.report_data("Data", self.network.items())
+        if self.data is not None:
+            self.report_data("Data", self.data)
         if any((self.attr_color, self.attr_shape,
                 self.attr_size, self.attr_label)):
             self.report_items(
