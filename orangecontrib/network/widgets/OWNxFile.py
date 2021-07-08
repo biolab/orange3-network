@@ -259,19 +259,9 @@ class OWNxFile(OWWidget):
         if self.network is None:
             self.Outputs.network.send(None)
             self.Outputs.items.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
-            return
-
-        self.Outputs.network.send(self.network)
-        self.Outputs.items.send(self.network.nodes)
-
-        n_nodes = self.network.number_of_nodes()
-        n_edges = self.network.number_of_edges()
-        summary = f"{n_nodes} / {n_edges}"
-        details = \
-            ('Directed' if self.network.edges[0].directed else 'Undirected') \
-            + f" network with\n{n_nodes} nodes and {n_edges} edges."
-        self.info.set_output_summary(summary, details)
+        else:
+            self.Outputs.network.send(self.network)
+            self.Outputs.items.send(self.network.nodes)
 
     def set_network_nodes(self):
         self.Error.mismatched_lengths.clear()
