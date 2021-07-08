@@ -265,13 +265,18 @@ class OWNxFromDistances(widget.OWWidget):
             if self.kNN >= self.matrix.shape[0]:
                 self.Warning.kNN_too_large(self.matrix.shape[0] - 1)
 
-            mask = self.matrix <= self.spinUpperThreshold
+            mask = np.array(self.matrix <= self.spinUpperThreshold)
             if self.include_knn:
                 mask |= mask.argsort() < self.kNN
+            np.fill_diagonal(mask, 0)
             weights = matrix[mask]
-            if weights.size and self.edge_weights == EdgeWeights.INVERSE:
-                weights = np.max(weights) - weights
-            edges = sp.csr_matrix((weights, mask.nonzero()))
+            shape = (len(items), len(items))
+            if weights.size:
+                if self.edge_weights == EdgeWeights.INVERSE:
+                    weights = np.max(weights) - weights
+                edges = sp.csr_matrix((weights, mask.nonzero()), shape=shape)
+            else:
+                edges = sp.csr_matrix(shape)
             graph = Network(items, edges)
 
             self.graph = None
