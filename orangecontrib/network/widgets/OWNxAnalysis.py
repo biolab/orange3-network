@@ -209,6 +209,8 @@ class OWNxAnalysis(widget.OWWidget):
 
         self.known = {}
         self.running_jobs = {}
+        # Indicates that node level statistics have changed or are pending to
+        self._nodelevel_invalidated = False
 
         self.controlArea = QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
@@ -298,6 +300,7 @@ class OWNxAnalysis(widget.OWWidget):
             self.items_analysis = self.graph.nodes
         else:
             self.items_analysis = None
+        self._nodelevel_invalidated = True
         self.run_more_jobs()
 
     def needed_methods(self):
@@ -320,6 +323,9 @@ class OWNxAnalysis(widget.OWWidget):
                   if method.name not in self.running_jobs
                   and set(method.args) <= known]
         free = max(1, QThread.idealThreadCount()) - len(self.running_jobs)
+        if not doable:
+            # This will output new data when everything is finished
+            self.send_data()
         for method in doable[:free]:
             job = WorkerThread(method, self.known)
             job.finished.connect(lambda job=job: self.job_finished(job))
@@ -335,8 +341,6 @@ class OWNxAnalysis(widget.OWWidget):
         del self.running_jobs[method.name]
         self.set_label_for(method.name)
         self.run_more_jobs()
-        if method.level == NODELEVEL:  # will send only if no new jobs are run
-            self.send_data()
 
     def set_label_for(self, name):
         level = METHODS[name].level
@@ -389,11 +393,15 @@ class OWNxAnalysis(widget.OWWidget):
         super().onDeleteWidget()
 
     def send_data(self):
-        if self.running_jobs:
+        # Don't send when computation is still on, or it's done but no node
+        # level statistics have changed
+        if self.running_jobs or not self._nodelevel_invalidated:
             return
+        self._nodelevel_invalidated = False
         if self.graph is None:
             self.Outputs.network.send(None)
             self.Outputs.items.send(None)
+            return
 
         to_report = [
             method for attr, method in METHODS.items()
@@ -420,10 +428,13 @@ class OWNxAnalysis(widget.OWWidget):
         self.Outputs.items.send(table)
 
     def method_clicked(self, name):
+        if METHODS[name].level == NODELEVEL:
+            self._nodelevel_invalidated = True
         if getattr(self, name):
             self.enabled_methods.add(name)
             if name in self.known:
                 self.set_label_for(name)
+                self.send_data()
             else:
                 self.run_more_jobs()
         else:
@@ -432,6 +443,7 @@ class OWNxAnalysis(widget.OWWidget):
                 self.cancel_job(name)
             else:
                 self.set_label_for(name)
+            self.send_data()
 
     def send_report(self):
         self.report_items("", items=[(method.label, f"{self.known[attr]:.4g}")
