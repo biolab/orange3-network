@@ -232,6 +232,10 @@ class Network:
         self.name = name
         self.coordinates = coordinates
 
+    def copy(self):
+        """Constructs a shallow copy of the network"""
+        return type(self)(self.nodes, self.edges, self.name, self.coordinates)
+
     def number_of_nodes(self):
         return len(self.nodes)
 
