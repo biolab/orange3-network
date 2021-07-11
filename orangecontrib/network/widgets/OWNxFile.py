@@ -154,7 +154,7 @@ class OWNxFile(OWWidget):
             self, 'Open a Network File', startfile,
             ';;'.join(("Pajek files (*.net *.pajek)",)))
         if not filename:
-            return
+            return False
 
         if filename in self.recentFiles:
             self.recentFiles.remove(filename)
@@ -163,6 +163,7 @@ class OWNxFile(OWWidget):
         self.populate_comboboxes()
         self.net_index = 0
         self.select_net_file()
+        return True
 
     def reload(self):
         if self.recentFiles:
@@ -171,7 +172,8 @@ class OWNxFile(OWWidget):
     def select_net_file(self):
         """user selected a graph file from the combo box"""
         if self.net_index > len(self.recentFiles) - 1:
-            self.browse_net_file(True)
+            if not self.browse_net_file(True):
+                return  # Cancelled
         elif self.net_index:
             self.recentFiles.insert(0, self.recentFiles.pop(self.net_index))
             self.net_index = 0
