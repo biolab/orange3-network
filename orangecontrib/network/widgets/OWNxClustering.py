@@ -83,10 +83,12 @@ class OWNxClustering(widget.OWWidget):
         # Tie a name for presenting clustering results to the widget instance
         if self.cluster_feature is None:
             self.cluster_feature = get_unique_names(domain, 'Cluster')
-        cd.add_results_to_items(self.net, labels, self.cluster_feature)
 
-        self.Outputs.items.send(self.net.nodes)
-        self.Outputs.network.send(self.net)
+        net = self.net.copy()
+        cd.add_results_to_items(net, labels, self.cluster_feature)
+
+        self.Outputs.items.send(net.nodes)
+        self.Outputs.network.send(net)
 
         nclusters = len(set(labels.values()))
         self.info.set_output_summary(nclusters, f"{nclusters} clusters")
