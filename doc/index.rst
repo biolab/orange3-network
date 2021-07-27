@@ -1,5 +1,5 @@
-Welcome to Orange3-Network's documentation!
-===========================================
+Orange3 Networks Add-on
+=======================
 
 Widgets
 -------

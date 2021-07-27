@@ -70,6 +70,10 @@ PACKAGE_DATA = {
     'orangecontrib.network.tests': ['*']
 }
 
+DATA_FILES = [
+    # Data files that will be installed outside site-packages folder
+]
+
 SETUP_REQUIRES = (
     'setuptools',
 )
@@ -94,6 +98,9 @@ EXTRAS_REQUIRE = {
     'test': (
         'coverage',
     ),
+    'doc': (
+        'sphinx', 'recommonmark', 'sphinx_rtd_theme'
+    ),
 }
 
 DEPENDENCY_LINKS = (
@@ -109,8 +116,9 @@ ENTRY_POINTS = {
     'orange.data.io.search_paths': (
         'network = orangecontrib.network:networks',
     ),
-    'orange.widgets': (
-        'Networks = orangecontrib.network.widgets',
+    # Register widget help
+    "orange.canvas.help": (
+        'html-index = orangecontrib.network.widgets:WIDGET_HELP_PATH',
     )
 }
 
@@ -140,6 +148,7 @@ def ext_modules():
         )
     ]
 
+
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None)
@@ -149,6 +158,20 @@ def configuration(parent_package='', top_path=None):
                        quiet=True)
     config.add_subpackage('orangecontrib.network')
     return config
+
+
+def include_documentation(local_dir, install_dir):
+    global DATA_FILES
+
+    doc_files = []
+    for dirpath, _, files in os.walk(local_dir):
+        doc_files.append(
+            (
+                dirpath.replace(local_dir, install_dir),
+                [os.path.join(dirpath, f) for f in files]
+            )
+        )
+    DATA_FILES.extend(doc_files)
 
 
 if __name__ == '__main__':
@@ -161,6 +184,8 @@ if __name__ == '__main__':
         # survive a `./setup egg_info` without numpy so pip can properly
         # query our install dependencies
         cmdclass["build_ext"] = build_ext_error
+
+    include_documentation('doc/_build/htmlhelp', 'help/orange3-network')
 
     setup(
         configuration=configuration,
@@ -178,6 +203,7 @@ if __name__ == '__main__':
         packages=PACKAGES,
         ext_modules=ext_modules(),
         package_data=PACKAGE_DATA,
+        data_files=DATA_FILES,
         setup_requires=SETUP_REQUIRES,
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
