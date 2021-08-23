@@ -137,7 +137,8 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         # This part is not so optimized because there can't be that many loops
         if np.any(arcs):
             xs, ys = self.xData[::2][arcs], self.yData[1::2][arcs]
-            sizes = self.sizes[::2][arcs] + w3[arcs]
+            sizes = self.sizes[::2][arcs]
+            sizes += w3 if isinstance(w3, float) else w3[arcs]
             # if radius of loop would be size, then distance betwween
             # vertex and loop centers would be
             # d = np.sqrt(size ** 2 - r ** 2 / 2) + r / np.sqrt(2) + r / 2
