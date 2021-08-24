@@ -80,7 +80,7 @@ class OWNxSave(OWSaveBase):
             return
 
         self.Error.general_error.clear()
-        if self.data is None or not self.filename:
+        if self.data is None or not self.filename or self.writer is None:
             return
         try:
             net = self.data
