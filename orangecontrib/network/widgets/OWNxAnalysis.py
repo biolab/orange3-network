@@ -84,7 +84,7 @@ METHODS = (
      lambda network, degrees: np.fromiter(
          (np.mean(degrees[network.neighbours(i)]) if degree else np.nan
           for i, degree in enumerate(degrees)),
-         dtype=np.float, count=len(degrees)),
+         dtype=float, count=len(degrees)),
      "Average neighbor degree", NODELEVEL, GENERAL),
     ("degree_centrality",
      lambda degrees, n: n and degrees / (n - 1) if n > 1 else 0,

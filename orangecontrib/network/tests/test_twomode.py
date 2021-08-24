@@ -17,7 +17,7 @@ class TestTwoMode(unittest.TestCase):
             for n1, n2, w in edges:
                 a2[n1, n2] = w
             np.testing.assert_almost_equal(a, a2)
-            self.assertEqual(a.dtype, np.float)
+            self.assertEqual(a.dtype, float)
 
         edges = sp.coo_matrix(
             ([1., 5, 3, 4, 2, 6], ([0, 1, 1, 2, 2, 3], [4, 4, 5, 4, 5, 6])),
@@ -77,7 +77,7 @@ class TestTwoMode(unittest.TestCase):
     def test_filtered_edges(self):
         def assert_edges(actual, expected):
             self.assertEqual(len(actual.data), len(expected))
-            self.assertEqual(actual.data.dtype, np.float)
+            self.assertEqual(actual.data.dtype, float)
             self.assertEqual(
                 set(zip(actual.row, actual.col, actual.data)), set(expected))
 
