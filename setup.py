@@ -185,7 +185,7 @@ if __name__ == '__main__':
         # query our install dependencies
         cmdclass["build_ext"] = build_ext_error
 
-    include_documentation('doc/_build/htmlhelp', 'help/orange3-network')
+    include_documentation('doc/_build/html', 'help/orange3-network')
 
     setup(
         configuration=configuration,

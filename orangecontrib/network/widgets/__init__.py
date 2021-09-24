@@ -26,7 +26,7 @@ WIDGET_HELP_PATH = (
     # You still need to build help pages using
     # make htmlhelp
     # inside doc folder
-    ("{DEVELOP_ROOT}/doc/_build/htmlhelp/index.html", None),
+    ("{DEVELOP_ROOT}/doc/_build/html/index.html", None),
 
     # Documentation included in wheel
     # Correct DATA_FILES entry is needed in setup.py and documentation has to be built
