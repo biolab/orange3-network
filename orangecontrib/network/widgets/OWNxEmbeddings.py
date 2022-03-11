@@ -42,7 +42,7 @@ class ProgressBarUpdater(CallbackAny2Vec):
 class OWNxEmbedding(OWWidget):
     name = "Network Embeddings"
     description = "Embed network elements"
-    icon = "icons/NetworkFile.svg"  # TODO: a proper icon
+    icon = "icons/NetworkEmbedding.svg"
     priority = 6450
 
     class Inputs:
