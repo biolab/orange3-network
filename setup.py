@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import sys
 from setuptools import setup
 
 from distutils.command.build_ext import build_ext
@@ -10,9 +9,6 @@ from distutils.core import Extension
 from setuptools import find_packages
 
 import numpy
-
-if sys.version_info < (3, 7):
-    sys.exit('Orange3-Network requires Python >= 3.7')
 
 try:
     from Cython.Distutils.build_ext import new_build_ext as build_ext
