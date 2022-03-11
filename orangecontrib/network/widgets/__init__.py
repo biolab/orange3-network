@@ -41,7 +41,7 @@ WIDGET_HELP_PATH = (
 )
 
 
-@summarize.register(Network)
+@summarize.register
 def summarize_(net: Network):
     n = net.number_of_nodes()
     if len(net.edges) == 1:
