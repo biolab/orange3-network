@@ -333,7 +333,8 @@ class TestOWNxSingleMode(NetworkTest):
         widget = self.widget
         network = self._read_network("davis.net")
         num_total = len(network.nodes)
-        network.nodes.X[0, 1] = np.nan  # hide a node's role (= person in this case)
+        with network.nodes.unlocked(network.nodes.X):
+            network.nodes.X[0, 1] = np.nan  # hide a node's role (= person in this case)
         self.send_signal(widget.Inputs.network, network)
 
         # Feature: role, Connect: person

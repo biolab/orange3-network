@@ -310,7 +310,8 @@ class OWNxFile(OWWidget):
         domain = Domain(src_dom.attributes, src_dom.class_vars,
                         src_dom.metas + (label_attr, ))
         data = source.transform(domain)
-        data.metas[:, -1] = nodes
+        with data.unlocked(data.metas):
+            data.metas[:, -1] = nodes
         return data
 
     def _label_to_tabel(self):
