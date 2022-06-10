@@ -19,7 +19,7 @@ except ImportError:
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.6.0'
+VERSION = '1.7.0'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__),
