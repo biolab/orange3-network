@@ -174,7 +174,7 @@ class OWNxGroups(OWWidget):
         weights /= np.sqrt(degs.T[row] * degs.T[col])
 
     def _map_into_feature_values(self, row, col):
-        selected_column = self.effective_data.get_column_view(self.feature)[0]
+        selected_column = self.effective_data.get_column(self.feature)
         return (selected_column[row].astype(np.float64),
                 selected_column[col].astype(np.float64))
 

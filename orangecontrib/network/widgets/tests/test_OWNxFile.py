@@ -73,7 +73,7 @@ class TestOWNxFile(NetworkTest):
         # `label` is chosen as default, and output has corresponding data
         self.assertIs(widget.label_variable, domain["label"])
         output = self.get_output(widget.Outputs.network)
-        id_col, _ = output.nodes.get_column_view("id")
+        id_col = output.nodes.get_column("id")
         np.testing.assert_equal(id_col, np.arange(1, 8))
 
         # No variable, row matching. Error is shown and original labels are used
@@ -89,7 +89,7 @@ class TestOWNxFile(NetworkTest):
         widget.label_changed()
         self.assertFalse(widget.Error.mismatched_lengths.is_shown())
         output = self.get_output(widget.Outputs.network)
-        id_col, _ = output.nodes.get_column_view("id")
+        id_col = output.nodes.get_column("id")
         np.testing.assert_equal(id_col, np.arange(2, 9))
 
         # Remove data: model must be cleared, data back to original

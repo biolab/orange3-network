@@ -285,7 +285,7 @@ class GraphView(OWScatterPlotBase):
             dests = dests[selected_edges]
             weights = weights[selected_edges]
         if np.allclose(weights, np.round(weights)):
-            labels = [str(x) for x in weights.astype(np.int)]
+            labels = [str(x) for x in weights.astype(int)]
         else:
             labels = ["{:.02}".format(x) for x in weights]
         x, y = self.scatterplot_item.getData()
@@ -366,7 +366,7 @@ class GraphView(OWScatterPlotBase):
             return
         self.scatterplot_marked.setData(
             x[marked], y[marked], size=25,
-            pen=pg.mkPen(None), brush=pg.mkBrush("aff"))
+            pen=pg.mkPen(None), brush=pg.mkBrush("#aff"))
 
     def select_by_click(self, _, points):
         # Poor man's double click
