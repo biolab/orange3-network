@@ -240,7 +240,7 @@ class OWNxFile(OWWidget):
         for var in data.domain.metas:
             if not isinstance(var, StringVariable):
                 continue
-            values, _ = data.get_column_view(var)
+            values= data.get_column(var)
             values = values[values != ""]
             set_values = set(values)
             if len(values) != len(set_values) \
@@ -288,7 +288,7 @@ class OWNxFile(OWWidget):
             self.network.nodes = self._data_by_labels(data)
 
     def _data_by_labels(self, data):
-            data_col, _ = data.get_column_view(self.label_variable)
+            data_col = data.get_column(self.label_variable)
             data_rows = {label: row for row, label in enumerate(data_col)}
             indices = [data_rows[label] for label in self.original_nodes]
             return data[indices]

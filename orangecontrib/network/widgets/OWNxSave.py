@@ -85,7 +85,7 @@ class OWNxSave(OWSaveBase):
         try:
             net = self.data
             if self.label_variable is not None:
-                labels = net.nodes.get_column_view(self.label_variable)[0]
+                labels = net.nodes.get_column(self.label_variable)
             else:
                 labels = range(1, net.number_of_nodes() + 1)
             self.writer.write(self.filename, net, labels)

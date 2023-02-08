@@ -245,7 +245,7 @@ class Network:
 
     def links(self, attr, edge_type=0, matrix_type=sp.coo_matrix):
         edges = self.edges[edge_type]
-        return matrix_type(edges.edges), edges.edge_data.get_column_view(attr)
+        return matrix_type(edges.edges), edges.edge_data.get_column(attr)
 
     @sum_over_edge_types()
     def out_degrees(self, edge_type, *, weighted=False):

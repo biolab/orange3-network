@@ -160,7 +160,7 @@ class OWNxSingleMode(OWWidget):
     def _mode_masks(self):
         """Return indices of nodes in the two modes"""
         data = self.network.nodes
-        col_view = data.get_column_view(self.variable)[0]
+        col_view = data.get_column(self.variable)
         column = col_view.astype(int)
         # Note: conversion required to handle empty (object) arrays
         missing_mask = np.isnan(col_view.astype(float))
