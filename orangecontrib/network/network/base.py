@@ -15,6 +15,9 @@ class Edges:
                  name: str = ""):
         self.edges = edges.tocsr(copy=True)
         self.edges.sum_duplicates()
+        # A sequence whose elements correspond to edges in the same order as
+        # elements of self.edges.data
+        # (i.e. sorted by source (row) then destination (column)
         self.edge_data = edge_data
         self.name = name
 
@@ -69,6 +72,8 @@ class Edges:
             return to - fr
 
     def subset(self, mask, node_renumeration, shape):
+        # TODO: This is wrong. edges is not sparse, because it can be
+        # (and usually is) a Table
         edges = self.edges.tocoo()
         edge_mask = np.logical_and(mask[edges.row], mask[edges.col])
         row = node_renumeration[edges.row[edge_mask]]
@@ -147,7 +152,7 @@ class UndirectedEdges(Edges):
             # Save (temporary) memory and CPU time
             edges.data = as_strided(1, (n_edges, ), (0,))
         else:
-            max_weight = np.max(edges.data)
+            max_weight = 2 * np.max(edges.data)
             edges.data[edges.data == 0] = max_weight + 1
 
         twe = edges + edges.transpose()
@@ -158,6 +163,7 @@ class UndirectedEdges(Edges):
             twe.data = as_strided(max_weight, (n_edges, ), (0,))
         else:
             twe.data[twe.data > max_weight] = 0
+            # TODO: Diagonal elements have double weights...
         return twe
 
     def degrees(self, *, weighted=False):
