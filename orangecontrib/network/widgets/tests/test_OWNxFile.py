@@ -109,7 +109,8 @@ class TestOWNxFile(NetworkTest):
              ["ii", "gg", "", "", "gg"]]
         )
         domain = data.domain
-        best_var, useful_vars = self.widget._vars_for_label(data)
+        self.widget.data = data
+        best_var, useful_vars = self.widget._vars_for_label()
         self.assertIs(best_var, domain["b"])
         # c is not unique and d doesn't cover all values
         self.assertEqual(useful_vars, [domain["a"], domain["b"], domain["e"]])
