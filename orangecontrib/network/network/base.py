@@ -1,5 +1,5 @@
 from functools import reduce, wraps, partial
-from typing import Sequence
+from typing import Sequence, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -206,7 +206,11 @@ concatenate_over_edge_types = partial(aggregate_over_edge_types, np.hstack)
 
 
 class Network:
-    def __init__(self, nodes: Sequence, edges: Sequence, name: str = "",
+    def __init__(self, nodes: Sequence,
+                 edges: Union[Edges,
+                              sp.csr_matrix,
+                              Sequence[Union[Edges, sp.csr_matrix]]],
+                 name: str = "",
                  coordinates: np.ndarray = None):
         """
         Attributes:
