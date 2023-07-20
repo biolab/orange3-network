@@ -12,6 +12,7 @@ import numpy
 
 try:
     from Cython.Distutils.build_ext import new_build_ext as build_ext
+    from Cython.Build import cythonize
     have_cython = True
 except ImportError:
     have_cython = False
@@ -128,21 +129,22 @@ class build_ext_error(build_ext):
         )
 
 def ext_modules():
+    if not have_cython:
+        return []
+
     includes = [numpy.get_include()]
     libraries = []
 
     if os.name == 'posix':
         libraries.append("m")
 
-    return [
-        # Cython extensions. Will be automatically cythonized.
-        Extension(
+    return cythonize([Extension(
             "*",
             ["orangecontrib/network/network/layout/*.pyx"],
             include_dirs=includes,
             libraries=libraries,
         )
-    ]
+    ])
 
 
 def configuration(parent_package='', top_path=None):
