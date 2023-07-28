@@ -1,20 +1,11 @@
 #!/usr/bin/env python
 
 import os
-from setuptools import setup
-
-from distutils.command.build_ext import build_ext
 from distutils.core import Extension
 
-from setuptools import find_packages
-
 import numpy
-
-try:
-    from Cython.Distutils.build_ext import new_build_ext as build_ext
-    have_cython = True
-except ImportError:
-    have_cython = False
+from Cython.Build import cythonize
+from setuptools import find_packages, setup
 
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
@@ -29,7 +20,7 @@ AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'https://github.com/biolab/orange3-network'
 LICENSE = 'GPLv3'
 
-KEYWORDS = (
+KEYWORDS = [
     'network',
     'network analysis',
     'network layout',
@@ -39,9 +30,9 @@ KEYWORDS = (
     'artificial intelligence',
     'orange',
     'orange3 add-on',
-)
+]
 
-CLASSIFIERS = (
+CLASSIFIERS = [
     'Development Status :: 4 - Beta',
     'Environment :: X11 Applications :: Qt',
     'Environment :: Console',
@@ -55,7 +46,7 @@ CLASSIFIERS = (
     'Intended Audience :: Education',
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
-)
+]
 
 PACKAGES = find_packages()
 
@@ -119,30 +110,14 @@ ENTRY_POINTS = {
 }
 
 NAMESPACES = ['orangecontrib']
-
-class build_ext_error(build_ext):
-    def initialize_options(self):
-        raise SystemExit(
-            "Cannot compile extensions. numpy and cython are required to "
-            "build Orange."
-        )
-
-def ext_modules():
-    includes = [numpy.get_include()]
-    libraries = []
-
-    if os.name == 'posix':
-        libraries.append("m")
-
-    return [
-        # Cython extensions. Will be automatically cythonized.
-        Extension(
-            "*",
-            ["orangecontrib/network/network/layout/*.pyx"],
-            include_dirs=includes,
-            libraries=libraries,
-        )
-    ]
+EXTENSIONS = [
+    Extension(
+        "*",
+        ["orangecontrib/network/network/layout/*.pyx"],
+        include_dirs=[numpy.get_include()],
+        libraries=["m"] if os.name == 'posix' else [],
+    )
+]
 
 
 def configuration(parent_package='', top_path=None):
@@ -172,14 +147,6 @@ def include_documentation(local_dir, install_dir):
 
 if __name__ == '__main__':
     cmdclass = {}
-    if have_cython:
-        cmdclass["build_ext"] = build_ext
-    else:
-        # substitute a build_ext command with one that raises an error when
-        # building. In order to fully support `pip install` we need to
-        # survive a `./setup egg_info` without numpy so pip can properly
-        # query our install dependencies
-        cmdclass["build_ext"] = build_ext_error
 
     include_documentation('doc/_build/html', 'help/orange3-network')
 
@@ -197,7 +164,7 @@ if __name__ == '__main__':
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
         packages=PACKAGES,
-        ext_modules=ext_modules(),
+        ext_modules=cythonize(EXTENSIONS),
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
         setup_requires=SETUP_REQUIRES,
@@ -208,5 +175,4 @@ if __name__ == '__main__':
         namespace_packages=NAMESPACES,
         include_package_data=True,
         zip_safe=False,
-        cmdclass=cmdclass
     )
