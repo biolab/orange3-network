@@ -167,6 +167,7 @@ if __name__ == '__main__':
         ext_modules=cythonize(EXTENSIONS),
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
+        python_requires=">=3.8",
         setup_requires=SETUP_REQUIRES,
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
