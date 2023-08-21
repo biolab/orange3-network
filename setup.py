@@ -70,6 +70,7 @@ INSTALL_REQUIRES = (
     'gensim',
     'Orange3>=3.34',
     'orange-widget-base',
+    'pyqtgraph',
     'scipy',
     'scikit-learn',
 ),
