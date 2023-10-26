@@ -1,7 +1,6 @@
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: initializedcheck=False
-#cython: cdivision=True
 #cython: embedsignature=True
 #cython: infer_types=False
 #cython: language_level=3
@@ -70,7 +69,7 @@ cpdef void repulse_sampled(arr_f2_t pos, arr_i1_t sample,
         Py_ssize_t i, j, s
 
         Py_ssize_t sample_size = sample.shape[0]
-        Py_ssize_t inv_sample_ratio = n_nodes / sample_size
+        double inv_sample_ratio = n_nodes / sample_size
         double k2 = sqr(k)
 
     for i in range(n_nodes):
@@ -167,9 +166,6 @@ def fruchterman_reingold_step(arr_f2_t pos,
         Py_ssize_t row, col, i, j, d, s
         Py_ssize_t n_nodes = pos.shape[0]
         Py_ssize_t n_dim = pos.shape[1]
-
-        Py_ssize_t sample_size = sample.shape[0]
-        Py_ssize_t inv_sample_ratio = n_nodes / sample_size
 
     with nogil:
         disp[:, :] = 0
