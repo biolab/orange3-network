@@ -13,31 +13,27 @@ def fruchterman_reingold(pos,
                          k,
                          init_temp=0.05,
                          sample_ratio=None,
-                         callback_step=None, callback=None):
+                         callback_interval=0.5, callback=None):
 
-    last_perc = 0
-
-    def run_iterations(n_iterations, temperatures):
-        nonlocal last_perc
-
+    def run_iterations(n_iterations, temperatures, callback=callback):
+        last_call = time.perf_counter()
         for iteration in range(n_iterations):
             if sample_ratio is not None:
                 np.random.shuffle(sample)
             fruchterman_reingold_step(pos, sample[:sample_size],
                                       edge_src, edge_dst, edge_weights,
                                       k, temperatures[iteration], disp)
-            if callback is not None and iteration % callback_step == 0:
-                perc = iteration / n_iterations * 100
-                if not callback(pos, perc - last_perc):
-                    return False
-                last_perc = perc
-        return True
 
+            if callback and \
+                    (now := time.perf_counter()) - last_call > callback_interval:
+                progress = iteration / n_iterations * 100
+                callback(pos, progress)
+                last_call = now
 
     n_nodes = len(pos)
 
     edge_weights = edges.data if weighted else np.empty(0)
-    edge_src, edge_dst = edges.row, edges.col,
+    edge_src, edge_dst = edges.row.astype(np.int32), edges.col.astype(np.int32)
 
     disp = np.empty((n_nodes, 2))
 
@@ -50,8 +46,7 @@ def fruchterman_reingold(pos,
 
     temperatures = np.linspace(init_temp, 0.01, TEST_ITERATIONS)
     start_time = time.perf_counter()
-    if not run_iterations(TEST_ITERATIONS, temperatures):
-        return
+    run_iterations(TEST_ITERATIONS, temperatures, callback=None)
     elapsed_time = time.perf_counter() - start_time
 
     iterations = int(allowed_time / (elapsed_time / TEST_ITERATIONS))

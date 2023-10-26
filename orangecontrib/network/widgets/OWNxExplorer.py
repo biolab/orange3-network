@@ -1,12 +1,13 @@
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QTimer, QSize, Qt, Signal, QObject, QThread
+from AnyQt.QtCore import QTimer, QSize, Qt
 
 import Orange
 from Orange.data import Table, Domain, StringVariable
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
@@ -14,11 +15,30 @@ from Orange.widgets.widget import Input, Output
 from orangecontrib.network.network.base import Network
 from orangecontrib.network.network.layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
+from orangewidget.widget import Message, Msg
 
 FR_ALLOWED_TIME = 30
 
 
-class OWNxExplorer(OWDataProjectionWidget):
+def run(positions, edges, observe_weights, init_temp, k, state):
+    def update(positions, progress):
+        state.set_progress_value(progress)
+        if not large_graph:
+            state.set_partial_result(positions)
+        if state.is_interruption_requested():
+            raise Exception  # pylint: disable=broad-exception-raised
+
+    nnodes = positions.shape[0]
+    large_graph = nnodes + edges.shape[0] > 30000
+    sample_ratio = None if nnodes < 1000 else 1000 / nnodes
+    fruchterman_reingold(
+        positions, edges, observe_weights,
+        FR_ALLOWED_TIME, k, init_temp, sample_ratio,
+        callback=update)
+    return positions
+
+
+class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
     icon = "icons/NetworkExplorer.svg"
@@ -36,8 +56,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         distances = Output("Distance matrix", Orange.misc.DistMatrix)
 
     UserAdviceMessages = [
-        widget.Message("Double clicks select connected components",
-                       widget.Message.Information),
+        Message("Double clicks select connected components",
+                Message.Information),
     ]
 
     GRAPH_CLASS = GraphView
@@ -54,16 +74,15 @@ class OWNxExplorer(OWDataProjectionWidget):
     alpha_value = 255  # Override the setting from parent
 
     class Warning(OWDataProjectionWidget.Warning):
-        distance_matrix_mismatch = widget.Msg(
+        distance_matrix_mismatch = Msg(
             "Distance matrix size doesn't match the number of network nodes "
             "and will be ignored.")
-        no_graph_found = widget.Msg("Node data is given, graph data is missing.")
+        no_graph_found = Msg("Node data is given, graph data is missing.")
 
     class Error(OWDataProjectionWidget.Error):
-        data_size_mismatch = widget.Msg(
+        data_size_mismatch = Msg(
             "Length of the data does not match the number of nodes.")
-        network_too_large = widget.Msg("Network is too large to visualize.")
-        single_node_graph = widget.Msg("I don't do single-node graphs today.")
+        network_too_large = Msg("Network is too large to visualize.")
 
     def __init__(self):
         # These are already needed in super().__init__()
@@ -77,17 +96,14 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.mark_mode = 0
         self.mark_text = ""
 
-        super().__init__()
+        OWDataProjectionWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
         self.network = None
         self.node_data = None
         self.distance_matrix = None
         self.edges = None
         self.positions = None
-
-        self._optimizer = None
-        self._animation_thread = None
-        self._stop_optimization = False
 
         self.marked_nodes = None
         self.searchStringTimer = QTimer(self)
@@ -99,6 +115,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         return QSize(800, 600)
 
     def _add_controls(self):
+        # pylint: disable=attribute-defined-outside-init
         self.gui = OWPlotGUI(self)
         self._add_info_box()
         self.gui.point_properties_box(self.controlArea)
@@ -108,6 +125,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
     def _add_info_box(self):
+        # pylint: disable=attribute-defined-outside-init
         info = gui.vBox(self.controlArea, box="Layout")
         gui.label(
             info, self,
@@ -137,6 +155,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                      callback=self.improve)
 
     def _add_effects_box(self):
+        # pylint: disable=attribute-defined-outside-init
         gbox = self.gui.create_gridbox(self.controlArea, box="Widths and Sizes")
         self.gui.add_widget(self.gui.PointSize, gbox)
         gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
@@ -167,6 +186,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         gui.hSlider(None, self, "graph.alpha_value")
 
     def _add_mark_box(self):
+        # pylint: disable=attribute-defined-outside-init
         hbox = gui.hBox(None, box=True)
         self.mainArea.layout().addWidget(hbox)
         vbox = gui.hBox(hbox)
@@ -345,7 +365,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.btselect.show()
 
         selection = self.graph.get_selection()
-        if not len(selection) or np.max(selection) == 0:
+        if len(selection) == 0 or np.max(selection) == 0:
             self.btadd.hide()
             self.btgroup.hide()
         elif np.max(selection) == 1:
@@ -433,7 +453,6 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.closeContext()
             self.Error.data_size_mismatch.clear()
             self.Warning.no_graph_found.clear()
-            self._invalid_data = False
             if network is None:
                 if self.node_data is not None:
                     self.Warning.no_graph_found()
@@ -442,7 +461,6 @@ class OWNxExplorer(OWDataProjectionWidget):
             if self.node_data is not None:
                 if len(self.node_data) != n_nodes:
                     self.Error.data_size_mismatch()
-                    self._invalid_data = True
                     self.data = None
                 else:
                     self.data = self.node_data
@@ -500,7 +518,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             elif len(set(self.edges.data)) == 1:
                 set_checkboxes(False)
 
-        self.stop_optimization_and_wait()
+        self.cancel()
         set_actual_data()
         super()._handle_subset_data()
         if self.positions is None:
@@ -527,7 +545,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def set_random_positions(self):
         if self.network is None:
-            self.position = None
+            self.positions = None
         else:
             self.positions = np.random.uniform(size=(self.number_of_nodes, 2))
 
@@ -593,8 +611,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.randomize_button.setHidden(running)
 
     def stop_relayout(self):
-        self._stop_optimization = True
-        self.set_buttons(running=False)
+        self.cancel()
 
     def restart(self):
         self.relayout(restart=True)
@@ -602,89 +619,41 @@ class OWNxExplorer(OWDataProjectionWidget):
     def improve(self):
         self.relayout(restart=False)
 
-    # TODO: Stop relayout if new data is received
     def relayout(self, restart):
         if self.edges is None:
             return
         if restart or self.positions is None:
             self.set_random_positions()
-        self.progressbar = gui.ProgressBar(self, 100)
-        self.set_buttons(running=True)
-        self._stop_optimization = False
 
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
             Simplifications.NoDensity
             + Simplifications.NoLabels * (len(self.graph.labels) > 20)
             + Simplifications.NoEdgeLabels * (len(self.graph.edge_labels) > 20)
-            + Simplifications.NoEdges * (self.number_of_edges > 30000))
+            + Simplifications.NoEdges * (self.number_of_edges > 1000))
 
-        large_graph = self.number_of_nodes + self.number_of_edges > 30000
+        init_temp = 0.05 if restart else 0.2
+        k = self.layout_density / 10 / np.sqrt(self.number_of_nodes)
+        self.set_buttons(running=True)
+        self.start(run, self.positions, self.edges, self.observe_weights, init_temp, k)
 
-        class LayoutOptimizer(QObject):
-            update = Signal(np.ndarray, float)
-            done = Signal(np.ndarray)
-            stopped = Signal()
+    def cancel(self):
+        self.set_buttons(running=False)
+        super().cancel()
 
-            def __init__(self, widget):
-                super().__init__()
-                self.widget = widget
+    def on_done(self, positions):  # pylint: disable=arguments-renamed
+        self.positions = positions
+        self.set_buttons(running=False)
+        self.graph.set_simplifications(
+            self.graph.Simplifications.NoSimplifications)
+        self.graph.update_coordinates()
 
-            def send_update(self, positions, progress):
-                if not large_graph:
-                    self.update.emit(np.array(positions), progress)
-                return not self.widget._stop_optimization
-
-            def run(self):
-                widget = self.widget
-                edges = widget.edges
-                nnodes = widget.number_of_nodes
-                init_temp = 0.05 if restart else 0.2
-                k = widget.layout_density / 10 / np.sqrt(nnodes)
-                sample_ratio =  None if nnodes < 1000 else 1000 / nnodes
-                fruchterman_reingold(
-                    widget.positions, edges, widget.observe_weights,
-                    FR_ALLOWED_TIME, k, init_temp, sample_ratio,
-                    callback_step=4, callback=self.send_update)
-                self.done.emit(widget.positions)
-                self.stopped.emit()
-
-        def update(positions, progress):
-            self.progressbar.advance(progress)
-            self.positions = positions
-            self.graph.update_coordinates()
-
-        def done(positions):
-            self.positions = positions
-            self.set_buttons(running=False)
-            self.graph.set_simplifications(
-                self.graph.Simplifications.NoSimplifications)
-            self.graph.update_coordinates()
-            self.progressbar.finish()
-
-        def thread_finished():
-            self._optimizer = None
-            self._animation_thread = None
-
-        self._optimizer = LayoutOptimizer(self)
-        self._animation_thread = QThread()
-        self._optimizer.update.connect(update)
-        self._optimizer.done.connect(done)
-        self._optimizer.stopped.connect(self._animation_thread.quit)
-        self._optimizer.moveToThread(self._animation_thread)
-        self._animation_thread.started.connect(self._optimizer.run)
-        self._animation_thread.finished.connect(thread_finished)
-        self._animation_thread.start()
-
-    def stop_optimization_and_wait(self):
-        if self._animation_thread is not None:
-            self._stop_optimization = True
-            self._animation_thread.quit()
-            self._animation_thread.wait()
-            self._animation_thread = None
+    def on_partial_result(self, positions):  # pylint: disable=arguments-renamed
+        self.positions = positions
+        self.graph.update_coordinates()
 
     def onDeleteWidget(self):
-        self.stop_optimization_and_wait()
+        self.shutdown()
         super().onDeleteWidget()
 
     def send_report(self):
@@ -711,6 +680,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
 
 def main():
+    # pylint: disable=import-outside-toplevel, unused-import
     from Orange.widgets.utils.widgetpreview import WidgetPreview
     from orangecontrib.network.network.readwrite \
         import read_pajek, transform_data_to_orange_table
