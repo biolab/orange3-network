@@ -51,17 +51,29 @@ def read_vertices(lines):
 
 
 def read_edges(id_idx, lines, nvertices):
-    lines = [(id_idx[v1], id_idx[v2], abs(float(value)))
-             for v1, v2, value, *_ in (line.split()[:3] + [1]
-                                       for line in lines)]
-    v1s, v2s, values = zip(*lines)
-    values = np.array(values)
-    if values.size and np.all(values == values[0]):
-        values = np.lib.stride_tricks.as_strided(
-            values[0], (len(values), ), (0, ))
+    def fake_data(x, n):
+        values = np.lib.stride_tricks.as_strided(x, (n, ), (0,))
         values.flags.writeable = False
-    return sp.coo_matrix((values, (np.array(v1s), np.array(v2s))),
-                         shape=(nvertices, nvertices))
+        return values
+
+
+    lines = [(id_idx[v1], id_idx[v2], value)
+             for v1, v2, value, *_ in (
+             (line.split(maxsplit=2) + [None])[:3] for line in lines)]
+    v1s, v2s, values = zip(*lines)
+    try:
+        values = np.array(values, dtype=float)
+        if np.all(np.isnan(values)):
+            values = fake_data(np.array(1.), len(values))
+        elif values.size and np.all(values == values[0]):
+            values = fake_data(values[0], len(values))
+        edge_data = None
+    except ValueError:
+        edge_data = np.array(values)
+        values = fake_data(np.array(1.), len(v1s))
+    return (sp.coo_matrix((values, (np.array(v1s), np.array(v2s))),
+                          shape=(nvertices, nvertices)),
+            edge_data)
 
 
 def read_edges_list(id_idx, lines, nvertices):
@@ -121,7 +133,7 @@ def read_pajek(path):
             check_has_vertices()
             edges.append(
                 EdgeType[part_type=="*arcs"](
-                    read_edges(id_idx, line_part, len(labels)),
+                    *read_edges(id_idx, line_part, len(labels)),
                     name=part_args.strip() or part_type[1:]))
         elif part_type in ("*edgeslist", "*arcslist"):
             check_has_vertices()
