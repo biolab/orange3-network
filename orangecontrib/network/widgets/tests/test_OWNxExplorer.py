@@ -79,7 +79,7 @@ class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
 
         # Mark nodes with many connections (multiple): should show the weights for edges between marked nodes only
         self.widget.mark_min_conn = 8
-        self.widget.set_mark_mode(8)
+        self.widget.set_mark_mode(9)
         self.assertEqual(len(self.widget.graph.edge_labels), 12)
 
         # Reset to default (no selection) and check that the labels disappear
@@ -87,7 +87,7 @@ class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
         self.assertEqual(len(self.widget.graph.edge_labels), 0)
 
         # Mark nodes with most connections (single): should show all its edges' weights
-        self.widget.set_mark_mode(9)
+        self.widget.set_mark_mode(10)
         self.assertEqual(len(self.widget.graph.edge_labels), 14)
 
     def test_input_subset(self):

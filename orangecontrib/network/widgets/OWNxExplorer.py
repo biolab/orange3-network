@@ -196,6 +196,10 @@ class OWNxExplorer(OWDataProjectionWidget):
                 return None
             return marker(np.char.array(labels), txt)
 
+        def mark_label_equals():
+            return _mark_by_labels(
+                lambda labels, txt: np.flatnonzero(labels.lower() == txt))
+
         def mark_label_starts():
             return _mark_by_labels(
                 lambda labels, txt: np.flatnonzero(labels.lower().startswith(txt)))
@@ -268,6 +272,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
         self.mark_criteria = [
             ("(Select criteria for marking)", None, lambda: np.zeros((0,))),
+            ("Mark node labelled as", text_line(), mark_label_equals),
             ("Mark nodes whose label starts with", text_line(), mark_label_starts),
             ("Mark nodes whose label contains", text_line(), mark_label_contains),
             ("Mark nodes whose data that contains", text_line(), mark_text),
