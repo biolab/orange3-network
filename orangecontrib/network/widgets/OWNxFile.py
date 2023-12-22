@@ -1,3 +1,4 @@
+from operator import itemgetter
 from os import path
 from itertools import product
 from traceback import format_exception_only
@@ -243,13 +244,15 @@ class OWNxFile(OWWidget):
             values= data.get_column(var)
             values = values[values != ""]
             set_values = set(values)
+            # values have to be unique, and have to include all labels
             if len(values) != len(set_values) \
                     or not original_nodes <= set_values:
                 continue
-            vars_and_overs.append((len(set_values - original_nodes), var))
+            vars_and_overs.append((len(set_values), var))
         if not vars_and_overs:
             return None, []
-        _, best_var = min(vars_and_overs)
+        # Prefer variables with less extra values
+        _, best_var = min(vars_and_overs, key=itemgetter(0))
         useful_string_vars = [var for _, var in vars_and_overs]
         return best_var, useful_string_vars
 

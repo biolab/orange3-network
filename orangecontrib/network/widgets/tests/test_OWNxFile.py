@@ -54,6 +54,25 @@ class TestOWNxFile(NetworkTest):
         self.assertIs(best_var, domain["label"])
         self.assertEqual(useful_vars, [domain["with_extras"], domain["label"]])
 
+        data = Orange.data.Table.from_list(
+            Orange.data.Domain(
+                [], None, [Orange.data.StringVariable(x) for x in "abcde"]),
+            [["aa", "", "cc", "aa", ""],
+             ["bb", "bb", "cc", "bb", "aa"],
+             ["cc", "", "aa", "cc", "bb"],
+             ["dd", "aa", "bb", "dd", "cc"],
+             ["ee", "cc", "dd", "ee", ""],
+             ["ff", "ee", "ee", "ff", "dd"],
+             ["gg", "dd", "ff", "", "ee"],
+             ["hh", "ff", "gg", "", "ff"],
+             ["ii", "gg", "", "", "gg"]]
+        )
+        domain = data.domain
+        best_var, useful_vars = self.widget._vars_for_label(data)
+        self.assertIs(best_var, domain["b"])
+        # c is not unique and d doesn't cover all values
+        self.assertEqual(useful_vars, [domain["a"], domain["b"], domain["e"]])
+
     def test_label_combo_contents(self):
         widget = self.widget
         widget.read_auto_data = Mock()
