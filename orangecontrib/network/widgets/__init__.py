@@ -44,16 +44,20 @@ WIDGET_HELP_PATH = (
 @summarize.register
 def summarize_(net: Network):
     n = net.number_of_nodes()
+    e = net.number_of_edges()
     if len(net.edges) == 1:
-        nettype = ['Network', 'Directed network'][net.edges[0].directed]
+        directed = net.edges[0].directed
+        direct = "➝" if directed else "–"
+        nettype = ['Network', 'Directed network'][directed]
         details = f"<nobr>{nettype} with {n} nodes " \
-                  f"and {net.number_of_edges()} edges</nobr>"
+                  f"and {net.number_of_edges()} edges</nobr>."
     else:
+        direct = "–"
         details = f"<nobr>Network with {n} nodes"
         if net.edges:
             details += " and {len(net.edges)} edge types:</nobr><ul>" + "".join(
                 f"<li>{len(edges)} edges, "
                 f"{['undirected', 'directed'][edges.directed]}</li>"
-                for edges in net.edges)
+                for edges in net.edges) + "."
 
-    return PartialSummary(n, details)
+    return PartialSummary(f"•{n} {direct}{e}", details)
