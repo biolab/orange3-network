@@ -1,37 +1,35 @@
 import numpy as np
 import scipy.sparse as sp
-from scipy.sparse import csgraph
-
 import pyqtgraph as pg
 
-from AnyQt.QtCore import QLineF, QSize, Qt
-from AnyQt.QtWidgets import QGridLayout, QLabel
+from AnyQt.QtCore import QLineF, QSize, Qt, Signal, QEvent
+from AnyQt.QtGui import QDoubleValidator, QIntValidator, QPalette
 
 from Orange.data import Domain, StringVariable, Table
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget, settings
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+
 from orangecontrib.network.network import Network
+from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
+# This enables summarize in widget preview, pylint: disable=unused-import
+import orangecontrib.network.widgets
 
 
-class NodeSelection:
-    ALL_NODES,   \
-    COMPONENTS,  \
-    LARGEST_COMP = range(3)
+class QIntValidatorWithFixup(QIntValidator):
+    def fixup(self, text):
+        if text and int(text) > self.top():
+            return str(self.top())
+        return super().fixup(text)
 
-class EdgeWeights:
-    PROPORTIONAL, \
-    INVERSE = range(2)
-
-PERCENTIL_STEP = 0.1
 
 class OWNxFromDistances(widget.OWWidget):
     name = "Network From Distances"
-    description = ('Constructs Graph object by connecting nodes from '
-                   'data table where distance between them is between '
-                   'given threshold.')
+    description = ('Constructs a network by connecting nodes with distances '
+                   'below somethreshold.')
     icon = "icons/NetworkFromDistances.svg"
     priority = 6440
 
@@ -40,307 +38,258 @@ class OWNxFromDistances(widget.OWWidget):
 
     class Outputs:
         network = Output("Network", Network)
-        data = Output("Data", Table)
-        distances = Output("Distances", DistMatrix)
 
-    resizing_enabled = False
+    resizing_enabled = True
+    want_control_area = False
 
-    # TODO: make settings input-dependent
-    percentil = settings.Setting(1)
-    include_knn = settings.Setting(False)
-    kNN = settings.Setting(2)
-    node_selection = settings.Setting(0)
-    edge_weights = settings.Setting(0)
-    excludeLimit = settings.Setting(2)
+    # The widget stores `density` as setting, because it is more transferable
+    # than `threshold`. Internally, the widget uses `threshold` because it is
+    # more accurate.
+    density = settings.Setting(20)
 
     class Warning(widget.OWWidget.Warning):
-        kNN_too_large = \
-            Msg('kNN is larger than supplied distance matrix dimension. '
-                'Using k = {}')
         large_number_of_nodes = \
-            Msg('Large number of nodes/edges; performance will be hindered')
-        invalid_number_of_items = \
-            Msg('Number of data items does not match the nunmber of nodes')
+            Msg('Large number of nodes/edges; expect slow performance.')
 
     class Error(widget.OWWidget.Error):
-        number_of_edges = Msg('Estimated number of edges is too high ({})')
+        number_of_edges = Msg('The network is too large ({})')
 
     def __init__(self):
         super().__init__()
-
-        self.spinUpperThreshold = 0
-
         self.matrix = None
+        self.symmetric = False
+        self.threshold = 0
         self.graph = None
-        self.graph_matrix = None
 
+        box = gui.vBox(self.mainArea, box=True)
         self.histogram = Histogram(self)
-        self.mainArea.layout().addWidget(self.histogram)
-        self.mainArea.setMinimumWidth(500)
-        self.mainArea.setMinimumHeight(300)
-        self.addHistogramControls()
+        self.histogram.thresholdChanged.connect(self._on_threshold_dragged)
+        self.histogram.draggingFinished.connect(self._on_threshold_drag_finished)
+        box.layout().addWidget(self.histogram)
 
-        # info
-        boxInfo = gui.widgetBox(self.controlArea, box="Info")
-        self.infoa = gui.widgetLabel(boxInfo, "No data loaded.")
-        self.infob = gui.widgetLabel(boxInfo, '')
-        self.infoc = gui.widgetLabel(boxInfo, '')
+        hbox = gui.hBox(box)
+        gui.rubber(hbox)
 
-        gui.rubber(self.controlArea)
+        _edit_args = dict(
+            orientation=Qt.Horizontal, alignment=Qt.AlignRight, controlWidth=50)
+        self.labels = []
+        self.threshold_label = gui.widgetLabel(hbox, "Threshold:")
+        self.labels.append(self.threshold_label)
+        self.threshold_edit = gui.lineEdit(
+            hbox, self, '',
+            validator=QDoubleValidator(), callback=self._on_threshold_edit,
+            **_edit_args)
+        gui.rubber(hbox)
 
-        self.resize(700, 100)
+        self.edges_label = gui.widgetLabel(hbox, "Number of edges:")
+        self.edges_edit = gui.lineEdit(
+            hbox, self, '',
+            validator=QIntValidatorWithFixup(), callback=self._on_edges_edit,
+            **_edit_args)
+        self.labels.append(self.edges_label)
+        gui.rubber(hbox)
 
-    def addHistogramControls(self):
-        # gui.spin and gui.doubleSpin cannot not be inserted somewhere, thus
-        # we insert them into controlArea and then move to grid
-        grid = QGridLayout()
-        gui.widgetBox(self.controlArea, box="Edges", orientation=grid)
-        self.spin_high = gui.doubleSpin(self.controlArea, self, 'spinUpperThreshold',
-                                        0, float('inf'), 0.001, decimals=3,
-                                        callback=self.changeUpperSpin,
-                                        keyboardTracking=False,
-                                        controlWidth=60,
-                                        addToLayout=False)
-        grid.addWidget(QLabel("Distance threshold"), 0, 0)
-        grid.addWidget(self.spin_high, 0, 1)
+        self.density_label = gui.widgetLabel(hbox, "Density (%):")
+        self.density_edit = gui.lineEdit(
+            hbox, self, 'density',
+            validator=QIntValidatorWithFixup(0, 100),
+            callback=self._on_density_edit,
+            **_edit_args)
+        self.labels.append(self.density_label)
+        gui.rubber(hbox)
 
-        self.histogram.region.sigRegionChangeFinished.connect(self.spinboxFromHistogramRegion)
+    def sizeHint(self):
+        return QSize(600, 500)
 
-        spin = gui.doubleSpin(self.controlArea, self, "percentil", 0, 100, PERCENTIL_STEP,
-                      label="Percentile", orientation=Qt.Horizontal,
-                      callback=self.setPercentil,
-                      callbackOnReturn=1, controlWidth=60)
-        grid.addWidget(QLabel("Percentile"), 1, 0)
-        grid.addWidget(spin, 1, 1)
+    @property
+    def eff_distances(self):
+        n = len(self.matrix)
+        return n * (n - 1) // (1 + self.symmetric)
 
-        knn_cb = gui.checkBox(self.controlArea, self, 'include_knn',
-                              label='Include closest neighbors',
-                              callback=self.generateGraph)
-        knn = gui.spin(self.controlArea, self, "kNN", 1, 1000, 1,
-                       orientation=Qt.Horizontal,
-                       callback=self.generateGraph, callbackOnReturn=1, controlWidth=60)
-        grid.addWidget(knn_cb, 2, 0)
-        grid.addWidget(knn, 2, 1)
+    def _on_threshold_dragged(self, threshold):
+        self.threshold = threshold
+        self.update_edits(self.histogram)
 
-        knn_cb.disables = [knn]
-        knn_cb.makeConsistent()
+    def _on_threshold_drag_finished(self):
+        self.generate_network()
 
-        # Options
-        ribg = gui.radioButtonsInBox(self.controlArea, self, "node_selection",
-                                     box="Node selection",
-                                     callback=self.generateGraph)
-        grid = QGridLayout()
-        ribg.layout().addLayout(grid)
-        grid.addWidget(
-            gui.appendRadioButton(ribg, "Keep all nodes", addToLayout=False),
-            0, 0
-        )
+    def _on_threshold_edit(self):
+        self.threshold = float(self.threshold_edit.text())
+        self.update_edits(self.threshold_label)
+        self.generate_network()
 
-        exclude_limit = gui.spin(
-            ribg, self, "excludeLimit", 2, 100, 1,
-            callback=(lambda h=True: self.generateGraph(h)),
-            controlWidth=60
-        )
-        grid.addWidget(
-            gui.appendRadioButton(ribg, "Components with at least nodes",
-                                  addToLayout=False), 1, 0)
-        grid.addWidget(exclude_limit, 1, 1)
+    def _on_density_edit(self):
+        self.density = int(self.density_edit.text())
+        self.set_threshold_from_density()
+        self.update_edits(self.density_label)
+        self.generate_network()
 
-        grid.addWidget(
-            gui.appendRadioButton(ribg, "Largest connected component",
-                                  addToLayout=False), 2, 0)
+    def _on_edges_edit(self):
+        edges = int(self.edges_edit.text())
+        self.set_threshold_from_edges(edges)
+        self.update_edits(self.edges_label)
+        self.generate_network()
 
-        ribg = gui.radioButtonsInBox(self.controlArea, self, "edge_weights",
-                                     box="Edge weights",
-                                     callback=self.generateGraph)
-        hb = gui.widgetBox(ribg, None, addSpace=False)
-        gui.appendRadioButton(ribg, "Proportional to distance", insertInto=hb)
-        gui.appendRadioButton(ribg, "Inverted distance", insertInto=hb)
+    def set_threshold_from_density(self):
+        self.set_threshold_from_edges(self.density * self.eff_distances / 100)
 
-    def setPercentil(self):
-        # Correct 0th and 100th percentile to min and max
-        if self.percentil < (0 + PERCENTIL_STEP):
-            self.percentil = 1 / self.matrix.shape[0] * 100.0
-        elif self.percentil > (100 - PERCENTIL_STEP):
-            self.percentil = (self.matrix.shape[0] - 1) / self.matrix.shape[0] * 100.0
+    def set_threshold_from_edges(self, edges):
+        # Set the threshold that will give at least the given number of edges
+        if edges == 0:
+            self.threshold = 0
+        else:
+            self.threshold = self.edges[np.searchsorted(self.cumfreqs, edges)]
 
-        if self.matrix is None:
-            return
-        if len(self.matrix_values) > 0:
-            # flatten matrix, sort values and remove identities (self.matrix[i][i])
-            ind = int(len(self.matrix_values) * self.percentil / 100)
-            self.spinUpperThreshold = self.matrix_values[ind]
-        self.generateGraph()
+    def edges_from_threshold(self):
+        idx = np.searchsorted(self.edges, self.threshold, side='right')
+        return self.cumfreqs[idx - 1] if idx else 0
+
+    def update_edits(self, reference):
+        if reference is not self.threshold_label:
+            self.threshold_edit.setText(f"{self.threshold:.2f}")
+        if reference is not self.edges_label:
+            edges = self.edges_from_threshold()
+            self.edges_edit.setText(str(edges))
+        if reference is not self.density_label:
+            self.density = \
+                int(round(100 * self.edges_from_threshold() / self.eff_distances))
+            self.density_edit.setText(str(self.density))
+        if reference is not self.histogram:
+            self.histogram.update_region(self.threshold, True, True,
+                                         density=self.density)
+
+        for label in self.labels:
+            font = label.font()
+            font.setBold(label is reference)
+            label.setFont(font)
 
     @Inputs.distances
-    def set_matrix(self, data):
-        if data is not None and not data.size:
-            data = None
-        self.matrix = data
-        if data is None:
-            self.histogram.setValues([])
-            self.generateGraph()
+    def set_matrix(self, matrix: DistMatrix):
+        if matrix is not None and not matrix.size:
+            matrix = None
+
+        self.matrix = matrix
+        if matrix is None:
+            self.symmetric = True
+            self.histogram.set_values([], [])
+            self.generate_network()
             return
 
-        if self.matrix.row_items is None:
-            self.matrix.row_items = list(range(self.matrix.shape[0]))
+        self.symmetric = matrix.is_symmetric()
+        # This can be removed when DistMatrix.flat is fixed to include this code
+        if not self.symmetric:
+            matrix = np.lib.stride_tricks.as_strided(
+                matrix.reshape(matrix.size, -1)[1:],
+                shape=(matrix.shape[0] - 1, matrix.shape[1]),
+                strides=(matrix.strides[0] + matrix.strides[1],
+                         matrix.strides[1]),
+                writeable=False
+            )
 
-        # draw histogram
-        self.matrix_values = values = sorted(self.matrix.flat)
-        self.histogram.setValues(values)
-
-        # Magnitude of the spinbox's step is data-dependent
-        if len(values) == 0:
-            low, upp = 0, 0
+        if self.eff_distances < 1000:
+            self.edges, freq = np.unique(matrix.flat, return_counts=True)
         else:
-            low, upp = values[0], values[-1]
-        step = (upp - low) / 20
-        self.spin_high.setSingleStep(step)
+            freq, edges = np.histogram(matrix.flat, bins=1000)
+            self.edges = edges[:-1]
+        self.cumfreqs = np.cumsum(freq)
+        self.histogram.set_values(self.edges, self.cumfreqs)
 
-        self.spinUpperThreshold = max(0, low - (0.03 * (upp - low)))
+        self.edges_edit.validator().setRange(0, self.eff_distances)
+        self.set_threshold_from_density()
+        self.update_edits(self.density_label)
+        self.generate_network()
 
-        self.setPercentil()
-        self.generateGraph()
-
-    def changeUpperSpin(self):
-        if self.matrix is None: return
-        self.spinUpperThreshold = np.clip(self.spinUpperThreshold, *self.histogram.boundary())
-        self.percentil = 100 * np.searchsorted(self.matrix_values, self.spinUpperThreshold) / len(self.matrix_values)
-        self.generateGraph()
-
-    def spinboxFromHistogramRegion(self):
-        _, self.spinUpperThreshold = self.histogram.getRegion()
-        self.changeUpperSpin()
-
-    def generateGraph(self, N_changed=False):
+    def generate_network(self):
         self.Error.clear()
         self.Warning.clear()
-        matrix = None
+        matrix = self.matrix
 
-        if N_changed:
-            self.node_selection = NodeSelection.COMPONENTS
-
-        if self.matrix is None:
-            if hasattr(self, "infoa"):
-                self.infoa.setText("No data loaded.")
-            if hasattr(self, "infob"):
-                self.infob.setText("")
-            if hasattr(self, "infoc"):
-                self.infoc.setText("")
-            self.pconnected = 0
-            self.nedges = 0
+        if matrix is None:
             self.graph = None
-            self.sendSignals()
+            self.Outputs.network.send(None)
             return
 
-        nEdgesEstimate = 2 * sum(y for x, y in zip(self.histogram.xData, self.histogram.yData)
-                                 if x <= self.spinUpperThreshold)
-
-        if nEdgesEstimate > 200000:
-            graph = None
-            self.Error.number_of_edges(nEdgesEstimate)
-        else:
-            items = None
-            matrix = self.matrix
-            if matrix is not None and matrix.row_items is not None:
-                row_items = self.matrix.row_items
-                if isinstance(row_items, Table):
-                    if self.matrix.axis == 1:
-                        items = row_items
-                    else:
-                        items = [[v.name] for v in row_items.domain.attributes]
-                else:
-                    items = [[str(x)] for x in self.matrix.row_items]
-            if len(items) != self.matrix.shape[0]:
-                self.Warning.invalid_number_of_items()
-                items = None
-            if items is None:
-                items = list(range(self.matrix.shape[0]))
-            if not isinstance(items, Table):
-                items = Table.from_list(Domain([], metas=[StringVariable('label')]), items)
-
-            # set the threshold
-            # set edges where distance is lower than threshold
-            self.Warning.kNN_too_large.clear()
-            if self.kNN >= self.matrix.shape[0]:
-                self.Warning.kNN_too_large(self.matrix.shape[0] - 1)
-
-            mask = np.array(self.matrix <= self.spinUpperThreshold)
-            if self.include_knn:
-                mask |= mask.argsort() < self.kNN
-            np.fill_diagonal(mask, 0)
-            weights = matrix[mask]
-            shape = (len(items), len(items))
-            if weights.size:
-                if self.edge_weights == EdgeWeights.INVERSE:
-                    weights = np.max(weights) - weights
-                edges = sp.csr_matrix((weights, mask.nonzero()), shape=shape)
-            else:
-                edges = sp.csr_matrix(shape)
-            graph = Network(items, edges)
-
+        threshold = float(self.threshold_edit.text())
+        nedges = self.edges_from_threshold()
+        if nedges > 200000:
+            self.Error.number_of_edges(nedges)
             self.graph = None
-            # exclude unconnected
-            if self.node_selection != NodeSelection.ALL_NODES:
-                n_components, components = csgraph.connected_components(edges)
-                counts = np.bincount(components)
-                if self.node_selection == NodeSelection.COMPONENTS:
-                    ind = np.flatnonzero(counts >= self.excludeLimit)
-                    mask = np.in1d(components, ind)
-                else:
-                    mask = components == np.argmax(counts)
-                graph = graph.subgraph(mask)
+            self.Outputs.network.send(None)
+            return
 
-        self.graph = graph
-        if graph is None:
-            self.pconnected = 0
-            self.nedges = 0
+        mask = np.array(matrix <= threshold)
+        if self.symmetric:
+            mask &= np.tri(*matrix.shape, k=-1, dtype=bool)
         else:
-            self.pconnected = self.graph.number_of_nodes()
-            self.nedges = self.graph.number_of_edges()
-        if hasattr(self, "infoa"):
-            self.infoa.setText("Data items on input: %d" % self.matrix.shape[0])
-        if hasattr(self, "infob"):
-            self.infob.setText("Network nodes: %d (%3.1f%%)" % (self.pconnected,
-                self.pconnected / float(self.matrix.shape[0]) * 100))
-        if hasattr(self, "infoc"):
-            self.infoc.setText("Network edges: %d (%.2f edges/node)" % (
-                self.nedges, self.nedges / float(self.pconnected)
-                if self.pconnected else 0))
+            mask &= ~np.eye(*matrix.shape, dtype=bool)
+        if np.sum(mask):
+            # Set the weights so that the edge with the smallest distances
+            # have the weight of 1, and the edges with the largest distances
+            # have the weight of 0.01; the rest are scaled logarithmically
+            weights = matrix[mask].astype(float)
+            mi, ma = np.min(weights), np.max(weights)
+            if ma - mi < 1e-6:
+                weights.fill(1)
+            else:
+                a = np.log(199) / (ma - mi)
+                weights -= mi
+                weights *= a
+                np.exp(weights, out=weights)
+                weights += 1
+                np.reciprocal(weights, out=weights)
+                weights *= 2
+            edges = sp.csr_matrix((weights, mask.nonzero()), shape=matrix.shape)
+        else:
+            edges = sp.csr_matrix(matrix.shape)
+        edge_type = UndirectedEdges if self.symmetric else DirectedEdges
+        self.graph = Network(self._items_for_network(), edge_type(edges))
+        self.Warning.large_number_of_nodes(
+            shown=self.graph.number_of_nodes() > 3000
+            or self.graph.number_of_edges() > 10000)
 
-        self.Warning.large_number_of_nodes.clear()
-        if self.pconnected > 1000 or self.nedges > 2000:
-            self.Warning.large_number_of_nodes()
-
-        self.sendSignals()
-        self.histogram.setRegion(0, self.spinUpperThreshold)
-
-    def sendReport(self):
-        self.reportSettings("Settings",
-                            [("Edge thresholds", "%.5f - %.5f" % \
-                              (0, \
-                               self.spinUpperThreshold)),
-                             ("Selected vertices", ["All", \
-                                "Without isolated vertices",
-                                "Largest component",
-                                "Connected with vertex"][self.node_selection]),
-                             ("Weight", ["Distance", "1 - Distance"][self.edge_weights])])
-        self.reportSection("Histogram")
-        self.reportImage(self.histogram.saveToFileDirect, QSize(400,300))
-        self.reportSettings("Output graph",
-                            [("Vertices", self.matrix.dim),
-                             ("Edges", self.nedges),
-                             ("Connected vertices", "%i (%.1f%%)" % \
-                              (self.pconnected, self.pconnected / \
-                               max(1, float(self.matrix.dim))*100))])
-
-    def sendSignals(self):
         self.Outputs.network.send(self.graph)
-        self.Outputs.distances.send(self.graph_matrix)
-        if self.graph is None:
-            self.Outputs.data.send(None)
+
+    def _items_for_network(self):
+        assert self.matrix is not None
+
+        if self.matrix.row_items is not None:
+            row_items = self.matrix.row_items
+            if isinstance(row_items, Table):
+                if self.matrix.axis == 1:
+                    items = row_items
+                else:
+                    items = [[v.name] for v in row_items.domain.attributes]
+            else:
+                items = [[str(x)] for x in self.matrix.row_items]
         else:
-            self.Outputs.data.send(self.graph.nodes)
+            items = [[str(i)] for i in range(1, 1 + self.matrix.shape[0])]
+        if not isinstance(items, Table):
+            items = Table.from_list(
+                Domain([], metas=[StringVariable('label')]),
+                items)
+        return items
+
+    def send_report(self):
+        self.report_items("Settings", [
+            ("Threshold", self.threshold),
+            ("Density", self.density),
+            ("Edges", self.edges_from_threshold()),
+        ])
+
+        if self.graph is None:
+            return
+
+        self.report_name("Histogram")
+        self.report_plot(self.histogram)
+
+        nodes = self.graph.number_of_nodes()
+        edges = self.graph.number_of_edges()
+        self.report_items(
+            "Output network",
+            [("Vertices", len(self.matrix)),
+             ("Edges", f"{edges} "
+                       f"({edges / nodes:.2f} per vertex), "
+                       f"density: {edges / self.eff_distances:.2%}")])
 
 
 pg_InfiniteLine = pg.InfiniteLine
@@ -366,53 +315,102 @@ pg.graphicsItems.LinearRegionItem.InfiniteLine = InfiniteLine
 
 
 class Histogram(pg.PlotWidget):
+    thresholdChanged = Signal(float)
+    draggingFinished = Signal()
+
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, setAspectLocked=True, background="w", **kwargs)
-        self.curve = self.plot([0, 1], [0], pen=pg.mkPen('b', width=2), stepMode=True)
-        self.region = pg.LinearRegionItem([0, 0], brush=pg.mkBrush('#02f1'), movable=True)
-        self.region.sigRegionChanged.connect(self._update_region)
-        # Selected region is only open-ended on the the upper side
-        self.region.hoverEvent = self.region.mouseDragEvent = lambda *args: None
-        self.region.lines[0].setVisible(False)
-        self.addItem(self.region)
-        self.fillCurve = self.plotItem.plot([0, 1], [0],
-            fillLevel=0, pen=pg.mkPen('b', width=2), brush='#02f3', stepMode=True)
+        axisItems = kwargs.pop("axisItems", None)
+        if axisItems is None:
+            axisItems = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
+        super().__init__(
+            parent, setAspectLocked=True, background=None, axisItems=axisItems,
+            **kwargs)
+        self.setBackgroundRole(QPalette.Base)
+        self.setPalette(QPalette())
+        self.__updateScenePalette()
+
+        self.curve = self.plot([0, 1], [0, 0], pen=pg.mkPen('b', width=3))
+        self.fill_curve = self.plotItem.plot([0, 1], [0, 0],
+            fillLevel=0, pen=pg.mkPen('b', width=4), brush='#02f3')
+        self.plotItem.setContentsMargins(12, 12, 12, 12)
         self.plotItem.vb.setMouseEnabled(x=False, y=False)
+        # Add another left axis
+        self.prop_axis = prop_axis = AxisItem(orientation='right')
+        self.plotItem.layout.addItem(prop_axis, 2, 3)
+        prop_axis.linkToView(self.plotItem.vb)
+        # Set axes titles
+        self.plotItem.setLabel('bottom', "Threshold Distance")
+        self.plotItem.setLabel('left', "Number of Edges")
+        prop_axis.setLabel("Edge Density", units="%")
 
-    def _update_region(self, region):
-        rlow, rhigh = self.getRegion()
-        low = max(0, np.searchsorted(self.xData, rlow, side='right') - 1)
-        high = np.searchsorted(self.xData, rhigh, side='right')
-        if high - low > 0:
-            xData = self.xData[low:high + 1].copy()
-            xData[0] = rlow  # set visible boundaries to match region lines
-            xData[-1] = rhigh
-            self.fillCurve.setData(xData, self.yData[low:high])
+        line_args = dict(
+            movable=True,
+            pen=pg.mkPen('k', width=1, style=Qt.DashLine),
+            hoverPen=pg.mkPen('k', width=2, style=Qt.DashLine)
+        )
+        self.hline = pg.InfiniteLine(angle=0, **line_args)
+        self.plotItem.addItem(self.hline, ignoreBounds=True)
+        self.hline.sigDragged.connect(self._hline_dragged)
+        self.hline.sigPositionChangeFinished.connect(self.draggingFinished)
 
-    def setBoundary(self, low, high):
-        self.region.setBounds((low, high))
+        self.vline = pg.InfiniteLine(angle=90, **line_args)
+        self.plotItem.addItem(self.vline, ignoreBounds=True)
+        self.vline.sigDragged.connect(self._vline_dragged)
+        self.vline.sigPositionChangeFinished.connect(self.draggingFinished)
 
-    def boundary(self):
-        return self.xData[[0, -1]]
+    def setScene(self, scene):
+        super().setScene(scene)
+        self.__updateScenePalette()
 
-    def setRegion(self, low, high):
-        low, high = np.clip([low, high], *self.boundary())
-        self.region.setRegion((low, high))
+    def __updateScenePalette(self):
+        scene = self.scene()
+        if scene is not None:
+            scene.setPalette(self.palette())
 
-    def getRegion(self):
-        return self.region.getRegion()
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updateScenePalette()
+            self.resetCachedContent()
+        super().changeEvent(event)
 
-    def setValues(self, values):
-        self.fillCurve.setData([0,1], [0])
-        if not len(values):
-            self.curve.setData([0, 1], [0])
-            self.setBoundary(0, 0)
+    def update_region(self, thresh,
+                      set_hline=False, set_vline=False,
+                      density=None):
+        high = np.searchsorted(self.xData, thresh, side='right')
+        self.fill_curve.setData(self.xData[:high], self.yData[:high])
+        if set_hline:
+            if density is None:
+                density = self.yData[min(high, len(self.yData) - 1)]
+            self.hline.setPos(density)
+        if set_vline:
+            self.vline.setPos(thresh)
+
+    def _hline_dragged(self):
+        pos = self.hline.value()
+        idx = np.searchsorted(self.yData, pos, side='right')
+        thresh = self.xData[min(idx, len(self.xData) - 1)]
+        self.update_region(thresh, set_vline=True)
+        self.thresholdChanged.emit(thresh)
+
+    def _vline_dragged(self):
+        thresh = self.vline.value()
+        self.update_region(thresh, set_hline=True)
+        self.thresholdChanged.emit(thresh)
+
+    def set_values(self, edges, cumfreqs):
+        self.fill_curve.setData([0, 1], [0, 0])
+        if not len(edges):
+            self.curve.setData([0], [1])
+            self.fill_curve.setData([0], [1])
             return
-        nbins = int(min(np.sqrt(len(values)), 100))
-        freq, edges = np.histogram(values, bins=nbins)
-        self.curve.setData(edges, freq)
-        self.setBoundary(edges[0], edges[-1])
-        self.autoRange()
+        self.curve.setData(np.hstack(([0], edges)),
+                           np.hstack(([0], cumfreqs)))
+        self.getAxis('left').setRange(0, cumfreqs[-1])
+        self.hline.setBounds([0, cumfreqs[-1]])
+        self.prop_axis.setScale(1 / cumfreqs[-1] * 100)
+        self.getAxis('bottom').setRange(edges[0], edges[-1])
+        self.vline.setBounds([edges[0], edges[-1]])
+        self.update_region(edges[0], set_hline=True, set_vline=True)
 
     @property
     def xData(self):
@@ -424,4 +422,10 @@ class Histogram(pg.PlotWidget):
 
 
 if __name__ == "__main__":
-    WidgetPreview(OWNxFromDistances).run(set_matrix=(Euclidean(Table("iris"))))
+    distances5 = DistMatrix(np.array([[0., 1, 2, 5, 10],
+                                      [1, -1, 5, 5, 13],
+                                      [2, 5, 2, 6, 13],
+                                      [5, 5, 6, 3, 15],
+                                      [10, 13, 13, 15, 0]]))
+    distances = Euclidean(Table("iris"))
+    WidgetPreview(OWNxFromDistances).run(set_matrix=distances)
