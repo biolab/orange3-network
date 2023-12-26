@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import numpy as np
 
-from Orange.data import Table, Domain, ContinuousVariable
 from Orange.misc import DistMatrix
 from Orange.widgets.tests.base import WidgetTest
 
@@ -257,31 +256,6 @@ class TestOWNxFromDistances(WidgetTest):
         widget.histogram.draggingFinished.emit()
         generate_network.assert_called_once()
 
-    def test_items_for_network(self):
-        widget = self.widget
-        self.send_signal(widget.Inputs.distances, self.distances)
-
-        self.assertEqual(list(widget._items_for_network().metas[:, 0]),
-                         ["1", "2", "3", "4", "5"])
-
-        self.distances.row_items = list("abcde")
-        self.send_signal(widget.Inputs.distances, self.distances)
-        self.assertEqual(list(widget._items_for_network().metas[:, 0]),
-                         list("abcde"))
-
-        self.distances.row_items = Table.from_numpy(
-            Domain([ContinuousVariable(x) for x in "abcde"]),
-            np.arange(25).reshape(5, 5))
-        self.distances.axis = 1
-        self.send_signal(widget.Inputs.distances, self.distances)
-
-        self.assertIs(widget._items_for_network(), self.distances.row_items)
-
-        self.distances.axis = 0
-        self.send_signal(widget.Inputs.distances, self.distances)
-        self.assertEqual(list(widget._items_for_network().metas[:, 0]),
-                         list("abcde"))
-
     def test_generate_network(self):
         widget = self.widget
 
@@ -300,6 +274,7 @@ class TestOWNxFromDistances(WidgetTest):
         np.testing.assert_equal(coo.row, [1, 2])
         np.testing.assert_equal(coo.col, [0, 0])
         np.testing.assert_almost_equal(coo.data, [1, 0.01])
+        self.assertEqual(list(graph.nodes), list("12345"))
 
         self.set_edit(widget.threshold_edit, 3)
         graph = self.get_output(widget.Outputs.network)

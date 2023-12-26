@@ -17,6 +17,7 @@ from orangecontrib.network.network import Network
 from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
 # This enables summarize in widget preview, pylint: disable=unused-import
 import orangecontrib.network.widgets
+from orangecontrib.network.widgets.utils import items_from_distmatrix
 
 
 class QIntValidatorWithFixup(QIntValidator):
@@ -242,32 +243,12 @@ class OWNxFromDistances(widget.OWWidget):
         else:
             edges = sp.csr_matrix(matrix.shape)
         edge_type = UndirectedEdges if self.symmetric else DirectedEdges
-        self.graph = Network(self._items_for_network(), edge_type(edges))
+        self.graph = Network(items_from_distmatrix(self.matrix), edge_type(edges))
         self.Warning.large_number_of_nodes(
             shown=self.graph.number_of_nodes() > 3000
             or self.graph.number_of_edges() > 10000)
 
         self.Outputs.network.send(self.graph)
-
-    def _items_for_network(self):
-        assert self.matrix is not None
-
-        if self.matrix.row_items is not None:
-            row_items = self.matrix.row_items
-            if isinstance(row_items, Table):
-                if self.matrix.axis == 1:
-                    items = row_items
-                else:
-                    items = [[v.name] for v in row_items.domain.attributes]
-            else:
-                items = [[str(x)] for x in self.matrix.row_items]
-        else:
-            items = [[str(i)] for i in range(1, 1 + self.matrix.shape[0])]
-        if not isinstance(items, Table):
-            items = Table.from_list(
-                Domain([], metas=[StringVariable('label')]),
-                items)
-        return items
 
     def send_report(self):
         self.report_items("Settings", [
