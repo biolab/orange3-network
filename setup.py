@@ -68,7 +68,7 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'anyqt',
     'gensim',
-    'Orange3>=3.34',
+    'Orange3>=3.35',
     'orange-widget-base',
     'pyqtgraph',
     'scipy',
