@@ -195,7 +195,7 @@ def aggregate_over_edge_types(aggregate, arg_no=0):
 
 
 sum_over_edge_types = \
-    partial(aggregate_over_edge_types, lambda x: reduce(np.add, x))
+    partial(aggregate_over_edge_types, lambda x: reduce(np.add, x, 0))
 
 concatenate_over_edge_types = partial(aggregate_over_edge_types, np.hstack)
 
