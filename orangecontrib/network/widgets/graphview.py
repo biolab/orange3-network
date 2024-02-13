@@ -14,22 +14,27 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, directed, *args, **kwargs):
         self.directed = directed
-        self.widths = kwargs.pop("widths", None)
+        self.__setWidths(kwargs.pop("widths", None))
         self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
         self.sizes = kwargs.pop("size", None)
         self.coss = self.sins = None
         super().__init__(*args, **kwargs)
 
     def setWidths(self, widths):
-        self.widths = widths
+        self.__setWidths(widths)
         self.update()
+
+    def __setWidths(self, widths):
+        if widths is not None:
+            widths = np.ceil(widths).astype(int)
+        self.widths = widths
 
     def setPen(self, pen):
         self.pen = pen
         self.pen.setCapStyle(Qt.RoundCap)
 
     def setData(self, *args, **kwargs):
-        self.widths = kwargs.pop("widths", self.widths)
+        self.__setWidths(kwargs.pop("widths", self.widths))
         self.setPen(kwargs.pop("pen", self.pen))
         self.sizes = kwargs.pop("size", self.sizes)
         super().setData(*args, **kwargs)
