@@ -3,9 +3,10 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from orangecontrib.network.widgets.tests.utils import NetworkTest
+import Orange
 from orangewidget.tests.utils import simulate
 
+from orangecontrib.network.widgets.tests.utils import NetworkTest
 from orangecontrib.network import Network
 from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer
 
@@ -22,6 +23,12 @@ class TestOWNxExplorer(NetworkTest):
     def test_minimum_size(self):
         # Disable this test from the base test class
         pass
+
+    @unittest.skipIf(Orange.__version__ < "3.38", "3.36 is not released yet")
+    def test_remove_allot(self):
+        self.fail(
+            "If https://github.com/biolab/orange3/pull/6612 is merged and released, "
+            "import allot from Orange.util and remove the class from the add-on.")
 
 
 class TestOWNxExplorerWithLayout(TestOWNxExplorer):

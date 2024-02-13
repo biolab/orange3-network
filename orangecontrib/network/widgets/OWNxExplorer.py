@@ -1,12 +1,18 @@
+import time
+import functools
+from weakref import WeakKeyDictionary
+from typing import Union, Optional, Callable
+
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QTimer, QSize, Qt, Signal, QObject, QThread
+from AnyQt.QtCore import QTimer, QSize, Qt
 
 import Orange
 from Orange.data import Table, Domain, StringVariable
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
@@ -14,11 +20,163 @@ from Orange.widgets.widget import Input, Output
 from orangecontrib.network.network.base import Network
 from orangecontrib.network.network.layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
+from orangewidget.widget import Message, Msg
 
 FR_ALLOWED_TIME = 30
 
 
-class OWNxExplorer(OWDataProjectionWidget):
+# This decorator doesn't belong here. When Orange 3.37 is released
+# (hopefully with https://github.com/biolab/orange3/pull/6612), this code
+# should be removed and the decorator imported from Orange.util.
+
+# This should look like decorator, not a class, pylint: disable=invalid-name
+class allot:
+    """
+    Decorator that allows a function only a specified portion of time per call.
+
+    Usage:
+
+    ```
+    @allot(0.2, overflow=of)
+    def f(x):
+       ...
+    ```
+
+    The above function is allotted 0.2 second per second. If it runs for 0.2 s,
+    all subsequent calls in the next second (after the start of the call) are
+    ignored. If it runs for 0.1 s, subsequent calls in the next 0.5 s are
+    ignored. If it runs for a second, subsequent calls are ignored for 5 s.
+
+    An optional overflow function can be given as a keyword argument
+    `overflow`. This function must have the same signature as the wrapped
+    function and is called instead of the original when the call is blocked.
+
+    If the overflow function is not given, the wrapped function must not return
+    result. This is because without the overflow function, the wrapper has no
+    value to return when the call is skipped.
+
+    The decorator adds a method `call` to force the call, e.g. by calling
+    f.call(5), in the above case. The used up time still counts for the
+    following (non-forced) calls.
+
+    The decorator also adds two attributes:
+
+    - f.last_call_duration is the duration of the last call (in seconds)
+    - f.no_call_before contains the time (time.perf_counter) when the next
+        call will be made.
+
+    The decorator can be used for functions and for methods.
+
+    A non-parametrized decorator doesn't block any calls and only adds
+    last_call_duration, so that it can be used for timing.
+    """
+    def __new__(cls: type, arg: Union[None, float, Callable], *,
+                overflow: Optional[Callable] = None,
+                _bound_methods: Optional[WeakKeyDictionary] = None):
+        self = super().__new__(cls)
+
+        if arg is None or isinstance(arg, float):
+            # Parametrized decorator
+            if arg is not None:
+                assert arg > 0
+
+            def set_func(func):
+                self.__init__(func,
+                              overflow=overflow,
+                              _bound_methods=_bound_methods)
+                self.allotted_time = arg
+                return self
+
+            return set_func
+
+        else:
+            # Non-parametrized decorator
+            self.allotted_time = None
+            return self
+
+    def __init__(self,
+                 func: Callable, *,
+                 overflow: Optional[Callable] = None,
+                 _bound_methods: Optional[WeakKeyDictionary] = None):
+        assert callable(func)
+        self.func = func
+        self.overflow = overflow
+        functools.update_wrapper(self, func)
+
+        self.no_call_before = 0
+        self.last_call_duration = None
+
+        # Used by __get__; see a comment there
+        if _bound_methods is None:
+            self.__bound_methods = WeakKeyDictionary()
+        else:
+            self.__bound_methods = _bound_methods
+
+    # If we are wrapping a method, __get__ is called to bind it.
+    # Create a wrapper for each instance and store it, so that each instance's
+    # method gets its share of time.
+    def __get__(self, inst, cls):
+        if inst is None:
+            return self
+
+        if inst not in self.__bound_methods:
+            # __bound_methods caches bound methods per instance. This is not
+            # done for perfoamnce. Bound methods can be rebound, even to
+            # different instances or even classes, e.g.
+            # >>> x = f.__get__(a, A)
+            # >>> y = x.__get__(b, B)
+            # >>> z = x.__get__(a, A)
+            # After this, we want `x is z`, there shared caching. This looks
+            # bizarre, but let's keep it safe. At least binding to the same
+            # instance, f.__get__(a, A),__get__(a, A), sounds reasonably
+            # possible.
+            cls = type(self)
+            bound_overflow = self.overflow and self.overflow.__get__(inst, cls)
+            decorator = cls(
+                self.allotted_time,
+                overflow=bound_overflow,
+                _bound_methods=self.__bound_methods)
+            self.__bound_methods[inst] = decorator(self.func.__get__(inst, cls))
+
+        return self.__bound_methods[inst]
+
+    def __call__(self, *args, **kwargs):
+        if time.perf_counter() < self.no_call_before:
+            if self.overflow is None:
+                return None
+            return self.overflow(*args, **kwargs)
+        return self.call(*args, **kwargs)
+
+    def call(self, *args, **kwargs):
+        start = time.perf_counter()
+        result = self.func(*args, **kwargs)
+        self.last_call_duration = time.perf_counter() - start
+        if self.allotted_time is not None:
+            if self.overflow is None:
+                assert result is None, "skippable function cannot return a result"
+            self.no_call_before = start + self.last_call_duration / self.allotted_time
+        return result
+
+
+def run(positions, edges, observe_weights, init_temp, k, state):
+    def update(positions, progress):
+        state.set_progress_value(progress)
+        if not large_graph:
+            state.set_partial_result(positions)
+        if state.is_interruption_requested():
+            raise Exception  # pylint: disable=broad-exception-raised
+
+    nnodes = positions.shape[0]
+    large_graph = nnodes + edges.shape[0] > 30000
+    sample_ratio = None if nnodes < 1000 else 1000 / nnodes
+    fruchterman_reingold(
+        positions, edges, observe_weights,
+        FR_ALLOWED_TIME, k, init_temp, sample_ratio,
+        callback=update)
+    return positions
+
+
+class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "Network Explorer"
     description = "Visually explore the network and its properties."
     icon = "icons/NetworkExplorer.svg"
@@ -36,8 +194,8 @@ class OWNxExplorer(OWDataProjectionWidget):
         distances = Output("Distance matrix", Orange.misc.DistMatrix)
 
     UserAdviceMessages = [
-        widget.Message("Double clicks select connected components",
-                       widget.Message.Information),
+        Message("Double clicks select connected components",
+                Message.Information),
     ]
 
     GRAPH_CLASS = GraphView
@@ -54,16 +212,15 @@ class OWNxExplorer(OWDataProjectionWidget):
     alpha_value = 255  # Override the setting from parent
 
     class Warning(OWDataProjectionWidget.Warning):
-        distance_matrix_mismatch = widget.Msg(
+        distance_matrix_mismatch = Msg(
             "Distance matrix size doesn't match the number of network nodes "
             "and will be ignored.")
-        no_graph_found = widget.Msg("Node data is given, graph data is missing.")
+        no_graph_found = Msg("Node data is given, graph data is missing.")
 
     class Error(OWDataProjectionWidget.Error):
-        data_size_mismatch = widget.Msg(
+        data_size_mismatch = Msg(
             "Length of the data does not match the number of nodes.")
-        network_too_large = widget.Msg("Network is too large to visualize.")
-        single_node_graph = widget.Msg("I don't do single-node graphs today.")
+        network_too_large = Msg("Network is too large to visualize.")
 
     def __init__(self):
         # These are already needed in super().__init__()
@@ -77,17 +234,14 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.mark_mode = 0
         self.mark_text = ""
 
-        super().__init__()
+        OWDataProjectionWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
         self.network = None
         self.node_data = None
         self.distance_matrix = None
         self.edges = None
         self.positions = None
-
-        self._optimizer = None
-        self._animation_thread = None
-        self._stop_optimization = False
 
         self.marked_nodes = None
         self.searchStringTimer = QTimer(self)
@@ -99,6 +253,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         return QSize(800, 600)
 
     def _add_controls(self):
+        # pylint: disable=attribute-defined-outside-init
         self.gui = OWPlotGUI(self)
         self._add_info_box()
         self.gui.point_properties_box(self.controlArea)
@@ -108,6 +263,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
 
     def _add_info_box(self):
+        # pylint: disable=attribute-defined-outside-init
         info = gui.vBox(self.controlArea, box="Layout")
         gui.label(
             info, self,
@@ -137,6 +293,7 @@ class OWNxExplorer(OWDataProjectionWidget):
                      callback=self.improve)
 
     def _add_effects_box(self):
+        # pylint: disable=attribute-defined-outside-init
         gbox = self.gui.create_gridbox(self.controlArea, box="Widths and Sizes")
         self.gui.add_widget(self.gui.PointSize, gbox)
         gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
@@ -167,6 +324,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         gui.hSlider(None, self, "graph.alpha_value")
 
     def _add_mark_box(self):
+        # pylint: disable=attribute-defined-outside-init
         hbox = gui.hBox(None, box=True)
         self.mainArea.layout().addWidget(hbox)
         vbox = gui.hBox(hbox)
@@ -345,7 +503,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.btselect.show()
 
         selection = self.graph.get_selection()
-        if not len(selection) or np.max(selection) == 0:
+        if len(selection) == 0 or np.max(selection) == 0:
             self.btadd.hide()
             self.btgroup.hide()
         elif np.max(selection) == 1:
@@ -433,7 +591,6 @@ class OWNxExplorer(OWDataProjectionWidget):
             self.closeContext()
             self.Error.data_size_mismatch.clear()
             self.Warning.no_graph_found.clear()
-            self._invalid_data = False
             if network is None:
                 if self.node_data is not None:
                     self.Warning.no_graph_found()
@@ -442,7 +599,6 @@ class OWNxExplorer(OWDataProjectionWidget):
             if self.node_data is not None:
                 if len(self.node_data) != n_nodes:
                     self.Error.data_size_mismatch()
-                    self._invalid_data = True
                     self.data = None
                 else:
                     self.data = self.node_data
@@ -500,7 +656,7 @@ class OWNxExplorer(OWDataProjectionWidget):
             elif len(set(self.edges.data)) == 1:
                 set_checkboxes(False)
 
-        self.stop_optimization_and_wait()
+        self.cancel()
         set_actual_data()
         super()._handle_subset_data()
         if self.positions is None:
@@ -527,7 +683,7 @@ class OWNxExplorer(OWDataProjectionWidget):
 
     def set_random_positions(self):
         if self.network is None:
-            self.position = None
+            self.positions = None
         else:
             self.positions = np.random.uniform(size=(self.number_of_nodes, 2))
 
@@ -593,8 +749,7 @@ class OWNxExplorer(OWDataProjectionWidget):
         self.randomize_button.setHidden(running)
 
     def stop_relayout(self):
-        self._stop_optimization = True
-        self.set_buttons(running=False)
+        self.cancel()
 
     def restart(self):
         self.relayout(restart=True)
@@ -602,89 +757,42 @@ class OWNxExplorer(OWDataProjectionWidget):
     def improve(self):
         self.relayout(restart=False)
 
-    # TODO: Stop relayout if new data is received
     def relayout(self, restart):
         if self.edges is None:
             return
         if restart or self.positions is None:
             self.set_random_positions()
-        self.progressbar = gui.ProgressBar(self, 100)
-        self.set_buttons(running=True)
-        self._stop_optimization = False
 
         Simplifications = self.graph.Simplifications
         self.graph.set_simplifications(
             Simplifications.NoDensity
             + Simplifications.NoLabels * (len(self.graph.labels) > 20)
             + Simplifications.NoEdgeLabels * (len(self.graph.edge_labels) > 20)
-            + Simplifications.NoEdges * (self.number_of_edges > 30000))
+            + Simplifications.NoEdges * (self.number_of_edges > 1000))
 
-        large_graph = self.number_of_nodes + self.number_of_edges > 30000
+        init_temp = 0.05 if restart else 0.2
+        k = self.layout_density / 10 / np.sqrt(self.number_of_nodes)
+        self.set_buttons(running=True)
+        self.start(run, self.positions, self.edges, self.observe_weights, init_temp, k)
 
-        class LayoutOptimizer(QObject):
-            update = Signal(np.ndarray, float)
-            done = Signal(np.ndarray)
-            stopped = Signal()
+    def cancel(self):
+        self.set_buttons(running=False)
+        super().cancel()
 
-            def __init__(self, widget):
-                super().__init__()
-                self.widget = widget
+    def on_done(self, positions):  # pylint: disable=arguments-renamed
+        self.positions = positions
+        self.set_buttons(running=False)
+        self.graph.set_simplifications(
+            self.graph.Simplifications.NoSimplifications)
+        self.graph.update_coordinates()
 
-            def send_update(self, positions, progress):
-                if not large_graph:
-                    self.update.emit(np.array(positions), progress)
-                return not self.widget._stop_optimization
-
-            def run(self):
-                widget = self.widget
-                edges = widget.edges
-                nnodes = widget.number_of_nodes
-                init_temp = 0.05 if restart else 0.2
-                k = widget.layout_density / 10 / np.sqrt(nnodes)
-                sample_ratio =  None if nnodes < 1000 else 1000 / nnodes
-                fruchterman_reingold(
-                    widget.positions, edges, widget.observe_weights,
-                    FR_ALLOWED_TIME, k, init_temp, sample_ratio,
-                    callback_step=4, callback=self.send_update)
-                self.done.emit(widget.positions)
-                self.stopped.emit()
-
-        def update(positions, progress):
-            self.progressbar.advance(progress)
-            self.positions = positions
-            self.graph.update_coordinates()
-
-        def done(positions):
-            self.positions = positions
-            self.set_buttons(running=False)
-            self.graph.set_simplifications(
-                self.graph.Simplifications.NoSimplifications)
-            self.graph.update_coordinates()
-            self.progressbar.finish()
-
-        def thread_finished():
-            self._optimizer = None
-            self._animation_thread = None
-
-        self._optimizer = LayoutOptimizer(self)
-        self._animation_thread = QThread()
-        self._optimizer.update.connect(update)
-        self._optimizer.done.connect(done)
-        self._optimizer.stopped.connect(self._animation_thread.quit)
-        self._optimizer.moveToThread(self._animation_thread)
-        self._animation_thread.started.connect(self._optimizer.run)
-        self._animation_thread.finished.connect(thread_finished)
-        self._animation_thread.start()
-
-    def stop_optimization_and_wait(self):
-        if self._animation_thread is not None:
-            self._stop_optimization = True
-            self._animation_thread.quit()
-            self._animation_thread.wait()
-            self._animation_thread = None
+    @allot(0.02)
+    def on_partial_result(self, positions):  # pylint: disable=arguments-renamed
+        self.positions = positions
+        self.graph.update_coordinates()
 
     def onDeleteWidget(self):
-        self.stop_optimization_and_wait()
+        self.shutdown()
         super().onDeleteWidget()
 
     def send_report(self):
@@ -711,15 +819,19 @@ class OWNxExplorer(OWDataProjectionWidget):
 
 
 def main():
+    # pylint: disable=import-outside-toplevel, unused-import
     from Orange.widgets.utils.widgetpreview import WidgetPreview
     from orangecontrib.network.network.readwrite \
         import read_pajek, transform_data_to_orange_table
     from os.path import join, dirname
 
     network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'leu_by_genesets.net'))
+    # network = read_pajek(
+    #    join(dirname(dirname(__file__)), 'networks', 'dicty_publication.net'))
     #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'davis.net'))
     #transform_data_to_orange_table(network)
     WidgetPreview(OWNxExplorer).run(set_graph=network)
+
 
 if __name__ == "__main__":
     main()
