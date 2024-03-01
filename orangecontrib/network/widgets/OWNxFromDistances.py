@@ -20,7 +20,7 @@ from orangecontrib.network.network import Network
 from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
 # This enables summarize in widget preview, pylint: disable=unused-import
 import orangecontrib.network.widgets
-from orangecontrib.network.widgets.utils import items_from_distmatrix
+from orangecontrib.network.widgets.utils import items_from_distmatrix, weights_from_distances
 
 
 class QIntValidatorWithFixup(QIntValidator):
@@ -261,17 +261,7 @@ class OWNxFromDistances(widget.OWWidget):
             # have the weight of 1, and the edges with the largest distances
             # have the weight of 0.01; the rest are scaled logarithmically
             weights = matrix[mask].astype(float)
-            mi, ma = np.min(weights), np.max(weights)
-            if ma - mi < 1e-6:
-                weights.fill(1)
-            else:
-                a = np.log(199) / (ma - mi)
-                weights -= mi
-                weights *= a
-                np.exp(weights, out=weights)
-                weights += 1
-                np.reciprocal(weights, out=weights)
-                weights *= 2
+            weights = weights_from_distances(weights)
             edges = sp.csr_matrix((weights, mask.nonzero()), shape=matrix.shape)
         else:
             edges = sp.csr_matrix(matrix.shape)

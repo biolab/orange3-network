@@ -1,3 +1,4 @@
+import numpy as np
 from Orange.data import Table, StringVariable, Domain
 
 
@@ -18,3 +19,23 @@ def items_from_distmatrix(matrix):
             Domain([], metas=[StringVariable('label')]),
             items)
     return items
+
+
+def weights_from_distances(weights):
+    weights = weights.astype(np.float64)
+
+    if weights.size == 0:
+        return weights
+
+    mi, ma = np.nanmin(weights), np.nanmax(weights)
+    assert mi >= 0, "All distances must be positive"
+
+    if ma - mi < 1e-6:
+        return np.ones(weights.shape)
+
+    weights /= ma
+    weights *= np.log(10)
+    np.exp(weights, out=weights)
+    np.reciprocal(weights, out=weights)
+
+    return weights
