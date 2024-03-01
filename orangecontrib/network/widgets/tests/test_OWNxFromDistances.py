@@ -302,7 +302,7 @@ class TestOWNxFromDistances(WidgetTest):
         coo = graph.edges[0].edges.tocoo()
         np.testing.assert_equal(coo.row, [1, 2])
         np.testing.assert_equal(coo.col, [0, 0])
-        np.testing.assert_almost_equal(coo.data, [1, 0.01])
+        np.testing.assert_almost_equal(coo.data, [1 / 10 ** 0.5, 0.1])
         self.assertEqual(list(graph.nodes), list("12345"))
 
         self.set_edit(widget.threshold_edit, 3)
@@ -312,7 +312,7 @@ class TestOWNxFromDistances(WidgetTest):
         coo = graph.edges[0].edges.tocoo()
         np.testing.assert_equal(coo.row, [1, 2, 4])
         np.testing.assert_equal(coo.col, [0, 0, 1])
-        np.testing.assert_almost_equal(coo.data, [1, 0.1323913, 0.01])
+        np.testing.assert_almost_equal(coo.data, [1 / 10 ** (1 / 3), 1 / 10 ** (2 / 3), 0.1])
 
         self.set_edit(widget.threshold_edit, 4)
         graph = self.get_output(widget.Outputs.network)
@@ -321,7 +321,7 @@ class TestOWNxFromDistances(WidgetTest):
         coo = graph.edges[0].edges.tocoo()
         np.testing.assert_equal(coo.row, [1, 2, 4])
         np.testing.assert_equal(coo.col, [0, 0, 1])
-        np.testing.assert_almost_equal(coo.data, [1, 0.1323913, 0.01])
+        np.testing.assert_almost_equal(coo.data, [1 / 10 ** (1 / 3), 1 / 10 ** (2 / 3), 0.1])
 
         self.set_edit(widget.threshold_edit, 5)
         graph = self.get_output(widget.Outputs.network)
@@ -330,6 +330,8 @@ class TestOWNxFromDistances(WidgetTest):
         coo = graph.edges[0].edges.tocoo()
         np.testing.assert_equal(coo.row, [1, 2, 2, 3, 3, 4])
         np.testing.assert_equal(coo.col, [0, 0, 1, 0, 1, 1])
+        np.testing.assert_almost_equal(coo.data, [1 / 10 ** (1 / 5), 1 / 10 ** (2 / 5),
+                                                  0.1, 0.1, 0.1, 1 / 10 ** (3 / 5)])
 
     def test_threshold_decimals(self):
         widget = self.widget

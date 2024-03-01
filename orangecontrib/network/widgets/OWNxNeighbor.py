@@ -16,7 +16,7 @@ from orangecontrib.network.network import Network
 from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
 # This enables summarize in widget preview, pylint: disable=unused-import
 import orangecontrib.network.widgets
-from orangecontrib.network.widgets.utils import items_from_distmatrix
+from orangecontrib.network.widgets.utils import items_from_distmatrix, weights_from_distances
 
 
 class OWNxNeighbor(widget.OWWidget):
@@ -92,8 +92,12 @@ class OWNxNeighbor(widget.OWWidget):
             edges = np.array([rows, cols]).T
             edges.sort()
             cols, rows = np.unique(edges, axis=0).T
-        ones = as_strided(1.0, (len(cols), ), (0, ))
-        return sp.coo_array((ones, (rows, cols)), matrix.shape)
+
+        weights = weights_from_distances(matrix[rows, cols])
+        mask = weights > 0
+        weights = weights[mask]
+
+        return sp.coo_array((weights, (rows, cols)), matrix.shape)
 
     def send_report(self):
         self.report_items("Settings", [
