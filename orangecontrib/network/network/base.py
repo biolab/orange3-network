@@ -51,8 +51,7 @@ class Edges:
         if not weights:
             return matrix.indices[fr:to]
         else:
-            return np.vstack(np.atleast_2d(matrix.indices[fr:to]),
-                             np.atleast_2d(matrix.data[fr:to]))
+            return matrix.indices[fr:to], matrix.data[fr:to]
 
     @staticmethod
     def _compute_degrees(edges, weighted):
