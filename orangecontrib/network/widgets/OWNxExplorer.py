@@ -433,7 +433,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             ("Mark node labelled as", text_line(), mark_label_equals),
             ("Mark nodes whose label starts with", text_line(), mark_label_starts),
             ("Mark nodes whose label contains", text_line(), mark_label_contains),
-            ("Mark nodes whose data that contains", text_line(), mark_text),
+            ("Mark nodes whose data contains", text_line(), mark_text),
             ("Mark nodes reachable from selected", None, mark_reachable),
 
             ("Mark nodes in vicinity of selection",
