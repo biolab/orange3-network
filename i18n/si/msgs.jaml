@@ -1,0 +1,774 @@
+__init__.py:
+    def `networks`:
+        networks: false
+network/base.py:
+    class `Network`:
+        def `__init__`:
+            def `as_edges`:
+                edges must be an instance of 'Edges' or a sparse matrix,: false
+                not '{type(edges).__name__}: false
+            Edges must be square matrices: true
+            Number of nodes and edge matrix dimension must match: true
+network/community.py:
+    def `add_results_to_items`:
+        C%d: false
+    def `label_propagation_hop_attenuation`:
+        Undirected graph expected: false
+network/embeddings.py:
+    class `Node2Vec`:
+        def `__init__`:
+            n2v: false
+        def `__call__`:
+            Network has no edges: Graf je prazen.
+            4.0.0: false
+            size: false
+            iter: false
+            vector_size: false
+            epochs: false
+            {}_{}: false
+network/generate.py:
+    path: false
+    cycle: false
+    complete: false
+    complete_bipartite: false
+    barbell: false
+    ladder: false
+    circular_ladder: false
+    grid: false
+    hypercube: false
+    lollipop: false
+    star: false
+    geometric: false
+    def `from_csr`:
+        def `wrapped`:
+            {f.__name__}{args}: false
+            ,): false
+            ): false
+    def `from_row_col`:
+        def `wrapped`:
+            {f.__name__}{args}: false
+            ,): false
+            ): false
+    def `from_dense`:
+        def `wrapped`:
+            {f.__name__}{args}: false
+            ,): false
+            ): false
+    def `complete`:
+        csr: false
+    def `geometric`:
+        'There are only {n_pairs} (< {n_edges}) possible edges between ': false
+        {n_nodes} points: false
+        geometric({n_nodes},{n_edges}): false
+network/readwrite.py:
+    read_pajek: false
+    write_pajek: false
+    PajekReader: false
+    class `PajekReader`:
+        .net: false
+        Pajek network file format: Format 'pajek'
+    def `read_pajek`:
+        def `check_has_vertices`:
+            Vertices must be defined before edges or arcs: false
+        %: false
+        *: false
+        *network: false
+        Pajek files with multiple networks are not supported: false
+        *vertices: false
+        'Pajek files with multiple set of vertices are not ': false
+        supported: false
+        *edges: false
+        *arcs: false
+        *edgeslist: false
+        *arcslist: false
+    def `write_pajek`:
+        'This implementation of Pajek format does not support saving ': false
+        networks with multiple edge types.: false
+        wt: false
+        *Network "{network.name}"\n: false
+    def `_write_vertices`:
+        *Vertices\t{network.number_of_nodes()}\n: false
+        {i:6} "{label}"\t: false
+        {' '.join(f'{c:.4f}' for c in coordinates)}\n: false
+    def `_write_edges`:
+        *Arcs\n: false
+        *Edges\n: false
+        {row + 1:6} {col + 1:6}\n: false
+        '{row + 1:6} {mat.indices[i] + 1:6} ': false
+        {mat.data[i]:.6f}\n: false
+    def `transform_data_to_orange_table`:
+        x: false
+        y: false
+        in_first_mode: false
+        mode: false
+        0: false
+        1: false
+        'label ': false
+network/twomode.py:
+    def `_normalize`:
+        ignore: false
+    WeightType: false
+    name: false
+    func: false
+    No weights: Brez uteži
+    Number of connections: Število povezav
+    Weighted number of connections: Uteženo število povezav
+    Geometric normalization: Geometrijska normalizacija
+    Geometric normalization by degrees: Geometrijska normalizacija po stopnjah
+    Normalization by sum of input weights: Normalizacija z vsoto uteži vhodov
+    Normalization by sum of output weights: Normalizacija z vsoto uteži izhodov
+    Normalization by minimal sum of weights: Normalizacija z minimalno vsoto uteži
+    Normalization by maximal sum of weights: Normalizacija z maksimalno vsoto uteži
+network/layout/setup.py:
+    def `configuration`:
+        posix: false
+        m: false
+        network: false
+        XXXXXXXXXX: false
+        _fr_layout: false
+        _fr_layout.c: false
+    __main__: false
+networks/makeNetworkList.py:
+    Network Name: false
+    Network File: false
+    dir: false
+    Item Set: false
+    Edge Set: false
+    Vertices: false
+    Edges: false
+    Date: false
+    Description: false
+    *.net: false
+    _items.tab: false
+    .tab: false
+    _edges.tab: false
+    doc/datasets/: false
+    4/12/2010: false
+    network_info.tab: false
+widgets/OWNxAnalysis.py:
+    n: false
+    e: false
+    degrees: false
+    Degree: Stopnje
+    number_of_nodes: false
+    Number of nodes: Število točk
+    number_of_edges: false
+    Number of edges: Število povezav
+    average_degree: false
+    Average degree: Povprečna stopnja
+    density: false
+    Density: Gostota
+    shortest_paths: false
+    Shortest paths: Najkrajše povezave
+    diameter: false
+    Diameter: Premer
+    radius: false
+    Radius: Polmer
+    average_shortest_path_length: false
+    Average shortest path length: Povprečna dolžina najkrajše poti
+    number_strongly_connected_components: false
+    Number of strongly connected components: Število močno povezanih komponent
+    number_weakly_connected_components: false
+    Number of weakly connected components: Število šibko povezanih komponent
+    in_degrees: false
+    In-degree: Vhodna stopnja
+    out_degrees: false
+    Out-degree: Izhodna stopnja
+    average_neighbour_degrees: false
+    Average neighbor degree: Povprečna stopnja sosedov
+    degree_centrality: false
+    Degree centrality: Centralnost stopnje
+    in_degree_centrality: false
+    In-degree centrality: Centralnost vhodne stopnje
+    out_degree_centrality: false
+    Out-degree centrality: Centralnost izhodne stopnje
+    closeness_centrality: false
+    Closeness centrality: Centralnost bližine
+    MethodDefinition: false
+    name: false
+    func: false
+    label: false
+    level: false
+    edge_constraint: false
+    args: false
+    class `OWNxAnalysis`:
+        Network Analysis: Analiza omrežja
+        Statistical analysis of network data.: Statistična analiza omrežja
+        icons/NetworkAnalysis.svg: false
+        class `Inputs`:
+            Network: Mreža
+            Items: Elementi
+        class `Outputs`:
+            Network: Mreža
+            Items: Elementi
+        class `Information`:
+            Computing {}: Računanje {}
+        number_of_nodes: false
+        number_of_edges: false
+        average_degree: false
+        def `__init__`:
+            Graph-level indices: Statistika mreže
+            Node-level indices: Statistika točk
+            lbl_: false
+            %(lbl_{method.name})s: false
+            tool_: false
+        def `set_graph`:
+            tool_{}: false
+            lbl_{name}: false
+            network: false
+        def `needed_methods`:
+            network: false
+        def `run_more_jobs`:
+            lbl_: false
+            pending: false
+            running: false
+        def `set_label_for`:
+            terminated: false
+            error: false
+            computing: false
+            pending: false
+            {value:.4g}: false
+            lbl_: false
+        def `show_computing`:
+            ', ': true
+        def `cancel_job`:
+            lbl_: false
+            terminated: false
+        def `send_report`:
+            {self.known[attr]:.4g}: false
+    def `main`:
+        networks: false
+        lastfm.net: false
+    __main__: false
+widgets/OWNxClustering.py:
+    class `OWNxClustering`:
+        Network Clustering: Gručenje omrežja
+        Orange widget for community detection in networks.: Odkrivanje skupnosti v omrežjih
+        icons/NetworkClustering.svg: false
+        class `Inputs`:
+            Network: Mreža
+        class `Outputs`:
+            Network: Mreža
+            Items: Elementi
+        def `__init__`:
+            Label Propagation: Razširjanje oznak
+            iterations: false
+            'Max. iterations: ': 'Maks. število korakov: '
+            hop_attenuation: false
+            'Apply hop attenuation: ': 'Uporabi zmanjšanje korakov: '
+            attenuate: false
+            use_random_state: false
+            Replicable clustering: Ponovljivo gručenje
+        def `commit`:
+            iterations: false
+            delta: false
+            seed: false
+            Cluster: Gruča
+        def `migrate_settings`:
+            autoApply: false
+            auto_apply: false
+            method: false
+            attenuate: false
+    __main__: false
+    networks: false
+    leu_by_genesets.net: false
+widgets/OWNxEmbeddings.py:
+    class `OWNxEmbedding`:
+        Network Embeddings: Vdelave omrežja
+        Embed network elements: Vdelaj elemente omrežja
+        icons/NetworkEmbedding.svg: false
+        class `Inputs`:
+            Network: Mreža
+        class `Outputs`:
+            Items: Elementi
+        def `__init__`:
+            p: false
+            'Return parameter (p): ': 'Parameter vrnitve (p): '
+            q: false
+            'In-out parameter (q): ': Parameter lokalnosti (q)
+            walk_len: false
+            'Walk length: ': 'Dolžina sprehoda: '
+            num_walks: false
+            'Walks per node: ': 'Sprehodi na točko: '
+            emb_size: false
+            'Embedding size: ': 'Velikost vdelave: '
+            window_size: false
+            'Context size: ': 'Velikost konteksta: '
+            num_epochs: false
+            'Number of epochs: ': 'Število epoh: '
+            auto_commit: false
+            Commit: Potrdi
+            Auto-commit: Samodejno potrdi
+    __main__: false
+    ..: false
+    networks: false
+    davis.net: false
+widgets/OWNxExplorer.py:
+    class `allot`:
+        def `call`:
+            skippable function cannot return a result: false
+    class `OWNxExplorer`:
+        Network Explorer: Raziskovalec omrežja
+        Visually explore the network and its properties.: Vizualno raziskovanje omrežja in njegovih lastnosti
+        icons/NetworkExplorer.svg: false
+        class `Inputs`:
+            Node Data: Podatki o točkah
+            Node Subset: Podmnožica točk
+            Network: Mreža
+            Node Distances: Razdalje med točkami
+        class `Outputs`:
+            Selected sub-network: Izbrana podmreža
+            Remaining sub-network: Preostala podmreža
+            Distance matrix: Matrika razdalj
+        Double clicks select connected components: Dvojni kliki izberejo povezane komponente
+        class `Warning`:
+            "Distance matrix size doesn't match the number of network nodes ": 'Velikost matrike razdalj se ne ujema s številom točk v omrežju, '
+            and will be ignored.: zato bo prezrta.
+            Node data is given, graph data is missing.: Podatki točk so podani, podatki omrežja pa manjkajo.
+        class `Error`:
+            Length of the data does not match the number of nodes.: Dolžina podatkov se ne ujema s številom točk.
+            Network is too large to visualize.: Omrežje je preveliko za vizualizacijo.
+        def `_add_info_box`:
+            Layout: Postavitev
+            'Nodes: %(number_of_nodes)i (%(nodes_per_edge).2f per edge); ': 'Točke: %(number_of_nodes)i (%(nodes_per_edge).2f na povezavo); '
+            %(nSelected)i selected: %(nSelected)i izbranih
+            'Edges: %(number_of_edges)i (%(edges_per_node).2f per node)': Povezave: %(number_of_edges)i (%(edges_per_node).2f na točko)
+            Improve: Izboljšaj
+            Optimize the current layout, with a small initial jerk: Izboljšaj trenutno postavitev, z majhnim začetnim sunkom
+            Stop: Ustavi
+            Re-layout: Ponovno postavi
+            Restart laying out from random positions: Ponovno postavi iz naključnih položajev
+            layout_density: false
+            Gravity: Gravitacija
+            Lower values improve optimization,\n: Nižje vrednosti izboljšajo optimizacijo,\n
+            'higher work better for graph with many small ': 'višje pa delujejo boljše za grafe z veliko majhnimi '
+            components: komponentami.
+            observe_weights: false
+            Make edges with large weights shorter: Skrajšaj povezave z velikimi utežmi
+        def `_add_effects_box`:
+            Widths and Sizes: Širine in velikosti
+            Node Size:: Velikost točk:
+            Edge width:: Širina povezav:
+            graph.edge_width: false
+            graph.relative_edge_widths: false
+            Scale edge widths to weights: Prilagodi širine povezav utežem
+            graph.show_edge_weights: false
+            Show edge weights: Prikaži uteži povezav
+            graph.label_selected_edges: false
+            Label only edges of selected nodes: Oznaši samo povezave izbranih točk
+            graph.alpha_value: false
+        def `_add_mark_box`:
+            def `text_line`:
+                mark_text: false
+                'Text: ': 'Besedilo: '
+            def `mark_text`:
+                \x00: false
+            (Select criteria for marking): (Izberi kriterij za označevanje)
+            Mark node labelled as: Označi točke z oznako:
+            Mark nodes whose label starts with: Označi točke, katerih oznaka se začne z:
+            Mark nodes whose label contains: Označi točke, katerih oznaka vsebuje:
+            Mark nodes whose data that contains: Označi točke, katerih podatki vsebujejo:
+            Mark nodes reachable from selected: Označi točke, ki so dosegljive iz izbranih:
+            Mark nodes in vicinity of selection: Označi točke v bližini izbora:
+            mark_hops: false
+            Number of hops:: Število korakov:
+            Mark nodes from subset signal: Označi točke iz signala podmnožice
+            Mark nodes with few connections: Označi točke z malo povezavami
+            mark_max_conn: false
+            Max. connections:: Maks. povezav:
+            Mark nodes with many connections: Označi točke z veliko povezavami
+            mark_min_conn: false
+            Min. connections:: Min. povezav:
+            Mark nodes with most connections: Označi točke z največ povezavami
+            mark_most_conn: false
+            Number of marked:: Število označenih:
+            Mark nodes with more connections than any neighbour: Označi točke z več povezavami kot katerikoli sosed
+            Mark nodes with more connections than average neighbour: Označi točke z več povezavami kot povprečen sosed
+            mark_mode: false
+            Select: Izberi
+            Add to Selection: Dodaj k izboru
+            Add New Group: Dodaj novo skupino
+        def `update_selection_buttons`:
+            Add to Selection: Dodaj k izboru
+            Add to Group: Dodaj v skupino
+        def `handleNewSignals`:
+            def `set_actual_data`:
+                label: oznaka
+        def `send_report`:
+            Graph info: Informacije o grafu
+            Number of vertices: Število točk
+            Number of edges: Število povezav
+            Vertices per edge: Točk na povezavo
+            Edges per vertex: Povezav na točko
+            Data: Podatki
+            Visual settings: Vizualne nastavitve
+            Color: Barva
+            Label: Oznaka
+            Shape: Oblika
+            Size: Velikost
+    def `main`:
+        networks: false
+        leu_by_genesets.net: false
+    __main__: false
+widgets/OWNxFile.py:
+    Orange3-Network: false
+    orange.data.io.search_paths: false
+    network: false
+    class `OWNxFile`:
+        Network File: Datoteka omrežja
+        Read network graph file: Branje omrežja iz grafa
+        icons/NetworkFile.svg: false
+        class `Inputs`:
+            Items: Elementi
+        class `Outputs`:
+            Network: Mreža
+            Items: Elementi
+        class `Information`:
+            Nodes annotated with data from file with the same name: Točke so označene s podatki iz datoteke z enakim imenom
+            Add optional data input to annotate nodes: Na vhod lahko dodate podatke o točkah
+        class `Error`:
+            Error reading file "{}"\n{}: Napaka pri branju datoteke "{}"\n{}
+            Error reading file "{}": Napaka pri branju datoteke "{}"
+            Attempt to read {} failed\n: Poskus branja {} ni uspel\n
+            The widget tried to annotated nodes with data from\n: Gradnik je poskusil označiti točke s podatki iz\n
+            a file with the same name.: datoteke z enakim imenom.
+            Data size does not match the number of nodes.\n: Velikost podatkov se ne ujema s številom točk.\n
+            'Select a data column whose values can be matched with network ': 'Izberite stolpec podatkov, katere vrednosti se lahko ujemajo z oznakami v '
+            labels: omrežju.
+        def `__init__`:
+            net_index: false
+            ...: true
+            Reload: Ponovno naloži
+            (Match by rows): (Ujemanje po vrsticah)
+            label_variable: false
+            'Match node labels to data column: ': 'Ujemanje oznak točk s stolpcem podatkov: '
+        def `populate_comboboxes`:
+            (None): (Brez)
+            Browse documentation networks...: Brskaj po dokumentacijskih omrežjih...
+        def `browse_net_file`:
+            .: false
+            Open a Network File: Odpri datoteko omrežja
+            ;;: false
+            Pajek files (*.net *.pajek): true
+        def `read_auto_data`:
+            _items: false
+            .tab: false
+            .tsv: false
+            .csv: false
+        def `_combined_data`:
+            node_label: false
+        def `_label_to_tabel`:
+            node_label: false
+        def `sendReport`:
+            Network file: Datoteka z omrežjem
+            File name: Ime datoteke
+            Vertices: Točke
+            Directed: Usmerjeno
+    __main__: false
+widgets/OWNxFromDistances.py:
+    class `OWNxFromDistances`:
+        Network From Distances: Omrežje iz razdalj
+        'Constructs a network by connecting nodes with distances ': 'Omrežje, v katerem so povezane toček z razdaljami '
+        below some threshold.: pod nekim pragom.
+        icons/NetworkFromDistances.svg: false
+        class `Inputs`:
+            Distances: Razdalje
+        class `Outputs`:
+            Network: Mreža
+        class `Warning`:
+            Large number of nodes/edges; expect slow performance.: Veliko število točk/povezav; pričakujte počasno delovanje.
+        class `Error`:
+            The network is too large ({}): Omrežje je preveliko ({})
+        def `__init__`:
+            Threshold:: Prag:
+            Number of edges:: Število povezav:
+            Density (%):: Gostota (%):
+        def `edges_from_threshold`:
+            right: false
+        def `update_edits`:
+            ~: false
+            {self.threshold:.{n_decimals}f}: false
+        def `send_report`:
+            Settings: Nastavitve
+            Threshold: Prag
+            Density: Gostota
+            Edges: Povezave
+            Histogram: Histogram
+            Output network: Izhodno omrežje
+            Vertices: Točke
+            '{edges} ': false
+            '({edges / nodes:.2f} per vertex), ': '({edges / nodes:.2f} na točko), '
+            'density: {edges / self.eff_distances:.2%}': gostota: {edges / self.eff_distances:.2%}
+    class `Histogram`:
+        def `__init__`:
+            axisItems: false
+            left: false
+            bottom: false
+            b: false
+            '#02f3': false
+            right: false
+            Threshold Distance: Prag razdalje
+            Number of Edges: Število povezav
+            Edge Density: Gostota povezav
+            %: true
+            k: false
+        def `update_region`:
+            right: false
+        def `_hline_dragged`:
+            left: false
+        def `set_graph`:
+            left: false
+            bottom: false
+    __main__: false
+    iris: false
+widgets/OWNxGenerator.py:
+    def `_ctrl_name`:
+        ___: false
+        ' ': false
+        _: false
+    class `OWNxGenerator`:
+        Network Generator: Generator omrežja
+        Construct example graphs.: Konstruiraj primere omrežij.
+        icons/NetworkGenerator.svg: false
+        Path: Pot
+        of length: dolžine
+        Cycle: Cikel
+        with: z
+        nodes: točkami
+        Complete: Poln graf
+        Complete bipartite: Poln dvodelni graf
+        and: in
+        Barbell: Utež
+        Ladder: Lestev
+        steps: prečkami
+        Circular ladder: Krožna lestev
+        Grid: Mreža
+        , height: višine
+        and width: in širine
+        Hypercube: Hiperkocka
+        ', ': ', '
+        dimensional: dimenzij(e)
+        Star: Zvezda
+        edges: točkami
+        Lollipop: Lizika
+        nodes, stem of: točk, steblo z
+        Geometric: Geometrijski graf
+        'nodes, ': 'točkami, '
+        class `Outputs`:
+            Network: Mreža
+        class `Error`:
+            {}: false
+        def `__init__`:
+            def `space`:
+                ' ': false
+            graph_type: false
+            Regenerate Network: Ponovno generiraj
+        def `on_type_changed`:
+            ' ': false
+        def `generate`:
+            id: false
+        def `migrate_settings`:
+            arguments: false
+            __: false
+    __main__: false
+widgets/OWNxGroups.py:
+    class `OWNxGroups`:
+        Network Of Groups: Mreža skupin
+        Group instances by feature and connect related groups.: Združi elemente glede na značilnosti in poveži sorodne skupine.
+        icons/NetworkGroups.svg: false
+        class `Inputs`:
+            Network: Mreža
+            Data: Podatki
+        class `Outputs`:
+            Network: Mreža
+            Data: Podatki
+        class `Warning`:
+            Data is given, network is missing.: Podatki so dani, omrežje pa manjka.
+            Data has no discrete features.: Podatki nimajo kategoričnih spremenljivk.
+        class `Error`:
+            'Length of the data does not ': 'Dolžina podatkov se ne '
+            match the number of nodes.: ujema s številom točk.
+        No weights: Brez uteži
+        Number of connections: Število povezav
+        Sum of connection weights: Vsota uteži povezav
+        def `__init__`:
+            Info: Informacije
+            feature: false
+            Group by: Združi po
+            weighting: false
+            Output weights: Izhodne uteži
+            normalize: false
+            Normalize by geometric mean: Normaliziraj z geometrijskim povprečjem
+        def `_set_input_label_text`:
+            'Input: no data': Vhod: ni podatkov
+            'Input: ': 'Vhod: '
+            '{self.network.number_of_nodes()} nodes, ': '{self.network.number_of_nodes()} {plsi(self.network.number_of_nodes(), "točka")}, '
+            {self.network.number_of_edges()} edges: {self.network.number_of_edges()} {plsi(self.network.number_of_edges(), "povezava")}
+        def `_set_output_label_text`:
+            'Output: no data': Izhod: ni podatkov
+            'Output: {self.out_nodes} nodes, {self.out_edges} edges': Izhod: {self.out_nodes} {plsi(self.out_nodes, "točka")}, {self.out_edges} {plsi(self.out_edges, "povezava")}
+        def `send_report`:
+            Input network: Vhodno omrežje
+            Number of vertices: Število točk
+            Number of edges: Število povezav
+            Input data: Vhodni podatki
+            Settings: Nastavitve
+            Group by: Združi po
+            Weights: Uteži
+            , normalized by geometric mean: , normalizirano z geometrijskim povprečjem
+            Output network: Izhodno omrežje
+    def `main`:
+        ..: false
+        networks: false
+        airtraffic.net: false
+        airtraffic_items.tab: false
+    __main__: false
+widgets/OWNxNeighbor.py:
+    class `OWNxNeighbor`:
+        Network of Neighbors: Omrežje sosedov
+        Constructs a network by connecting nearest neighbors.: Konstruiraj omrežje s povezovanjem najbližjih sosedov.
+        icons/NetworkOfNeighbors.svg: false
+        class `Inputs`:
+            Distances: Razdalje
+        class `Outputs`:
+            Network: Mreža
+        def `__init__`:
+            k: false
+            Number of neighbors:: Število sosedov:
+            directed: false
+            Directed edges: Usmerjene povezave
+        def `send_report`:
+            Settings: Nastavitve
+            Neighbors: Sosedje
+            Directed: Usmerjeno
+            Output network: Izhodno omrežje
+            Vertices: Točke
+            Edges: Povezave
+    __main__: false
+    iris: false
+widgets/OWNxSave.py:
+    class `OWNxSave`:
+        Save Network: Shrani omrežje
+        Save network to an output file.: Shrani omrežje v izhodno datoteko.
+        icons/NetworkSave.svg: false
+        {w.DESCRIPTION} (*{w.EXTENSIONS[0]}): false
+        class `Inputs`:
+            Network: Mreža
+        class `Error`:
+            Can't save network with multiple edge types: Omrežja z več vrstami povezav ni mogoče shraniti
+        def `__init__`:
+            (None): (Brez)
+            'Node label: ': 'Oznaka točke: '
+            label_variable: false
+            Choose the variables that will be used as a label: Izberite spremenljivke, ki bodo uporabljene kot oznaka
+        def `set_network`:
+            node_label: false
+        def `send_report`:
+            Node labels: Oznake točk
+            none: brez
+            File name: Ime datoteke
+            not set: ni nastavljeno
+    def `main_with_annotation`:
+        ../networks/leu_by_genesets.net: false
+    def `main_without_annotation`:
+        ../networks/leu_by_genesets.net: false
+    __main__: false
+widgets/__init__.py:
+    Network: Omrežja
+    Network visualization and analysis tools for Orange.: Vizualizacijska in analitična orodja za omrežja v Orange.
+    '#C0FF97': false
+    icons/Category-Network.svg: false
+    {DEVELOP_ROOT}/doc/_build/html/index.html: false
+    {}/help/orange3-network/index.html: false
+    data: false
+    https://orange3-network.readthedocs.io/en/latest/: false
+    def `summarize_`:
+        ➝: true
+        –: true
+        Network: Omrežje
+        Directed network: Usmerjeno omrežje
+        '<nobr>{nettype} with {n} nodes ': '<nobr>{nettype} {plsi_sz(n)} {n} {plsi(n, "točko|točkama|točkami")} '
+        and {net.number_of_edges()} edges</nobr>.: in {net.number_of_edges()} {plsi(net.number_of_edges(), "povezavo|povezavama|povezavami")}</nobr>.
+        <nobr>Network with {n} nodes: '<nobr>Omrežje {plsi_sz(n)} {n} {plsi(n, "točko|točkama|točkami")} '
+        ' and {len(net.edges)} edge types:</nobr><ul>': in {len(net.edges)} {plsi(len(net.edges), "povezavo|povezavama|povezavami")}</nobr>.
+        '<li>{len(edges)} edges, ': '<li>{len(edges)} {plsi(len(edges), "povezava|povezavi|povezave|povezav")}, '
+        {['undirected', 'directed'][edges.directed]}</li>: {['neusmerjeno', 'usmerjeno'][edges.directed]}</li>
+        .: false
+        •{n} {direct}{e}: true
+widgets/graphview.py:
+    class `PlotVarWidthCurveItem`:
+        def `__init__`:
+            widths: false
+            pen: false
+            size: false
+        def `setData`:
+            widths: false
+            pen: false
+            size: false
+    class `GraphView`:
+        def `update_edges`:
+            size: false
+            widths: false
+        def `update_edge_labels`:
+            {:.02}: false
+        def `update_marks`:
+            '#aff': false
+widgets/ownxsinglemode.py:
+    class `OWNxSingleMode`:
+        Single Mode: Enovrstno omrežje
+        Convert multimodal graphs to single modal: Pretvori večvrstno omrežjo v enovrstno
+        icons/SingleMode.svg: false
+        class `Inputs`:
+            Network: Omrežje
+        class `Outputs`:
+            Network: Omrežje
+        class `Warning`:
+            Nodes with missing data are being ignored.: Točke z manjkajočimi podatki so izpuščene.
+        class `Error`:
+            Network has additional data.: Omrežje ima dodatne podatke.
+            Data has no categorical features.: Podatki nimajo kategoričnih spremenljivk.
+            Values for modes cannot be the same.: Vrednosti za vrste ne morejo biti enake.
+        def `__init__`:
+            Mode indicator: Kazalec vrste
+            Feature:: Značilnost:
+            variable: false
+            Connect:: Poveži:
+            connect_value: false
+            by:: glede na:
+            connector_value: false
+            weighting: false
+            Edge weights: Uteži povezav
+            Output: Izhod
+        def `_update_value_combos`:
+            (all others): (vse ostale)
+        def `_set_output_msg`:
+            No network on output: Na izhodu ni omrežja
+            '{out_network.number_of_nodes()} nodes, ': '{out_network.number_of_nodes()} {plsi(out_network.number_of_nodes(), "točka")}, '
+            {out_network.number_of_edges()} edges: {out_network.number_of_edges()} {plsi(out_network.number_of_edges(), "povezava")}
+        def `send_report`:
+            Input network: Vhodno omrežje
+            {} nodes, {} edges: {} točk, {} povezav
+            Mode: Način
+            Select {}={}, connected through {}: Izberi {}={}, povezane preko {}
+            any node: katerikoli točki
+            Weighting: Uteževanje
+            Output network: Izhodno omrežje
+    def `main`:
+        /Users/janez/Downloads/100_petrozavodsk_171_events_no_sqrt.net: false
+    __main__: false
+widgets/utils.py:
+    def `items_from_distmatrix`:
+        label: oznaka
+    def `weights_from_distances`:
+        All distances must be positive: Vse razdalje morajo biti pozitivne
+widgets/tests/utils.py:
+    class `NetworkTest`:
+        def `_read_network`:
+            n: false
+        def `_get_filename`:
+            d: false
+            widgets: false
+            tests: false
+            test_items.tab: false
+            test.net: false
+            networks: false
