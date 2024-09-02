@@ -326,12 +326,15 @@ class OWNxFile(OWWidget):
         return data
 
 
-    def sendReport(self):
-        self.reportSettings(
+    def send_report(self):
+        if not self.network:
+            return
+
+        self.report_items(
             "Network file",
             [("File name", self.filecombo.currentText()),
              ("Vertices", self.network.number_of_nodes()),
-             ("Directed", gui.YesNo[self.network.edges[0].directed])
+             ("Directed", ["No", "Yes"][self.network.edges[0].directed])
              ])
 
 
