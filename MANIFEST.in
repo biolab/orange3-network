@@ -1,5 +1,6 @@
 recursive-include orangecontrib *.pyx *.cpp *.net *.py *.tab *.png *.svg *.tsv
 recursive-include doc *.bat *.json *.md *.png *.py *.rst Makefile
+recursive-include i18n *.jaml *.yaml
 
 include *.py *.txt *.rst *.pypi *.md *.ini .coveragerc
 include COPYING
