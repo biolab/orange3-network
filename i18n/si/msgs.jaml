@@ -1,12 +1,11 @@
-__init__.py:
-    def `networks`:
-        networks: false
 network/base.py:
     class `Network`:
         def `__init__`:
             def `as_edges`:
                 edges must be an instance of 'Edges' or a sparse matrix,: false
                 not '{type(edges).__name__}: false
+            Edges must be square matrices: false
+            Number of nodes and edge matrix dimension must match: false
 network/community.py:
     def `add_results_to_items`:
         C%d: false
