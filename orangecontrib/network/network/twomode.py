@@ -24,7 +24,7 @@ def to_single_mode(net, mode_mask, conn_mask, weighting):
         single-mode network
     """
     mode_edges = _filtered_edges(net, mode_mask, conn_mask)
-    new_edges = Weighting[weighting].func(mode_edges)
+    new_edges = Weighting[weighting].func(mode_edges, np.sum(mode_mask))
     return Network(net.nodes[mode_mask], new_edges)
 
 
@@ -38,7 +38,7 @@ def _normalize(a, *nominators):
 
 
 def _dot_edges(normalization):
-    def norm_dot(edges):
+    def norm_dot(edges, dim):
         edges = normalization(
             edges, wuu=lambda: edges.sum(axis=0), wvv=lambda: edges.sum(axis=1))
         new_edges = np.dot(edges, edges.T).tocoo()
@@ -47,12 +47,12 @@ def _dot_edges(normalization):
 
         return sp.csr_matrix(
             (new_edges.data[mask], (new_edges.row[mask], new_edges.col[mask])),
-            shape=new_edges.shape)
+            shape=(dim, dim))
     return norm_dot
 
 
-def _weight_no_weights(edges):
-    new_edges = _weight_connections(edges)
+def _weight_no_weights(edges, dim):
+    new_edges = _weight_connections(edges, dim)
     new_edges[new_edges.nonzero()] = 1
     return new_edges
 

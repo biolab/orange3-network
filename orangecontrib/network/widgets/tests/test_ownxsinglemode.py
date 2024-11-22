@@ -112,7 +112,7 @@ class TestOWNxSingleMode(NetworkTest):
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
 
-        net = Network(range(3), sp.csr_matrix([[0, 1], [1, 2]]))
+        net = Network(range(3), sp.csr_matrix([[0, 1, 0], [1, 2, 0], [0, 0, 0]]))
         self.send_signal(widget.Inputs.network, net)
         self.assertTrue(no_data())
         self.assertFalse(no_categorical())
