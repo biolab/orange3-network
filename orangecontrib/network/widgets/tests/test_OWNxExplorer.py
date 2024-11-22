@@ -24,12 +24,6 @@ class TestOWNxExplorer(NetworkTest):
         # Disable this test from the base test class
         pass
 
-    @unittest.skipIf(Orange.__version__ < "3.38", "3.36 is not released yet")
-    def test_remove_allot(self):
-        self.fail(
-            "If https://github.com/biolab/orange3/pull/6612 is merged and released, "
-            "import allot from Orange.util and remove the class from the add-on.")
-
 
 class TestOWNxExplorerWithLayout(TestOWNxExplorer):
     def test_empty_network(self):
