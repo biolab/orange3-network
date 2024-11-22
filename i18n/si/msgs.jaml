@@ -7,8 +7,6 @@ network/base.py:
             def `as_edges`:
                 edges must be an instance of 'Edges' or a sparse matrix,: false
                 not '{type(edges).__name__}: false
-            Edges must be square matrices: true
-            Number of nodes and edge matrix dimension must match: true
 network/community.py:
     def `add_results_to_items`:
         C%d: false
@@ -304,9 +302,6 @@ widgets/OWNxEmbeddings.py:
     networks: false
     davis.net: false
 widgets/OWNxExplorer.py:
-    class `allot`:
-        def `call`:
-            skippable function cannot return a result: false
     class `OWNxExplorer`:
         Network Explorer: Raziskovalec omrežja
         Visually explore the network and its properties.: Vizualno raziskovanje omrežja in njegovih lastnosti
@@ -367,7 +362,7 @@ widgets/OWNxExplorer.py:
             Mark node labelled as: Označi točke z oznako:
             Mark nodes whose label starts with: Označi točke, katerih oznaka se začne z:
             Mark nodes whose label contains: Označi točke, katerih oznaka vsebuje:
-            Mark nodes whose data that contains: Označi točke, katerih podatki vsebujejo:
+            Mark nodes whose data contains: Označi točke, katerih podatki vsebujejo:
             Mark nodes reachable from selected: Označi točke, ki so dosegljive iz izbranih:
             Mark nodes in vicinity of selection: Označi točke v bližini izbora:
             mark_hops: false
@@ -459,11 +454,13 @@ widgets/OWNxFile.py:
             node_label: false
         def `_label_to_tabel`:
             node_label: false
-        def `sendReport`:
-            Network file: Datoteka z omrežjem
+        def `send_report`:
+            Network file: Datoteka omrežja
             File name: Ime datoteke
-            Vertices: Točke
+            Vertices: Število točk
             Directed: Usmerjeno
+            No: Ne
+            Yes: Da
     __main__: false
 widgets/OWNxFromDistances.py:
     class `OWNxFromDistances`:
