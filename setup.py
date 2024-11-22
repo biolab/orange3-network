@@ -5,7 +5,8 @@ from distutils.core import Extension
 
 import numpy
 from Cython.Build import cythonize
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
+from setuptools.command.install import install
 
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
@@ -48,7 +49,7 @@ CLASSIFIERS = [
     'Intended Audience :: Developers',
 ]
 
-PACKAGES = find_packages()
+PACKAGES = find_namespace_packages()
 
 PACKAGE_DATA = {
     'orangecontrib.network': ['networks/*'],
@@ -63,12 +64,13 @@ DATA_FILES = [
 
 SETUP_REQUIRES = (
     'setuptools',
+    'trubar>=0.3.3',
 )
 
 INSTALL_REQUIRES = (
     'anyqt',
     'gensim',
-    'Orange3>=3.35',
+    'Orange3>=3.37',
     'orange-widget-base',
     'pyqtgraph',
     'scipy',
@@ -146,6 +148,21 @@ def include_documentation(local_dir, install_dir):
     DATA_FILES.extend(doc_files)
 
 
+class InstallMultilingualCommand(install):
+    def run(self):
+        install.run(self)
+        self.compile_to_multilingual()
+
+    def compile_to_multilingual(self):
+        from trubar import translate
+
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        translate(
+            "msgs.jaml",
+            source_dir=os.path.join(self.install_lib, "orangecontrib", "network"),
+            config_file=os.path.join(package_dir, "i18n", "trubar-config.yaml"))
+
+
 if __name__ == '__main__':
     cmdclass = {}
 
@@ -170,6 +187,9 @@ if __name__ == '__main__':
         data_files=DATA_FILES,
         python_requires=">=3.8",
         setup_requires=SETUP_REQUIRES,
+        cmdclass={
+            'install': InstallMultilingualCommand,
+        },
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
         dependency_links=DEPENDENCY_LINKS,

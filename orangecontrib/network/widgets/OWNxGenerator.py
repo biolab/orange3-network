@@ -72,9 +72,9 @@ class OWNxGenerator(widget.OWWidget):
 
     graph_type = settings.Setting(7)
     arguments = settings.Setting(
-        {name: [args[0] for args in defaults if isinstance(args, tuple)]
-         for _, name, *defaults in GRAPH_TYPES})
-    settings_version = 2
+        {func.__name__: [args[0] for args in defaults if isinstance(args, tuple)]
+         for func, _, *defaults in GRAPH_TYPES})
+    settings_version = 3
 
     want_main_area = False
     resizing_enabled = False
@@ -95,7 +95,7 @@ class OWNxGenerator(widget.OWWidget):
         )
         rb.layout().setSpacing(6)
         self.arg_spins = {}
-        for (_1, name, _2, *arguments), defaults \
+        for (func, name, _, *arguments), defaults \
                 in zip(self.GRAPH_TYPES, self.arguments.values()):
             argbox = gui.hBox(rb)
             argbox.layout().setSpacing(0)
@@ -116,7 +116,7 @@ class OWNxGenerator(widget.OWWidget):
                     spin = QSpinBox(value=next(values), minimum=minv, maximum=maxv)
                     argbox.layout().addWidget(spin)
                     spin.valueChanged.connect(
-                        lambda value, name=name, argidx=argno:
+                        lambda value, name=func.__name__, argidx=argno:
                         self.update_arg(value, name, argidx))
                     argno += 1
                     box.append(spin)
@@ -148,7 +148,7 @@ class OWNxGenerator(widget.OWWidget):
 
     def generate(self):
         func, name, args, *_ = self.GRAPH_TYPES[self.graph_type]
-        args = self.arguments[name]
+        args = self.arguments[func.__name__]
         self.Error.generation_error.clear()
         try:
             network = func(*args)
@@ -169,6 +169,14 @@ class OWNxGenerator(widget.OWWidget):
             for name, value in settings_.pop("arguments", {}):
                 arguments[name.split("__")[0]].append(value)
             settings_["arguments"] = dict(arguments)
+
+        if version < 3:
+            old = settings_["arguments"]
+            settings_["arguments"] = {
+                func.__name__: old.get(name, [args[0] for args in defaults
+                                              if isinstance(args, tuple)])
+                for func, name, *defaults in cls.GRAPH_TYPES}
+
 
 def main():
     def send(graph):
