@@ -1,1 +1,1 @@
-from .base import Network
+from .base import Network, DirectedEdges, UndirectedEdges
