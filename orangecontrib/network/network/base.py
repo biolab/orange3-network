@@ -228,6 +228,11 @@ class Network:
             self.edges = [as_edges(e) for e in edges]
         else:
             self.edges = [as_edges(edges)]
+        if not all(edges.edges.shape[0] == edges.edges.shape[1]
+                   for edges in self.edges):
+            raise ValueError("Edges must be square matrices")
+        if not all(edges.edges.shape[0] == len(nodes) for edges in self.edges):
+            raise ValueError("Number of nodes and edge matrix dimension must match")
         self.name = name
         self.coordinates = coordinates
 
