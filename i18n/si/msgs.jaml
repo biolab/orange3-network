@@ -7,6 +7,8 @@ network/base.py:
             def `as_edges`:
                 edges must be an instance of 'Edges' or a sparse matrix,: false
                 not '{type(edges).__name__}: false
+            Edges must be square matrices: false
+            Number of nodes and edge matrix dimension must match: false
 network/community.py:
     def `add_results_to_items`:
         C%d: false
@@ -350,7 +352,7 @@ widgets/OWNxExplorer.py:
             graph.show_edge_weights: false
             Show edge weights: Prikaži uteži povezav
             graph.label_selected_edges: false
-            Label only edges of selected nodes: Oznaši samo povezave izbranih točk
+            Label only edges of selected nodes: Označi samo povezave izbranih točk
             graph.alpha_value: false
         def `_add_mark_box`:
             def `text_line`:
