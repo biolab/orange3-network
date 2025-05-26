@@ -1,3 +1,6 @@
+__init__.py:
+    def `networks`:
+        networks: false
 network/base.py:
     class `Network`:
         def `__init__`:

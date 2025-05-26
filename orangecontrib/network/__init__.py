@@ -1,8 +1,9 @@
-from pkg_resources import resource_filename
+from importlib.resources import files, as_file
 
 def networks():
-    yield ('', resource_filename(__name__, 'networks'))
-
+    path_in_package = files(__package__).joinpath('networks')
+    with as_file(path_in_package) as dir_path:
+        yield ('', dir_path)
 
 from .network import *
 
