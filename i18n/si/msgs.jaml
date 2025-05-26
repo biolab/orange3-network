@@ -349,7 +349,7 @@ widgets/OWNxExplorer.py:
             graph.show_edge_weights: false
             Show edge weights: Prikaži uteži povezav
             graph.label_selected_edges: false
-            Label only edges of selected nodes: Oznaši samo povezave izbranih točk
+            Label only edges of selected nodes: Označi samo povezave izbranih točk
             graph.alpha_value: false
         def `_add_mark_box`:
             def `text_line`:
