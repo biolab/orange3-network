@@ -11,7 +11,7 @@ from setuptools.command.install import install
 NAME = 'Orange3-Network'
 DOCUMENTATION_NAME = 'Orange Network'
 
-VERSION = '1.10'
+VERSION = '1.10.1'
 
 DESCRIPTION = 'Networks add-on for Orange 3 data mining software package.'
 LONG_DESCRIPTION  = open(os.path.join(os.path.dirname(__file__),
