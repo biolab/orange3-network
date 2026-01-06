@@ -1,3 +1,6 @@
 [build-system]
 requires = ["setuptools", "wheel", "cython", "oldest-supported-numpy"]
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+skip = ["cp314-*"]  # skip because gensim is not available for 3.14
