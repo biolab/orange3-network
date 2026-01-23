@@ -41,7 +41,8 @@ class OWNxClustering(widget.OWWidget):
             label="Max. iterations: ", callback=self.commit)
         gui.doubleSpin(box, self, "hop_attenuation", 0, 1, 0.01,
                        label="Apply hop attenuation: ",
-                       checked="attenuate", callback=self.commit)
+                       checked="attenuate", callback=self.commit,
+                       checkCallback=self.commit)
         self.random_state = gui.checkBox(
             box, self, "use_random_state",
             label="Replicable clustering", callback=self.commit)
