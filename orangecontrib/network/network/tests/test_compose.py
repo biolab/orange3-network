@@ -65,9 +65,9 @@ class TestUtils(TestComposeBase):
         np.testing.assert_equal(net.edges[0].edges.todense(), exp)
 
     def test_sort_edges(self):
-        edge_data = np.array([1, 3, 5, 7, 9, 2, 4, 6, 8])
-        row_indss = np.array([1, 2, 3, 1, 2, 3, 1, 2, 3])
-        col_indss = np.array([2, 2, 2, 1, 1, 1, 3, 3, 3])
+        edge_data = np.array([3, 1, 2, 7, 9, 5, 8, 6, 4])
+        row_indss = np.array([2, 1, 3, 1, 2, 3, 3, 2, 1])
+        col_indss = np.array([2, 2, 1, 1, 1, 2, 3, 3, 3])
         np.testing.assert_equal(_sort_edges(row_indss, col_indss, edge_data),
                                 [7, 1, 4, 9, 3, 6, 2, 5, 8])
 
