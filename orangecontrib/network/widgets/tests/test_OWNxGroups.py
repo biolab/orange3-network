@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock
 from math import sqrt
+import datetime
 
 import numpy as np
 from scipy import sparse as sp
@@ -172,7 +173,6 @@ class TestOWNxGroups(NetworkTest):
         expected[1, 2] = 2 / sqrt(6 * 2)
         expected[3, 4] = 6 / sqrt(14 * 13) + 8 / sqrt(14 * 15)
         np.testing.assert_equal(groups.edges[0].edges.todense(), expected)
-
 
 if __name__ == "__main__":
     unittest.main()

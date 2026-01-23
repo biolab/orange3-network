@@ -15,6 +15,7 @@ network/community.py:
     def `label_propagation_hop_attenuation`:
         Undirected graph expected: false
 network/embeddings.py:
+    'gensim library is required to use Node2Vec embedding. ': false
     class `Node2Vec`:
         def `__init__`:
             n2v: false
@@ -281,6 +282,8 @@ widgets/OWNxEmbeddings.py:
             Network: Mreža
         class `Outputs`:
             Items: Elementi
+        class `Error`:
+            This widget requires gensim, which is unsupported in Python>=3.14.: Ta gradnik zahteva gensim, ki ni podprt v Pythonu >= 3.14.
         def `__init__`:
             p: false
             'Return parameter (p): ': 'Parameter vrnitve (p): '
