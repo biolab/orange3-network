@@ -159,6 +159,7 @@ class OWNxGroups(OWWidget):
         else:
             weights = None
         if self.normalize:
+            weights = weights.copy() if weights is not None else None
             self._normalize_weights(row, col, weights)
         row, col = self._map_into_feature_values(row, col)
         return Network(
