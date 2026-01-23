@@ -1,6 +1,6 @@
 import os
 import unittest
-from pkg_resources import resource_filename
+from importlib.resources import files
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -9,10 +9,13 @@ from orangecontrib.network.network import readwrite
 
 
 def _fullpath(name):
-    return os.path.join(resource_filename("orangecontrib.network", "networks"), name)
+    resource_path = files("orangecontrib.network").joinpath("networks", name)
+    return str(resource_path)
+
 
 def _fullpathtest(name):
-    return os.path.join(resource_filename(__name__, ""), name)
+    resource_path = files(__name__).joinpath(name)
+    return str(resource_path)
 
 
 class TestReadPajek(unittest.TestCase):
