@@ -94,9 +94,8 @@ def _net_from_data_and_edges(data, edge_data, row_ind, col_ind, directed=False):
 
 
 def _sort_edges(row_ind, col_ind, edge_data):
-    ocol = np.argsort(col_ind)
-    dcol = np.argsort(row_ind[ocol])
-    return edge_data[ocol[dcol]]  # same, but faster than as edge_data[ocol][dcol]
+    indices = np.lexsort((col_ind, row_ind))
+    return edge_data[indices]
 
 
 def _reduced_edge_data(edges, edge_src_variable, edge_dst_variable):
