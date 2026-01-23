@@ -1,7 +1,12 @@
+try:
+    from gensim.models.callbacks import CallbackAny2Vec
+except ImportError:
+    raise ValueError("gensim library is required to use Node2Vec embedding. ")
+
+
 from AnyQt.QtCore import Qt, QThread
 from Orange.data import Table
 from Orange.widgets.widget import OWWidget
-from gensim.models.callbacks import CallbackAny2Vec
 from orangewidget import gui, settings
 from orangewidget.utils.signals import Input, Output
 

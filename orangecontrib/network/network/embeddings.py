@@ -1,5 +1,9 @@
 import numpy as np
-import gensim
+try:
+    import gensim
+except:
+    raise ValueError("gensim library is required to use Node2Vec embedding. ")
+
 from gensim.models import Word2Vec
 from Orange.data import ContinuousVariable, Table, Domain
 
