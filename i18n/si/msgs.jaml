@@ -14,6 +14,18 @@ network/community.py:
         C%d: false
     def `label_propagation_hop_attenuation`:
         Undirected graph expected: false
+network/compose.py:
+    def `network_from_edge_table`:
+        node_label: false
+    def `_str_to_ind`:
+        'Unknown labels: ': false
+        ', ': false
+    def `_float_to_ind`:
+        negative vertex indices: false
+        vertex indices must be 1-based: false
+        some indices are too large: false
+        {var_name} has missing values: false
+        some indices are non-integer: false
 network/embeddings.py:
     'gensim library is required to use Node2Vec embedding. ': false
     class `Node2Vec`:
@@ -307,6 +319,7 @@ widgets/OWNxEmbeddings.py:
     networks: false
     davis.net: false
 widgets/OWNxExplorer.py:
+    Weights: Uteži
     class `OWNxExplorer`:
         Network Explorer: Raziskovalec omrežja
         Visually explore the network and its properties.: Vizualno raziskovanje omrežja in njegovih lastnosti
@@ -328,6 +341,8 @@ widgets/OWNxExplorer.py:
         class `Error`:
             Length of the data does not match the number of nodes.: Dolžina podatkov se ne ujema s številom točk.
             Network is too large to visualize.: Omrežje je preveliko za vizualizacijo.
+        def `_add_node_box`:
+            Nodes: Točke
         def `_add_info_box`:
             Layout: Postavitev
             'Nodes: %(number_of_nodes)i (%(nodes_per_edge).2f per edge); ': 'Točke: %(number_of_nodes)i (%(nodes_per_edge).2f na povezavo); '
@@ -345,17 +360,18 @@ widgets/OWNxExplorer.py:
             components: komponentami.
             observe_weights: false
             Make edges with large weights shorter: Skrajšaj povezave z velikimi utežmi
-        def `_add_effects_box`:
-            Widths and Sizes: Širine in velikosti
-            Node Size:: Velikost točk:
-            Edge width:: Širina povezav:
+        def `_add_edge_box`:
+            Edges: Povezave
+            (None): (Brez)
+            edge_label_variable: false
+            Label: Oznaka
+            (Same color): (Ista barva)
+            edge_color_variable: false
+            Color: Barva
+            (Same width): (Ista širina)
+            Width:: Širina:
+            edge_width_variable: false
             graph.edge_width: false
-            graph.relative_edge_widths: false
-            Scale edge widths to weights: Prilagodi širine povezav utežem
-            graph.show_edge_weights: false
-            Show edge weights: Prikaži uteži povezav
-            graph.label_selected_edges: false
-            Label only edges of selected nodes: Označi samo povezave izbranih točk
             graph.alpha_value: false
         def `_add_mark_box`:
             def `text_line`:
@@ -394,6 +410,10 @@ widgets/OWNxExplorer.py:
         def `handleNewSignals`:
             def `set_actual_data`:
                 label: oznaka
+            def `set_actual_edges`:
+                label: oznaka
+        def `get_edge_labels`:
+            {:.02}: false
         def `send_report`:
             Graph info: Informacije o grafu
             Number of vertices: Število točk
@@ -409,6 +429,7 @@ widgets/OWNxExplorer.py:
     def `main`:
         networks: false
         leu_by_genesets.net: false
+        relations.tab: false
     __main__: false
 widgets/OWNxFile.py:
     Orange3-Network: false
@@ -420,31 +441,55 @@ widgets/OWNxFile.py:
         icons/NetworkFile.svg: false
         class `Inputs`:
             Items: Elementi
+            Edges: Povezave
         class `Outputs`:
             Network: Mreža
             Items: Elementi
         class `Information`:
             Nodes annotated with data from file with the same name: Točke so označene s podatki iz datoteke z enakim imenom
             Add optional data input to annotate nodes: Na vhod lahko dodate podatke o točkah
+        class `Warning`:
+            There is no data for some edges: Za nekatere povezave ni podatkov
+            Edge data contains data for some edges that do not exist: Podatki o povezavah vsebujejo podatke za nekatere povezave, ki ne obstajajo
+            'Data for nodes is ignored because its size does not match ': 'Podatki o točkah niso upoštevani, ker njihova velikost ni enaka '
+            the number of nodes:\n: številu točk:\n
+            'select a data column whose values can be matched with network ': 'izberite stolpec podatkov, katerih vrednosti ustrezajo '
+            labels: oznakam v omrežju
         class `Error`:
             Error reading file "{}"\n{}: Napaka pri branju datoteke "{}"\n{}
             Error reading file "{}": Napaka pri branju datoteke "{}"
             Attempt to read {} failed\n: Poskus branja {} ni uspel\n
             The widget tried to annotated nodes with data from\n: Gradnik je poskusil označiti točke s podatki iz\n
             a file with the same name.: datoteke z enakim imenom.
-            Data size does not match the number of nodes.\n: Velikost podatkov se ne ujema s številom točk.\n
-            'Select a data column whose values can be matched with network ': 'Izberite stolpec podatkov, katere vrednosti se lahko ujemajo z oznakami v '
-            labels: omrežju.
+            Choose a label column to construct a network from tables: Izberite stolpec z oznakami za konstruiranje omrežja iz tabel
+            Source and destination columns must be of the same type\n: Stolpca vira in cilja morata biti iste vrste\n
+            (numerical or text): (številska ali besedilna)
+            Edge data refers to nodes that do not exist in the node data:\n{}: Podatki o povezavah se nanašajo na točke, ki ne obstajajo v podatkih o točkah:\n{}
+            'Constructing a network from tables requires a label column ': 'Za konstruiranje omrežja iz tabel je potreben stolpec z oznakami '
+            without missing values: brez manjkajočih vrednosti
         def `__init__`:
+            original_net_source: false
+            Network from file: Omrežje iz datoteke
+            'Load network from file: ': 'Naloži omrežje iz datoteke: '
+            'Load from file and ': 'Naloži iz datoteke in '
+            use inputs (if any) to annotate vertices and edges: uporabi vhode (če obstajajo) za označevanje točk in povezav
             net_index: false
             ...: true
             Reload: Ponovno naloži
+            Construct network from input tables: Konstruiraj omrežje iz vhodnih tabel
             (Match by rows): (Ujemanje po vrsticah)
             label_variable: false
-            'Match node labels to data column: ': 'Ujemanje oznak točk s stolpcem podatkov: '
-        def `populate_comboboxes`:
+            Node description (from input signal): Opisi točk (iz vhodnega signala)
+            'Match node labels with values of ': 'Ujemanje oznak točk z vrednostmi '
             (None): (Brez)
-            Browse documentation networks...: Brskaj po dokumentacijskih omrežjih...
+            Edge description (from input signal): Opisi povezav (iz vhodnega signala)
+            edge_src_variable: false
+            Source node label:: Oznaka izvorne točke:
+            edge_dst_variable: false
+            Destination node label:: Oznaka ciljne točke:
+        def `update_file_combo`:
+            (None): (Bre<)
+            Browse documentation networks...: Prebrskaj omrežja v dokumentaciji...
         def `browse_net_file`:
             .: false
             Open a Network File: Odpri datoteko omrežja
@@ -459,14 +504,27 @@ widgets/OWNxFile.py:
             node_label: false
         def `_label_to_tabel`:
             node_label: false
+        def `network_from_inputs`:
+            ...: true
         def `send_report`:
-            Network file: Datoteka omrežja
             File name: Ime datoteke
             Vertices: Število točk
+            Edges: Število povezav
             Directed: Usmerjeno
-            No: Ne
-            Yes: Da
+            Network file: Datoteka omrežja
+            Table with vertex data: Tabela s podatki o točkah
+            Column with label: Stolpec z oznakami
+            Table with edge data: Tabela s podatki o povezavah
+            Columns for matching with label: Stolpca za ujemanje z oznakami
+            '{ctrl.edge_src_variable.currentText()} and ': '{ctrl.edge_src_variable.currentText()} in '
+            {ctrl.edge_dst_variable.currentText()}: {ctrl.edge_dst_variable.currentText()}
+            Additional data from inputs: Dodatni podatki iz vhodov
+        def `migrate_settings`:
+            context_settings: false
+            label_variable_hint: false
+            label_variable: false
     __main__: false
+    heart_disease: false
 widgets/OWNxFromDistances.py:
     class `OWNxFromDistances`:
         Network From Distances: Omrežje iz razdalj
@@ -701,18 +759,17 @@ widgets/graphview.py:
     class `PlotVarWidthCurveItem`:
         def `__init__`:
             widths: false
+            colors: false
             pen: false
             size: false
         def `setData`:
             widths: false
+            colors: false
             pen: false
             size: false
     class `GraphView`:
         def `update_edges`:
             size: false
-            widths: false
-        def `update_edge_labels`:
-            {:.02}: false
         def `update_marks`:
             '#aff': false
 widgets/ownxsinglemode.py:
