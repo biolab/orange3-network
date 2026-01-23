@@ -9,13 +9,12 @@ from orangecontrib.network.network import readwrite
 
 
 def _fullpath(name):
-    resource_path = files("orangecontrib.network").joinpath("networks", name)
-    return str(resource_path)
+    return str(files("orangecontrib.network").joinpath("networks", name))
 
 
 def _fullpathtest(name):
-    resource_path = files(__name__).joinpath(name)
-    return str(resource_path)
+    # Not a package, so we can't use importlib.resources
+    return os.path.join(os.path.dirname(__file__), name)
 
 
 class TestReadPajek(unittest.TestCase):
