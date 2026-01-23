@@ -28,7 +28,7 @@ class TestOWNxClustering(NetworkTest):
 
         # Should not crash
         self.send_signal(self.widget.Inputs.network, graph)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         # There should be an additional cluster column
         output = self.get_output(self.widget.Outputs.network).nodes
@@ -39,11 +39,11 @@ class TestOWNxClustering(NetworkTest):
         self.widget.controls.use_random_state.setChecked(True)
 
         self.send_signal(self.widget.Inputs.network, network)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         res1 = self.get_output(self.widget.Outputs.network).nodes.metas
 
         self.send_signal(self.widget.Inputs.network, network)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         res2 = self.get_output(self.widget.Outputs.network).nodes.metas
 
         # Seeded rerun should give same clustering result
@@ -55,7 +55,7 @@ class TestOWNxClustering(NetworkTest):
 
         for _ in range(10):
             self.send_signal(self.widget.Inputs.network, network)
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
         output = self.get_output(self.widget.Outputs.network).nodes
         # Multiple reruns should override the results instead of adding new feature every time
