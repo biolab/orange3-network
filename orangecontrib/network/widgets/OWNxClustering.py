@@ -38,21 +38,23 @@ class OWNxClustering(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Label Propagation")
         gui.spin(
             box, self, "iterations", 1, 100000, 1,
-            label="Max. iterations: ", callback=self.commit)
+            label="Max. iterations: ", callback=self.commit.deferred)
         gui.doubleSpin(box, self, "hop_attenuation", 0, 1, 0.01,
                        label="Apply hop attenuation: ",
-                       checked="attenuate", callback=self.commit)
+                       checked="attenuate", callback=self.commit.deferred,
+                       checkCallback=self.commit.deferred)
         self.random_state = gui.checkBox(
             box, self, "use_random_state",
-            label="Replicable clustering", callback=self.commit)
+            label="Replicable clustering", callback=self.commit.deferred)
 
         gui.auto_apply(self.controlArea, self)
 
     @Inputs.network
     def set_network(self, net):
         self.net = net
-        self.commit()
+        self.commit.now()
 
+    @gui.deferred
     def commit(self):
         kwargs = {'iterations': self.iterations}
         if self.attenuate:
