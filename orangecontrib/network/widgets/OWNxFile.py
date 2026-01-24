@@ -293,7 +293,11 @@ class OWNxFile(OWWidget):
             values = self.data.get_column(var)
             values = values[values != ""]
             set_values = set(values)
-            # if you remove the subset condition, also change data_by_labels
+            # Exclude duplicates
+            #     because we can't match them unambiguously
+            # Exclude variables that don't cover all original nodes
+            #     because there must be no missing nodes
+            # If you remove the subset condition, also change data_by_labels
             if len(values) != len(set_values) \
                     or not original_nodes <= set_values:
                 continue

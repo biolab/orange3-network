@@ -696,7 +696,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
             else:
                 return np.array(["{:.02}".format(x) for x in weights])
         elw = self.edge_label_variable
-        tostr = elw.repr_val
+        tostr = elw.str_val
         return np.array([tostr(x) for x in self.edge_data.get_column(elw)])
 
     def get_edge_widths(self):
