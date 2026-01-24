@@ -1,24 +1,30 @@
+from typing import Optional, Union
+
 import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import QTimer, QSize, Qt
 
 import Orange
-from Orange.data import Table, Domain, StringVariable
 from Orange.util import allot
-from Orange.widgets import gui
-from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
+from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
+    Variable
+from Orange.widgets import gui, widget
+from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Input, Output
 
+from orangecontrib.network.network import compose
 from orangecontrib.network.network.base import Network
 from orangecontrib.network.network.layout import fruchterman_reingold
 from orangecontrib.network.widgets.graphview import GraphView
 from orangewidget.widget import Message, Msg
 
 FR_ALLOWED_TIME = 30
+WEIGHTS_COMBO_ITEM = "Weights"
 
 
 def run(positions, edges, observe_weights, init_temp, k, state):
@@ -71,6 +77,12 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
     mark_min_conn = Setting(5)
     mark_max_conn = Setting(5)
     mark_most_conn = Setting(1)
+    # These can't be context settings. Contexts are inherited from parent class
+    # and use variables describing projected points (= graph nodes). Edges would
+    # need a separate context, so let us use hints instead.
+    edge_width_variable_hint: Optional[str] = Setting(None, schema_only=True)
+    edge_label_variable_hint: Optional[str] = Setting(None, schema_only=True)
+    edge_color_variable_hint: Optional[str] = Setting(None, schema_only=True)
 
     alpha_value = 255  # Override the setting from parent
 
@@ -97,6 +109,10 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.mark_mode = 0
         self.mark_text = ""
 
+        self.edge_width_variable = None
+        self.edge_label_variable = None
+        self.edge_color_variable = None
+
         OWDataProjectionWidget.__init__(self)
         ConcurrentWidgetMixin.__init__(self)
 
@@ -104,6 +120,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.node_data = None
         self.distance_matrix = None
         self.edges = None
+        self.edge_data = None
         self.positions = None
 
         self.marked_nodes = None
@@ -119,11 +136,23 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # pylint: disable=attribute-defined-outside-init
         self.gui = OWPlotGUI(self)
         self._add_info_box()
-        self.gui.point_properties_box(self.controlArea)
-        self._add_effects_box()
-        self.gui.plot_properties_box(self.controlArea)
+        self._add_node_box()
+        self._add_edge_box()
+        self._add_properties_box()
         self._add_mark_box()
         self.controls.attr_label.activated.connect(self.on_change_label_attr)
+
+    def _add_node_box(self):
+        sgui = self.gui
+        box = sgui.create_gridbox(self.controlArea, "Nodes")
+        sgui.add_widgets([
+            sgui.Color,
+            sgui.Shape,
+            sgui.Label,
+            sgui.Size,
+            sgui.PointSize,
+            ], box)
+        box.layout().itemAtPosition(5, 0).widget().setText("")
 
     def _add_info_box(self):
         # pylint: disable=attribute-defined-outside-init
@@ -155,36 +184,49 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                      label="Make edges with large weights shorter",
                      callback=self.improve)
 
-    def _add_effects_box(self):
-        # pylint: disable=attribute-defined-outside-init
-        gbox = self.gui.create_gridbox(self.controlArea, box="Widths and Sizes")
-        self.gui.add_widget(self.gui.PointSize, gbox)
-        gbox.layout().itemAtPosition(1, 0).widget().setText("Node Size:")
+    def _add_edge_box(self):
+        gbox = self.gui.create_gridbox(self.controlArea, box="Edges")
+
+        order = (None, WEIGHTS_COMBO_ITEM, DomainModel.Separator) + DomainModel.SEPARATED
+        self.edge_label_model = DomainModel(
+            placeholder="(None)", order=order, separators=True)
+        self.gui._combo(
+            gbox, "edge_label_variable", "Label", self.edge_label_var_changed,
+            model=self.edge_label_model)
+        self.edge_color_model = DomainModel(
+            placeholder="(Same color)",
+            valid_types=DomainModel.PRIMITIVE)
+        self.gui._combo(
+            gbox, "edge_color_variable", "Color", self.edge_color_var_changed,
+            model=self.edge_color_model)
+        self.edge_width_model = DomainModel(
+            valid_types=ContinuousVariable,
+            placeholder="(Same width)", order=order, separators=False)
+
         self.gui.add_control(
-            gbox, gui.hSlider, "Edge width:",
+            gbox,
+            gui.comboBox, "Width:",
+            master=self, value="edge_width_variable",
+            model=self.edge_width_model,
+            callback=self.edge_width_var_changed,
+        )
+        self.gui.add_control(
+            gbox, gui.hSlider, "",
             master=self, value='graph.edge_width',
             minValue=1, maxValue=10, step=1,
-            callback=self.graph.update_edges)
-        box = gui.vBox(None)
-        gbox.layout().addWidget(box, 3, 0, 1, 2)
-        gui.separator(box)
-        self.checkbox_relative_edges = gui.checkBox(
-            box, self, 'graph.relative_edge_widths',
-            'Scale edge widths to weights',
-            callback=self.graph.update_edges)
-        self.checkbox_show_weights = gui.checkBox(
-            box, self, 'graph.show_edge_weights',
-            'Show edge weights',
-            callback=self.graph.update_edge_labels)
-        self.checkbox_show_weights = gui.checkBox(
-            box, self, 'graph.label_selected_edges',
-            'Label only edges of selected nodes',
-            callback=self.graph.update_edge_labels)
+            callback=self.graph.update_edge_widths)
 
         # This is ugly: create a slider that controls alpha_value so that
         # parent can enable and disable it - although it's never added to any
         # layout and visible to the user
         gui.hSlider(None, self, "graph.alpha_value")
+
+    def _add_properties_box(self):
+        sgui = self.gui
+        return sgui.create_box([
+            sgui.LabelOnlySelected,
+            sgui.ClassDensity,
+            sgui.ShowLegend], self.controlArea, None, False)
 
     def _add_mark_box(self):
         # pylint: disable=attribute-defined-outside-init
@@ -402,6 +444,22 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.mark_mode in (1, 2):
             self.update_marks()
 
+    @staticmethod
+    def _hint(var: Union[Variable, str, None]) -> Union[str, None]:
+        return var.name if isinstance(var, Variable) else var
+
+    def edge_color_var_changed(self):
+        self.edge_color_variable_hint = self._hint(self.edge_color_variable)
+        self.graph.update_edge_colors()
+
+    def edge_label_var_changed(self):
+        self.edge_label_variable_hint = self._hint(self.edge_label_variable)
+        self.graph.update_edge_labels()
+
+    def edge_width_var_changed(self):
+        self.edge_width_variable_hint = self._hint(self.edge_width_variable)
+        self.graph.update_edge_widths()
+
     @Inputs.node_data
     def set_node_data(self, data):
         self.node_data = data
@@ -493,22 +551,32 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 self.cb_class_density.setEnabled(self.can_draw_density())
 
         def set_actual_edges():
-            def set_checkboxes(value):
-                self.checkbox_show_weights.setEnabled(value)
-                self.checkbox_relative_edges.setEnabled(value)
-
             self.Warning.distance_matrix_mismatch.clear()
 
             if self.network is None:
                 self.edges = None
-                set_checkboxes(False)
+                self.edge_data = None
                 return
 
-            set_checkboxes(True)
             if network.number_of_edges(0):
-                self.edges = network.edges[0].edges.tocoo()
+                edges = network.edges[0]
+                self.edges = edges.edges.tocoo()
+                self.edge_data = edge_data = edges.edge_data
+                if isinstance(edge_data, np.ndarray):
+                    if edge_data.dtype == float:
+                        self.edge_data = Table.from_numpy(
+                            Domain([ContinuousVariable("label")]),
+                            np.atleast_2d(edge_data))
+                    else:
+                        self.edge_data = Table.from_numpy(
+                            Domain([], metas=[StringVariable("label")]),
+                            np.empty((len(edge_data), 0)),
+                            metas=edge_data.reshape(len(edge_data), 1))
+                elif edge_data is not None:
+                    assert isinstance(edges.edge_data, Table)
             else:
                 self.edges = sp.coo_matrix((0, 3))
+                self.edge_data = None
             if self.distance_matrix is not None:
                 if len(self.distance_matrix) != self.number_of_nodes:
                     self.Warning.distance_matrix_mismatch()
@@ -520,9 +588,22 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                     )
             if np.allclose(self.edges.data, 0):
                 self.edges.data[:] = 1
-                set_checkboxes(False)
-            elif len(set(self.edges.data)) == 1:
-                set_checkboxes(False)
+
+            def _retrieve(model, hint):
+                model.set_domain(domain)
+                for var in model:
+                    if (isinstance(var, Variable) and var.name == hint
+                            or isinstance(var, str) and var == hint):
+                        return var
+                return None
+
+            domain = None if self.edge_data is None else self.edge_data.domain
+            self.edge_label_variable = \
+                _retrieve(self.edge_label_model, self.edge_label_variable_hint)
+            self.edge_color_variable = \
+                _retrieve(self.edge_color_model, self.edge_color_variable_hint)
+            self.edge_width_variable = \
+                _retrieve(self.edge_width_model, self.edge_width_variable_hint)
 
         self.cancel()
         set_actual_data()
@@ -604,6 +685,34 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def get_edges(self):
         return self.edges
+
+    def get_edge_labels(self):
+        if self.edge_label_variable is None:
+            return None
+        if self.edge_label_variable == WEIGHTS_COMBO_ITEM:
+            weights = self.edges.data
+            if np.allclose(np.modf(weights)[0], 0):
+                return np.array([str(x) for x in weights.astype(int)])
+            else:
+                return np.array(["{:.02}".format(x) for x in weights])
+        elw = self.edge_label_variable
+        tostr = elw.str_val
+        return np.array([tostr(x) for x in self.edge_data.get_column(elw)])
+
+    def get_edge_widths(self):
+        if self.edge_width_variable is None:
+            return None
+        if self.edge_width_variable == WEIGHTS_COMBO_ITEM:
+            widths = self.edges.data
+            return widths if len(set(widths)) > 1 else None
+        else:
+            return self.edge_data.get_column(self.edge_width_variable)
+
+    def get_edge_colors(self):
+        var = self.edge_color_variable
+        if var is None:
+            return None
+        return var.palette.values_to_qcolors(self.edge_data.get_column(var))
 
     def is_directed(self):
         return self.network is not None and self.network.edges[0].directed
@@ -698,6 +807,8 @@ def main():
     #    join(dirname(dirname(__file__)), 'networks', 'dicty_publication.net'))
     #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'davis.net'))
     #transform_data_to_orange_table(network)
+    data = Table("relations.tab")
+    network = compose.network_from_edge_table(data, *data.domain.metas[:2])
     WidgetPreview(OWNxExplorer).run(set_graph=network)
 
 

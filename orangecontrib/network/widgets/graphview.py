@@ -6,7 +6,7 @@ import pyqtgraph as pg
 from AnyQt.QtCore import QLineF, Qt, QRectF
 from AnyQt.QtGui import QPen
 
-from Orange.util import scale
+from Orange.data.util import scale
 from Orange.widgets.settings import Setting
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 
@@ -15,6 +15,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
     def __init__(self, directed, *args, **kwargs):
         self.directed = directed
         self.__setWidths(kwargs.pop("widths", None))
+        self.colors = kwargs.pop("colors", None)
         self.setPen(kwargs.pop("pen", pg.mkPen(0.0)))
         self.sizes = kwargs.pop("size", None)
         self.coss = self.sins = None
@@ -29,12 +30,17 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
             widths = np.ceil(widths).astype(int)
         self.widths = widths
 
+    def setEdgeColors(self, colors):
+        self.colors = colors
+        self.update()
+
     def setPen(self, pen):
         self.pen = pen
         self.pen.setCapStyle(Qt.RoundCap)
 
     def setData(self, *args, **kwargs):
         self.__setWidths(kwargs.pop("widths", self.widths))
+        self.colors = kwargs.pop("colors", self.colors)
         self.setPen(kwargs.pop("pen", self.pen))
         self.sizes = kwargs.pop("size", self.sizes)
         super().setData(*args, **kwargs)
@@ -110,7 +116,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
         pen = QPen(self.pen)
         p.setRenderHint(p.Antialiasing, True)
         p.setCompositionMode(p.CompositionMode_SourceOver)
-        if self.widths is None:
+        if self.widths is None and self.colors is None:
             p.setPen(pen)
             if self.directed:
                 for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), arc in zip(
@@ -123,19 +129,31 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
                 for ecoords in edge_coords[~arcs]:
                     p.drawLine(QLineF(*ecoords))
         else:
+            if self.widths is None:
+                widths = np.lib.stride_tricks.as_strided(
+                    pen.width(), (len(edge_coords),), (0,))
+            else:
+                widths = self.widths
+            if self.colors is None:
+                colors = np.lib.stride_tricks.as_strided(
+                    pen.color(), (len(edge_coords),), (0,))
+            else:
+                colors = self.colors
             if self.directed:
-                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), w, arc in zip(
+                for (x0, y0, x1, y1), (x1w, y1w), (xa1, ya1, xa2, ya2), w, c, arc in zip(
                         edge_coords, get_short_edge_coords(), get_arrows(),
-                        self.widths, arcs):
+                        widths, colors, arcs):
                     if not arc:
                         pen.setWidth(w)
+                        pen.setColor(c)
                         p.setPen(pen)
                         p.drawLine(QLineF(x0, y0, x1w, y1w))
                         p.drawLine(QLineF(xa1, ya1, x1, y1))
                         p.drawLine(QLineF(xa2, ya2, x1, y1))
             else:
-                for ecoords, w in zip(edge_coords[~arcs], self.widths[~arcs]):
+                for ecoords, w, c in zip(edge_coords[~arcs], widths[~arcs], colors[~arcs]):
                     pen.setWidth(w)
+                    pen.setColor(c)
                     p.setPen(pen)
                     p.drawLine(QLineF(*ecoords))
 
@@ -160,11 +178,14 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
 
             if self.widths is None:
                 widths = np.full(len(rxs), pen.width())
+                colors = np.full(len(rxs), pen.color())
             else:
                 widths = self.widths[arcs]
-            for rx, ry, rfx, rfy, w in zip(rxs, rys, rfxs, rfys, widths):
+                colors = self.colors[arcs]
+            for rx, ry, rfx, rfy, w, c in zip(rxs, rys, rfxs, rfys, widths, colors):
                 rect = QRectF(rx, ry, rfx, rfy)
                 pen.setWidth(w)
+                pen.setColor(c)
                 p.setPen(pen)
                 p.drawArc(rect, 100 * 16, 250 * 16)
                 if self.directed:
@@ -175,10 +196,7 @@ class PlotVarWidthCurveItem(pg.PlotCurveItem):
 
 
 class GraphView(OWScatterPlotBase):
-    show_edge_weights = Setting(False)
-    relative_edge_widths = Setting(True)
     edge_width = Setting(2)
-    label_selected_edges = Setting(True)
 
     COLOR_NOT_SUBSET = (255, 255, 255, 255)
     COLOR_SUBSET = (0, 0, 0, 255)
@@ -233,7 +251,14 @@ class GraphView(OWScatterPlotBase):
             return
         x, y = self.scatterplot_item.getData()
         edges = self.master.get_edges()
-        srcs, dests, weights = edges.row, edges.col, edges.data
+        colors = self.master.get_edge_colors()
+        widths = self.master.get_edge_widths()
+        if widths is not None:
+            widths = scale(widths, .7, 8)
+            widths[np.isnan(widths)] = 0.35
+            widths *= np.log2(self.edge_width / 4 + 1)
+
+        srcs, dests = edges.row, edges.col
         if self.edge_curve is None:
             self.pair_indices = np.empty((2 * len(srcs),), dtype=int)
             self.pair_indices[::2] = srcs
@@ -241,12 +266,8 @@ class GraphView(OWScatterPlotBase):
 
         data = dict(x=x[self.pair_indices], y=y[self.pair_indices],
                     pen=self._edge_curve_pen(), antialias=True,
-                    size=self.scatterplot_item.data["size"][self.pair_indices] / 2)
-        if self.relative_edge_widths and len(set(weights)) > 1:
-            data['widths'] = \
-                scale(weights, .7, 8) * np.log2(self.edge_width / 4 + 1)
-        else:
-            data['widths'] = None
+                    size=self.scatterplot_item.data["size"][self.pair_indices] / 2,
+                    widths=widths, colors=colors)
 
         if self.edge_curve is None:
             self.edge_curve = PlotVarWidthCurveItem(
@@ -272,14 +293,14 @@ class GraphView(OWScatterPlotBase):
             self.plot_widget.removeItem(label)
         self.edge_labels = []
         if self.scatterplot_item is None \
-                or not self.show_edge_weights \
                 or self.simplify & self.Simplifications.NoEdgeLabels:
             return
         edges = self.master.get_edges()
-        if edges is None:
+        labels = self.master.get_edge_labels()
+        if edges is None or labels is None:
             return
-        srcs, dests, weights = edges.row, edges.col, edges.data
-        if self.label_selected_edges:
+        srcs, dests = edges.row, edges.col
+        if self.label_only_selected:
             selected = self._selected_and_marked()
             num_selected = np.sum(selected)
             if num_selected >= 2:
@@ -288,11 +309,7 @@ class GraphView(OWScatterPlotBase):
                 selected_edges = selected[srcs] | selected[dests]
             srcs = srcs[selected_edges]
             dests = dests[selected_edges]
-            weights = weights[selected_edges]
-        if np.allclose(weights, np.round(weights)):
-            labels = [str(x) for x in weights.astype(int)]
-        else:
-            labels = ["{:.02}".format(x) for x in weights]
+            labels = labels[selected_edges]
         x, y = self.scatterplot_item.getData()
         xs = (x[srcs.astype(np.int64)] + x[dests.astype(np.int64)]) / 2
         ys = (y[srcs.astype(np.int64)] + y[dests.astype(np.int64)]) / 2
@@ -302,6 +319,13 @@ class GraphView(OWScatterPlotBase):
             ti.setPos(x, y)
             self.plot_widget.addItem(ti)
             self.edge_labels.append(ti)
+
+    def update_edge_colors(self):
+        self.update_edges()
+
+    def update_edge_widths(self):
+        self.update_edges()
+
 
     def _remove_edges(self):
         if self.edge_curve:
@@ -347,6 +371,7 @@ class GraphView(OWScatterPlotBase):
             if marked is not None and len(marked):
                 self.selection = self._selected_and_marked()
         super().update_labels()
+        self.update_edge_labels()
         self.selection = saved_selection
 
     def _remove_labels(self):
@@ -384,10 +409,10 @@ class GraphView(OWScatterPlotBase):
 
     def unselect_all(self):
         super().unselect_all()
-        if self.label_selected_edges:
+        if self.label_only_selected:
             self.update_edge_labels()
 
     def _update_after_selection(self):
-        if self.label_selected_edges:
+        if self.label_only_selected:
             self.update_edge_labels()
         super()._update_after_selection()

@@ -1,0 +1,12 @@
+*Network ""
+*Vertices	5
+     1 "foo"	
+     2 "bar"	
+     3 "qux"	
+     4 "baz"	
+     5 "bax"	
+*Edges
+     1      2
+     1      4
+     4      4
+     5      2
