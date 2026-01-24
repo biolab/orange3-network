@@ -1,0 +1,62 @@
+*Network ""
+*Vertices	30
+     1 "Celje"
+     2 "Divača"
+     3 "Dobova"
+     4 "Grobelno"
+     5 "Grosuplje"
+     6 "Hodoš"
+     7 "Ilirska Bistrica"
+     8 "Imeno"
+     9 "Jesenice"
+    10 "Kamnik"
+    11 "Koper"
+    12 "Kočevje"
+    13 "Ljubljana"
+    14 "Maribor"
+    15 "Metlika"
+    16 "Ormož"
+    17 "Pivka"
+    18 "Podgorje"
+    19 "Pragersko"
+    20 "Prevalje"
+    21 "Prešnica"
+    22 "Rogatec"
+    23 "Sevnica"
+    24 "Sežana"
+    25 "Stranje"
+    26 "Trebnje"
+    27 "Velenje"
+    28 "Zidani Most"
+    29 "Šentilj"
+*Edges
+     1      4	Y
+     1     27	N
+     2     21	Y
+     2     24	Y
+     4     19	Y
+     4     25	N
+     5     12	N
+     5     26	N
+     9     24	N
+    13      5	N
+    13      9	Y
+    13     10	N
+    13     17	Y
+    14     20	N
+    14     29	Y
+    16      6	Y
+    17      2	Y
+    17      7	Y
+    19     14	Y
+    19     16	Y
+    21     11	Y
+    21     18	N
+    23      3	Y
+    25      8	N
+    25     22	N
+    26     15	N
+    26     23	N
+    28      1	Y
+    28     13	Y
+    28     23	Y
