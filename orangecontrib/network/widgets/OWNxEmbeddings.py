@@ -1,13 +1,22 @@
+from orangewidget.widget import Msg
+
+try:
+    from gensim.models.callbacks import CallbackAny2Vec
+except ImportError:
+    CallbackAny2Vec = None
+
+
 from AnyQt.QtCore import Qt, QThread
 from Orange.data import Table
 from Orange.widgets.widget import OWWidget
-from gensim.models.callbacks import CallbackAny2Vec
 from orangewidget import gui, settings
 from orangewidget.utils.signals import Input, Output
+from orangewidget.utils.widgetpreview import WidgetPreview
 
 from orangecontrib.network import Network
-from orangecontrib.network.network import embeddings, readwrite
-from orangewidget.utils.widgetpreview import WidgetPreview
+from orangecontrib.network.network import readwrite
+if CallbackAny2Vec is not None:
+    from orangecontrib.network.network import embeddings
 
 
 class EmbedderThread(QThread):
@@ -23,7 +32,7 @@ class EmbedderThread(QThread):
         self.result = self.func()
 
 
-class ProgressBarUpdater(CallbackAny2Vec):
+class ProgressBarUpdater(CallbackAny2Vec or object):
     def __init__(self, widget, num_epochs):
         self.widget = widget
         self.curr_epoch = 0
@@ -50,6 +59,10 @@ class OWNxEmbedding(OWWidget):
 
     class Outputs:
         items = Output("Items", Table)
+
+    class Error(OWWidget.Error):
+        unsupported_gensim = Msg(
+            "This widget requires gensim, which is unsupported in Python>=3.14.")
 
     resizing_enabled = False
     want_main_area = False
@@ -95,12 +108,18 @@ class OWNxEmbedding(OWWidget):
                         checkbox_label="Auto-commit", orientation=Qt.Horizontal)
         commit()
 
+        if CallbackAny2Vec is None:
+            self.Error.unsupported_gensim()
+            self.controlArea.setDisabled(True)
+
     @Inputs.network
     def set_network(self, net):
         self.network = net
         self.commit()
 
     def commit(self):
+        if CallbackAny2Vec is None:
+            return
         self.Warning.clear()
 
         # cancel existing computation if running

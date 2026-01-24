@@ -1,4 +1,5 @@
 import unittest
+import datetime
 
 import numpy as np
 import scipy.sparse as sp
@@ -6,10 +7,25 @@ from Orange.data import Table, ContinuousVariable, Domain
 
 from orangecontrib.network import Network
 from orangecontrib.network.network.base import DirectedEdges, UndirectedEdges
-from orangecontrib.network.network.embeddings import Node2Vec
-
+try:
+    import gensim
+except ImportError:
+    gensim = None
+else:
+    from orangecontrib.network.network.embeddings import Node2Vec
 
 class TestEmbeddings(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if gensim is None:
+            if datetime.date.today() < datetime.date(2026, 6, 1):
+                raise unittest.SkipTest(
+                    "gensim library is required to run these tests.")
+            else:
+                raise RuntimeError(
+                    "Check whether gensim is supported "
+                    "and either update setup.py or change the above date.")
+
     def setUp(self):
         row, col, w = zip(*((1, 2, 1.0), (1, 3, 3.0), (2, 3, 1.0), (2, 6, 0.5), (3, 4, 1.0), (4, 5, 1.0), (4, 7, -1.0),
                             (5, 6, 0.0), (6, 5, 0.1), (6, 2, 0.1)))
