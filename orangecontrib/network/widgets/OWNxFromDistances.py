@@ -19,8 +19,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from orangecontrib.network.network import Network
 from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
 # This enables summarize in widget preview, pylint: disable=unused-import
-import orangecontrib.network.widgets
-from orangecontrib.network.widgets.utils import items_from_distmatrix, weights_from_distances
+from orangecontrib.network.utils import items_from_distmatrix, weights_from_distances
 
 
 class QIntValidatorWithFixup(QIntValidator):

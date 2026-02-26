@@ -4,7 +4,7 @@ import numpy as np
 
 from Orange.misc import DistMatrix
 from Orange.data import Table, Domain, ContinuousVariable
-from orangecontrib.network.widgets.utils import items_from_distmatrix, weights_from_distances
+from orangecontrib.network.utils import items_from_distmatrix, weights_from_distances
 
 
 class TestItemsFromMatrix(unittest.TestCase):
