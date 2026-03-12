@@ -566,7 +566,8 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                     if edge_data.dtype == float:
                         self.edge_data = Table.from_numpy(
                             Domain([ContinuousVariable("label")]),
-                            np.atleast_2d(edge_data))
+                            edge_data.reshape(-1, 1) if edge_data.ndim == 1
+                            else edge_data)
                     else:
                         self.edge_data = Table.from_numpy(
                             Domain([], metas=[StringVariable("label")]),

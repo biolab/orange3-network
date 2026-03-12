@@ -68,7 +68,7 @@ def read_edges(id_idx, lines, nvertices):
         elif values.size and np.all(values == values[0]):
             values = fake_data(values[0], len(values))
         edge_data = None
-    except ValueError:
+    except (TypeError, ValueError):
         edge_data = np.array(values)
         values = fake_data(np.array(1.), len(v1s))
     return (sp.coo_matrix((values, (np.array(v1s), np.array(v2s))),

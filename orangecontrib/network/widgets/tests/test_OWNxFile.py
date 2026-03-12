@@ -295,7 +295,7 @@ class TestOWNxFile(NetworkTest):
 
         self.send_signal(w.Inputs.edges, None)
         self.assertIs(w.edge_src_variable, None)
-        self.assertIs(w.edge_src_variable, None)
+        self.assertIs(w.edge_dst_variable, None)
 
         # Remember the hint
         self.send_signal(w.Inputs.edges, self.edges)

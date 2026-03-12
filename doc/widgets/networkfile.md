@@ -7,7 +7,7 @@ Read network graph file in a Pajek-like format. The widget can also construct a 
 
 - Items: An optional table with properties of network nodes.
 - Edges: An optional table with properties of network edges.
-- 
+
 **Outputs**
 
 - Network: An instance of Network Graph.
@@ -24,7 +24,7 @@ Additional node and edge annotation can be provided in input tables.
 3. Reload the network from a file.
 4. Construct a network from input tables instead of a file.
 5. When an input table with additional nodes data is present, this combo is used to set the column that is matched to node labels from the file (or the edge table on the input, if no file is used).
-5. Sets the columns from the input edge table that correspond to source and target node labels, either to match nodes from the file or to construct a network from the edge table.
+6. Sets the columns from the input edge table that correspond to source and target node labels, either to match nodes from the file or to construct a network from the edge table.
 
 The widget loads the data from an extended Pajek format. The format is not documented well and is being changed over time. The original format seems to allow adding weights (a number) as the third item in the edge definition line. Orange will allow non-numeric values and treat them as edge labels.
 
@@ -44,7 +44,7 @@ We loaded the *lastfm.net* from documentation data set (dropdown → Browse docu
 
 ![](images/network-file-example.png)
 
-In the following example, we construct a network from a table of edges rather than reading it from the file. The table contains junctions and terminal stations in the Slovenian railway network. We use column *station1* and *station2* to define edges: the values in the two columns correspond to node labels, and two labels are connected if they appear in the same row. Other columns (such as distance, year, electricified) in that table are used as additional edge annotations that we can use to, for instaance, label or color edges in the **Network Explorer**.
+In the following example, we construct a network from a table of edges rather than reading it from the file. The table contains junctions and terminal stations in the Slovenian railway network. We use column *station1* and *station2* to define edges: the values in the two columns correspond to node labels, and two labels are connected if they appear in the same row. Other columns (such as distance, year, electricified) in that table are used as additional edge annotations that we can use to, for instance, label or color edges in the **Network Explorer**.
 
 We also provided a table with node annotations, which contain some information on stations (year opened, station office), which we can use for color, size, shape and label in the **Network Explorer**.
 

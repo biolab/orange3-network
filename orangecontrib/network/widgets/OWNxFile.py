@@ -470,7 +470,7 @@ class OWNxFile(OWWidget):
             (src, dst): row for row, src, dst in zip(count(), src_col, dst_col)}
         edges0 = self.original_network.edges[0]
         directed = edges0.directed
-        edges = edges0.edges
+        edges = edges0.edges.copy()  # edges are mutated in edges.sort_indices()
         n_edges = len(self.edges)
         edges.sort_indices()
         indices = []
@@ -491,7 +491,7 @@ class OWNxFile(OWWidget):
             *([var for var in part if var not in edge_attrs]
             for part in (domain.attributes, domain.class_vars, domain.metas)))
         pure_table = self.edges.transform(pure_domain)
-        if np.max(indices) == n_edges:
+        if indices and np.max(indices) == n_edges:
             extra_row = Table.from_list(
                 pure_domain, [[np.nan] * (len(pure_domain.variables) + len(pure_domain.metas))]
             )

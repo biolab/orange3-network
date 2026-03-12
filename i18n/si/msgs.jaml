@@ -488,7 +488,7 @@ widgets/OWNxFile.py:
             edge_dst_variable: false
             Destination node label:: Oznaka ciljne točke:
         def `update_file_combo`:
-            (None): (Bre<)
+            (None): (Brez)
             Browse documentation networks...: Prebrskaj omrežja v dokumentaciji...
         def `browse_net_file`:
             .: false
