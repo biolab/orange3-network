@@ -57,9 +57,10 @@ def read_edges(id_idx, lines, nvertices):
         return values
 
 
-    lines = [(id_idx[v1], id_idx[v2], value)
-             for v1, v2, value, *_ in (
-             (line.split(maxsplit=2) + [None])[:3] for line in lines)]
+    lines = sorted(
+        (id_idx[v1], id_idx[v2], value)
+        for v1, v2, value, *_ in (
+        (line.split(maxsplit=2) + [None])[:3] for line in lines))
     v1s, v2s, values = zip(*lines)
     try:
         values = np.array(values, dtype=float)

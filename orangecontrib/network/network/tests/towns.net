@@ -7,6 +7,6 @@
 4 "Novo mesto"
 *Edges
 1	2	near
+3	4	huh?
 1	3	far
 1	4	not near, not far
-3	4	huh?
