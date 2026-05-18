@@ -24,13 +24,15 @@ The visualization in **Network Explorer** works just like the one for **Scatter 
 
 ![](images/Network-Explorer-overview-stamped.png)
 
-1. Information on the network. Reports on the number (and proportion) of nodes and edges. Press 'Re-layout' to re-compute nodes with Fruchterman-Reingold optimization. Select 'Randomize positions' starts from random position of nodes.
-2. Set the color, shape, size and label of the nodes by attribute. Color will display the 10 most frequent values and color the rest as 'Other'. Shape is assigned to the 5 most frequent values and the rest is marked as 'Other'. *Label only selection and subset* is handy for keeping the projection organized.
-3. Set the (relative) node size and edge width. By default, edge widths correspond to their weights. To see the weight value, select *Show edge weights*. By default, only the edges of selected nodes are labeled to keep the projection organized.
-4. *Show color regions* colors the projection according to the majority node value. Deselect *Show legend* to hide the legend.
+1. Information on the network. Reports on the number (and proportion) of nodes and edges. Press 'Improve' to run the algorithm that slightly rearranges the positions, or 'Re-layout' to run the Fruchterman-Reingold optimization from scratch. 'Gravity' makes the nodes less or more "clumped" together.
+2. Set the color, shape, label and size of the nodes by attribute, and the general size factor. Color will display the 10 most frequent values and color the rest as 'Other'. Shape is assigned to the 5 most frequent values and the rest is marked as 'Other'. *Label only selection and subset* is handy for keeping the projection organized.
+3. Set the edge label, color and width by attribute.
+4. Additional settings. By default, only the edges of selected nodes are labeled to keep the projection organized. *Show color regions* colors the background regions according to the prevalent node colors. Deselect *Show legend* to hide the legend.
 5. Select, zoom, pan and zoom to fit are the options for exploring the graph. The manual selection of data instances works as an angular/square selection tool. Double click to move the projection. Scroll in or out for zoom.
+6. Send the selected nodes, or set the automatic sending.
+7. Marking options for highlighting nodes by specific criterium.
 
-####Marking
+#### Marking
 
 Pressing *Select* will select and output the highlighted nodes. *Add to Group* adds to the existing selection, while *Add New Group* creates a new group.
 

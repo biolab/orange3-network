@@ -1,5 +1,6 @@
 import os
 import unittest
+from importlib.resources import files
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -8,12 +9,17 @@ from orangecontrib.network.network import readwrite
 
 
 def _fullpath(name):
-    return os.path.join(os.path.split(__file__)[0], name)
+    return str(files("orangecontrib.network").joinpath("networks", name))
+
+
+def _fullpathtest(name):
+    # Not a package, so we can't use importlib.resources
+    return os.path.join(os.path.dirname(__file__), name)
 
 
 class TestReadPajek(unittest.TestCase):
     def test_two_mode(self):
-        davis = readwrite.read_pajek(_fullpath("../networks/davis.net"))
+        davis = readwrite.read_pajek(_fullpath("davis.net"))
         self.assertEqual(davis.number_of_nodes(), 32)
         self.assertEqual(
             list(davis.nodes),
@@ -24,6 +30,17 @@ class TestReadPajek(unittest.TestCase):
              'E12', 'E13', 'E14']
             )
         self.assertEqual(davis.in_first_mode, 18)
+
+    def test_edge_labels(self):
+        net = readwrite.read_pajek(_fullpathtest("towns.net"))
+        self.assertEqual(net.number_of_nodes(), 4)
+        self.assertEqual(
+            list(net.nodes),
+            ["Ljubljana", "Kranj", "Maribor", "Novo mesto"]
+            )
+        self.assertEqual(
+            list(net.edges[0].edge_data),
+            ['near', 'far', 'not near, not far', 'huh?'])
 
     def test_write_pajek(self):
         net = readwrite.read_pajek(_fullpath("../networks/leu_by_genesets.net"))
@@ -62,7 +79,7 @@ class TestReadPajek(unittest.TestCase):
             self.assertRaises(TypeError, readwrite.write_pajek, f, net)
 
     def test_edge_list(self):
-        net = readwrite.read_pajek(_fullpath("test-arcslist.net"))
+        net = readwrite.read_pajek(_fullpathtest("test-arcslist.net"))
         neighs = [(1, (2, 3, 6)),
                   (2, (1, 4, 5, 6)),
                   (5, (1, 2)),

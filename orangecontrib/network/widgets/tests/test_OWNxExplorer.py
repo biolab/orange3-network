@@ -8,7 +8,8 @@ from orangewidget.tests.utils import simulate
 
 from orangecontrib.network.widgets.tests.utils import NetworkTest
 from orangecontrib.network import Network
-from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer
+from orangecontrib.network.widgets.OWNxExplorer import OWNxExplorer, \
+    WEIGHTS_COMBO_ITEM
 
 
 class TestOWNxExplorer(NetworkTest):
@@ -76,7 +77,8 @@ class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
 
     def test_edge_weights(self):
         self.send_signal(self.widget.Inputs.network, self.davis_net)
-        self.widget.graph.show_edge_weights = True
+        self.widget.edge_label_variable = WEIGHTS_COMBO_ITEM
+        self.widget.graph.label_only_selected = True
 
         # Mark nodes with many connections (multiple): should show the weights for edges between marked nodes only
         self.widget.mark_min_conn = 8
