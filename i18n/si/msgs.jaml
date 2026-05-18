@@ -1,6 +1,11 @@
 __init__.py:
     def `networks`:
         networks: false
+utils.py:
+    def `items_from_distmatrix`:
+        label: oznaka
+    def `weights_from_distances`:
+        All distances must be positive: Vse razdalje morajo biti pozitivne
 network/base.py:
     class `Network`:
         def `__init__`:
@@ -815,11 +820,6 @@ widgets/ownxsinglemode.py:
     def `main`:
         /Users/janez/Downloads/100_petrozavodsk_171_events_no_sqrt.net: false
     __main__: false
-widgets/utils.py:
-    def `items_from_distmatrix`:
-        label: oznaka
-    def `weights_from_distances`:
-        All distances must be positive: Vse razdalje morajo biti pozitivne
 widgets/tests/utils.py:
     class `NetworkTest`:
         def `_read_network`:

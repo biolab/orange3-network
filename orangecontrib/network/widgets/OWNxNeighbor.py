@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.lib.stride_tricks import as_strided
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt
@@ -15,8 +14,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from orangecontrib.network.network import Network
 from orangecontrib.network.network.base import UndirectedEdges, DirectedEdges
 # This enables summarize in widget preview, pylint: disable=unused-import
-import orangecontrib.network.widgets
-from orangecontrib.network.widgets.utils import items_from_distmatrix, weights_from_distances
+from orangecontrib.network.utils import items_from_distmatrix, weights_from_distances
 
 
 class OWNxNeighbor(widget.OWWidget):
