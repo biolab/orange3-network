@@ -116,8 +116,8 @@ class DirectedEdges(Edges):
         return self._compute_degree(self.in_edges, node, weighted)
 
     def degree(self, node, *, weighted=False):
-        return self._compute_degree(self.in_edges, node, weighted) \
-               + self._compute_degree(self.out_Edgesnode, weighted)
+        return self._compute_degree(self.edges, node, weighted) \
+               + self._compute_degree(self.in_edges, node, weighted)
 
     def outgoing(self, node, weights=False):
         return self._compose_neighbours(node, self.edges, weights)
