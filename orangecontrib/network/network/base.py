@@ -1,4 +1,5 @@
 from functools import reduce, wraps, partial
+from itertools import chain
 from typing import Sequence, Union
 
 import numpy as np
@@ -47,7 +48,7 @@ class Edges:
     def ingoing(self, node, weights=False) -> np.ndarray:
         pass
 
-    def neighbours(self, node, edge_type=None, weights=False) -> np.ndarray:
+    def neighbours(self, node, weights=False) -> np.ndarray:
         pass
 
     @staticmethod
@@ -124,10 +125,17 @@ class DirectedEdges(Edges):
     def incoming(self, node, weights=False):
         return self._compose_neighbours(node, self.in_edges, weights)
 
-    def neighbours(self, node, edge_type=None, weights=False):
-        return np.hstack(
-            (self._compose_neighbours(node, self.edges, weights),
-             self._compose_neighbours(node, self.in_edges, weights)))
+    def neighbours(self, node, weights=False):
+        if not weights:
+            return np.unique(np.hstack(
+                (self._compose_neighbours(node, self.edges, False),
+                 self._compose_neighbours(node, self.in_edges, False))))
+        neighs = {}
+        for idx, weight in chain(
+                zip(*self._compose_neighbours(node, self.edges, True)),
+                zip(*self._compose_neighbours(node, self.in_edges, True))):
+            neighs[idx] = neighs.get(idx, 0) + weight
+        return np.array(list(neighs)), np.array(list(neighs.values()))
 
 
 class UndirectedEdges(Edges):
