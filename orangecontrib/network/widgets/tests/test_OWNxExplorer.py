@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import numpy as np
 
-import Orange
 from orangewidget.tests.utils import simulate
 
 from orangecontrib.network.widgets.tests.utils import NetworkTest
@@ -52,7 +51,6 @@ class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
 
     def test_subset_selection(self):
         # test if selecting from the graph works
-
         self.send_signal(self.widget.Inputs.network, self.network)
         self.assertEqual(self.widget.nSelected, 0)
         self.send_signal(self.widget.Inputs.node_data, self.data)
@@ -117,6 +115,36 @@ class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):
         self.send_signal(self.widget.Inputs.node_data, self.davis_data)
         self.widget.send_report()
 
+    def test_clear_selection_on_no_data(self):
+        self.widget.relayout = Mock()
+        self.send_signal(self.widget.Inputs.network, self.network)
+        self.widget.graph.selection_select(np.arange(0, 5))
+        self.assertEqual(self.widget.nSelected, 5)
+        self.assertIsNotNone(self.widget.selection)
+        self.send_signal(self.widget.Inputs.network, None)
+        self.assertEqual(self.widget.nSelected, 0)
+        self.assertIsNone(self.widget.selection)
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+
+    def test_node_settings(self):
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        self.send_signal(self.widget.Inputs.node_data, self.davis_data)
+
+        self.widget.attr_color = self.davis_data.domain["id"]
+        self.widget.attr_shape = self.davis_data.domain["role"]
+        self.widget.attr_label = self.davis_data.domain["name"]
+        self.widget.attr_size = self.davis_data.domain["id"]
+        self.send_signal(self.widget.Inputs.node_data, None)
+        self.assertIsNone(self.widget.attr_color)
+        self.assertIsNone(self.widget.attr_shape)
+        self.assertIsNone(self.widget.attr_label)
+        self.assertIsNone(self.widget.attr_size)
+
+        self.send_signal(self.widget.Inputs.network, None)
+        self.assertIsNone(self.widget.attr_color)
+        self.assertIsNone(self.widget.attr_shape)
+        self.assertIsNone(self.widget.attr_label)
+        self.assertIsNone(self.widget.attr_size)
 
 if __name__ == "__main__":
     unittest.main()
