@@ -1,4 +1,5 @@
 from functools import reduce, wraps, partial
+from itertools import chain
 from typing import Sequence, Union
 
 import numpy as np
@@ -14,7 +15,9 @@ class Edges:
                  edge_data: Sequence = None,
                  name: str = ""):
         self.edges = edges.tocsr(copy=True)
-        self.edges.sum_duplicates()
+        # Do not do this: it will ruin its relation to edge_data!
+        # self.edges.sum_duplicates()
+
         # A sequence whose elements correspond to edges in the same order as
         # elements of self.edges.data
         # (i.e. sorted by source (row) then destination (column)
@@ -45,7 +48,7 @@ class Edges:
     def ingoing(self, node, weights=False) -> np.ndarray:
         pass
 
-    def neighbours(self, node, edge_type=None, weights=False) -> np.ndarray:
+    def neighbours(self, node, weights=False) -> np.ndarray:
         pass
 
     @staticmethod
@@ -94,7 +97,7 @@ class DirectedEdges(Edges):
                  edge_data: Sequence = None,
                  name: str = ""):
         super().__init__(edges, edge_data, name)
-        self.in_edges = self.edges.transpose()
+        self.in_edges = self.edges.transpose().tocsr(copy=True)
 
     def out_degrees(self, *, weighted=False):
         return self._compute_degrees(self.edges, weighted)
@@ -113,8 +116,8 @@ class DirectedEdges(Edges):
         return self._compute_degree(self.in_edges, node, weighted)
 
     def degree(self, node, *, weighted=False):
-        return self._compute_degree(self.in_edges, node, weighted) \
-               + self._compute_degree(self.out_Edgesnode, weighted)
+        return self._compute_degree(self.edges, node, weighted) \
+               + self._compute_degree(self.in_edges, node, weighted)
 
     def outgoing(self, node, weights=False):
         return self._compose_neighbours(node, self.edges, weights)
@@ -122,10 +125,17 @@ class DirectedEdges(Edges):
     def incoming(self, node, weights=False):
         return self._compose_neighbours(node, self.in_edges, weights)
 
-    def neighbours(self, node, edge_type=None, weights=False):
-        return np.hstack(
-            (self._compose_neighbours(node, self.edges, weights),
-             self._compose_neighbours(node, self.in_edges, weights)))
+    def neighbours(self, node, weights=False):
+        if not weights:
+            return np.unique(np.hstack(
+                (self._compose_neighbours(node, self.edges, False),
+                 self._compose_neighbours(node, self.in_edges, False))))
+        neighs = {}
+        for idx, weight in chain(
+                zip(*self._compose_neighbours(node, self.edges, True)),
+                zip(*self._compose_neighbours(node, self.in_edges, True))):
+            neighs[idx] = neighs.get(idx, 0) + weight
+        return np.array(list(neighs)), np.array(list(neighs.values()))
 
 
 class UndirectedEdges(Edges):
