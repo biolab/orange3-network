@@ -88,6 +88,7 @@ network/readwrite.py:
     def `read_pajek`:
         def `check_has_vertices`:
             Vertices must be defined before edges or arcs: false
+        utf-8: false
         %: false
         *: false
         *network: false
@@ -103,6 +104,7 @@ network/readwrite.py:
         'This implementation of Pajek format does not support saving ': false
         networks with multiple edge types.: false
         wt: false
+        utf-8: false
         *Network "{network.name}"\n: false
     def `_write_vertices`:
         *Vertices\t{network.number_of_nodes()}\n: false
