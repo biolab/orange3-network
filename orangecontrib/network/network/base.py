@@ -94,7 +94,7 @@ class DirectedEdges(Edges):
                  edge_data: Sequence = None,
                  name: str = ""):
         super().__init__(edges, edge_data, name)
-        self.in_edges = self.edges.transpose()
+        self.in_edges = self.edges.transpose().tocsr(copy=True)
 
     def out_degrees(self, *, weighted=False):
         return self._compute_degrees(self.edges, weighted)
