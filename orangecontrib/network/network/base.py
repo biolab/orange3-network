@@ -14,7 +14,9 @@ class Edges:
                  edge_data: Sequence = None,
                  name: str = ""):
         self.edges = edges.tocsr(copy=True)
-        self.edges.sum_duplicates()
+        # Do not do this: it will ruin its relation to edge_data!
+        # self.edges.sum_duplicates()
+
         # A sequence whose elements correspond to edges in the same order as
         # elements of self.edges.data
         # (i.e. sorted by source (row) then destination (column)
