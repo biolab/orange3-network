@@ -715,6 +715,14 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         else:
             return None, None
 
+    def set_coordinates(self, indices, coordinates):
+        if self.positions is not None:
+            self.positions[indices] = coordinates
+        self.graph.update_coordinates()
+        if self.positions_hint is not None:
+            self.positions_hint = (self.positions.tolist(),
+                                   self.positions_hint[1])
+
     def get_embedding(self):
         return self.positions
 
