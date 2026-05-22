@@ -52,7 +52,13 @@ The widget enables selection of nodes by the specified criterium:
 - *Mark nodes with more connections than any neighbor*. Highlight the most connected nodes.
 - *Mark nodes with more connections than average neighbor*. Highlight nodes whose degree is above average.
 
-####Selecting a subset
+#### Moving a point
+
+It is possible to move a point or a group of selected points. Click on the point and move it. If several points are selected, all of them will move with the subgraph distances retained. When running optimisation, it will run from the moved positions.
+
+When attempting to select instead of move, simply draw the rectangual selection over the points. If using an external monitor, there might be issues with distinguishing between a selection or move event. This has historically been a recurring class of Qt/pyqtgraph issues.
+
+#### Selecting a subset
 
 Just like **Scatter Plot** widget, the **Network Explorer** supports group selection. To create the first group, either select nodes from the plot or highlight them by setting the criterium and pressing *Select*.
 
