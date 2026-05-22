@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import Mock
 
 import numpy as np
-from AnyQt.QtTest import QSignalSpy
 
 from orangewidget.tests.utils import simulate
 
@@ -69,6 +68,21 @@ class TestOWNxExplorerWithLayout(TestOWNxExplorer):
         self.wait_until_finished()
 
         self.assertNotEqual(self.widget.positions.tolist(), positions.tolist())
+
+    def test_edges_plotted(self):
+        self.assertIsNone(self.widget.graph.edge_curve)
+
+        self.send_signal(self.widget.Inputs.network, self.railway)
+        self.wait_until_finished()
+        self.assertIsNotNone(self.widget.graph.edge_curve)
+
+        self.send_signal(self.widget.Inputs.network, self.network)
+        self.assertIsNone(self.widget.graph.edge_curve)
+        self.widget.cancel()
+
+        self.send_signal(self.widget.Inputs.network, self.railway)
+        self.wait_until_finished()
+        self.assertIsNotNone(self.widget.graph.edge_curve)
 
 
 class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):

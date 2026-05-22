@@ -795,6 +795,8 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def cancel(self):
         self.set_buttons(running=False)
         super().cancel()
+        self.graph.set_simplifications(
+            self.graph.Simplifications.NoSimplifications)
 
     def on_done(self, positions):  # pylint: disable=arguments-renamed
         self.positions = positions
