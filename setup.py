@@ -185,7 +185,7 @@ if __name__ == '__main__':
         ext_modules=cythonize(EXTENSIONS),
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
-        python_requires=">=3.8",
+        python_requires=">=3.11",
         setup_requires=SETUP_REQUIRES,
         cmdclass={
             'install': InstallMultilingualCommand,

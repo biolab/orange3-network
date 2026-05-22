@@ -99,7 +99,7 @@ def read_pajek(path):
         if labels is None:
             raise ValueError("Vertices must be defined before edges or arcs")
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         lines = [line.strip() for line in f]
     lines = np.array([line for line in lines if line and line[0] != "%"])
     part_starts = [(line_no, line)
@@ -153,7 +153,7 @@ def write_pajek(path, network, labels=None):
         raise TypeError(
             "This implementation of Pajek format does not support saving "
             "networks with multiple edge types.")
-    f = open(path, "wt") if isinstance(path, str) else path
+    f = open(path, "wt", encoding="utf-8") if isinstance(path, str) else path
     f.write(f'*Network "{network.name}"\n')
     _write_vertices(f, network, labels)
     if network.edges:

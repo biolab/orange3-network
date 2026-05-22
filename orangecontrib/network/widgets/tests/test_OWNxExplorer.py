@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 import numpy as np
+from AnyQt.QtTest import QSignalSpy
 
 from orangewidget.tests.utils import simulate
 
@@ -20,6 +21,8 @@ class TestOWNxExplorer(NetworkTest):
         self.davis_net = self._read_network("davis.net")
         self.davis_data = self._read_items("davis.tsv")
 
+        self.railway = self._read_network("railway.net")
+
     def test_minimum_size(self):
         # Disable this test from the base test class
         pass
@@ -30,6 +33,42 @@ class TestOWNxExplorerWithLayout(TestOWNxExplorer):
         net = Network([], [])
         # should not crash
         self.send_signal(self.widget.Inputs.network, net)
+
+    def test_positions_hint(self):
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        self.wait_until_finished()
+
+        # Store positions
+        positions = self.widget.positions
+        self.assertIsNotNone(positions)
+        # Intermediate test: positions hint should be available after optimization finishes
+        self.assertIsNotNone(self.widget.positions_hint)
+
+        # Clear the network and check that positions are cleared as well
+        self.send_signal(self.widget.Inputs.network, None)
+        self.assertIsNone(self.widget.positions)
+
+        # Send the same network again and check that positions are the same as
+        # before. If hint was not used, positions would be different
+        self.send_signal(self.widget.Inputs.network, self.davis_net)
+        np.testing.assert_equal(self.widget.positions, positions)
+
+        # Send a different network and check that positions are different
+        # This must, basically, not crash
+        self.send_signal(self.widget.Inputs.network, self.railway)
+        self.wait_until_finished()
+
+        self.assertNotEqual(self.widget.positions.tolist(), positions.tolist())
+        positions = self.widget.positions
+
+        # Now change the edges and see that positions are updated
+        edges = self.railway.edges[0].edges.copy()
+        edges.indices[0] += 1
+        new_network = Network(self.railway.nodes, type(self.railway.edges[0])(edges))
+        self.send_signal(self.widget.Inputs.network, new_network)
+        self.wait_until_finished()
+
+        self.assertNotEqual(self.widget.positions.tolist(), positions.tolist())
 
 
 class TestOWNxEplorerWithoutLayout(TestOWNxExplorer):

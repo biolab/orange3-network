@@ -1,3 +1,4 @@
+import hashlib
 from typing import Optional, Union
 
 import numpy as np
@@ -83,6 +84,9 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
     edge_width_variable_hint: Optional[str] = Setting(None, schema_only=True)
     edge_label_variable_hint: Optional[str] = Setting(None, schema_only=True)
     edge_color_variable_hint: Optional[str] = Setting(None, schema_only=True)
+
+    positions_hint: Optional[tuple[list[list[float]], str]] = \
+        Setting(None, schema_only=True)
 
     alpha_value = 255  # Override the setting from parent
 
@@ -630,9 +634,19 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.positions is None:
             set_actual_edges()
             set_edge_combos()
-            self.set_random_positions()
-            self.setup_plot()
-            self.relayout(True)
+
+            if (self.positions_hint is not None
+                and self.edges is not None
+                and len(self.positions_hint[0]) == self.number_of_nodes
+                and self.positions_hint[1] == self.edges_hash()
+            ):
+                self.positions = np.array(self.positions_hint[0])
+                self.setup_plot()
+            else:
+                self.set_random_positions()
+                self.setup_plot()
+                self.relayout(True)
+
         else:
             self.graph.update_point_props()
         self.update_marks()
@@ -788,6 +802,14 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.graph.set_simplifications(
             self.graph.Simplifications.NoSimplifications)
         self.graph.update_coordinates()
+        self.positions_hint = (self.positions.tolist(), self.edges_hash())
+
+    def edges_hash(self):
+        h = hashlib.blake2b(digest_size=32)
+        h.update(self.edges.row.tobytes())
+        h.update(self.edges.col.tobytes())
+        h.update(self.edges.data.tobytes())
+        return h.hexdigest()
 
     @allot(0.02)
     def on_partial_result(self, positions):  # pylint: disable=arguments-renamed
