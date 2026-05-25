@@ -410,9 +410,19 @@ class OWNxFile(OWWidget):
             data = None
 
         if data is None:
-            return self._label_to_tabel()
+            if isinstance(self.original_nodes, Table):
+                return self.original_nodes
+            else:
+                return self._label_to_tabel()
         elif self.label_variable is None:
-            return self._combined_data(data)
+            if isinstance(self.original_nodes, Table):
+                # We could try to merge the two tables (original_nodes
+                # from the network file and data from an extra file),
+                # but we should probably let the explicit data override that
+                # from the network file, hence we return `data`.
+                return data
+            else:
+                return self._combined_data(data)
         else:
             return self._data_by_labels(data)
 
