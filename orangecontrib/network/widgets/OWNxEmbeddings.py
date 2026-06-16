@@ -1,17 +1,16 @@
-from orangewidget.widget import Msg
-
 try:
     from gensim.models.callbacks import CallbackAny2Vec
 except ImportError:
     CallbackAny2Vec = None
 
+from AnyQt.QtCore import Qt, QThread, pyqtSignal as Signal, QObject
 
-from AnyQt.QtCore import Qt, QThread
-from Orange.data import Table
-from Orange.widgets.widget import OWWidget
 from orangewidget import gui, settings
 from orangewidget.utils.signals import Input, Output
 from orangewidget.utils.widgetpreview import WidgetPreview
+from orangewidget.widget import Msg
+from Orange.data import Table
+from Orange.widgets.widget import OWWidget
 
 from orangecontrib.network import Network
 from orangecontrib.network.network import readwrite
@@ -32,8 +31,11 @@ class EmbedderThread(QThread):
         self.result = self.func()
 
 
-class ProgressBarUpdater(CallbackAny2Vec or object):
+class ProgressBarUpdater(CallbackAny2Vec, QObject):
+    progress_changed = Signal(float)
+
     def __init__(self, widget, num_epochs):
+        super().__init__()
         self.widget = widget
         self.curr_epoch = 0
         self.num_epochs = num_epochs
@@ -42,7 +44,7 @@ class ProgressBarUpdater(CallbackAny2Vec or object):
         if self.widget is None:
             return
 
-        self.widget.progressBarSet(100 * (self.curr_epoch / self.num_epochs))
+        self.progress_changed.emit(100 * (self.curr_epoch / self.num_epochs))
 
     def on_epoch_end(self, model):
         self.curr_epoch += 1
@@ -133,6 +135,7 @@ class OWNxEmbedding(OWWidget):
             return
 
         self._progress_updater = ProgressBarUpdater(self, self.num_epochs)
+        self._progress_updater.progress_changed.connect(self.progressBarSet)
         self.embedder = embeddings.Node2Vec(self.p, self.q, self.walk_len, self.num_walks,
                                             self.emb_size, self.window_size, self.num_epochs,
                                             callbacks=[self._progress_updater])
