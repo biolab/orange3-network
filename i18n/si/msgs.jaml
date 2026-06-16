@@ -294,37 +294,41 @@ widgets/OWNxClustering.py:
     leu_by_genesets.net: false
 widgets/OWNxEmbeddings.py:
     class `OWNxEmbedding`:
-        Network Embeddings: Vdelave omrežja
-        Embed network elements: Vdelaj elemente omrežja
+        Network Embeddings: Vložitve omrežja
+        Embed network elements: Vloži točke omrežja
         icons/NetworkEmbedding.svg: false
         class `Inputs`:
             Network: Mreža
         class `Outputs`:
-            Items: Elementi
+            Embeddings: Vložitve
         class `Error`:
             This widget requires gensim, which is unsupported in Python>=3.14.: Ta gradnik zahteva gensim, ki ni podprt v Pythonu >= 3.14.
         def `__init__`:
+            def `spin`:
+                :: " :"
+            Random Walk: Naključni sprehod
+            Return parameter: Parameter vračanja
             p: false
-            'Return parameter (p): ': 'Parameter vrnitve (p): '
+            In-out parameter: Parameter vstopa-izstopa
             q: false
-            'In-out parameter (q): ': Parameter lokalnosti (q)
+            Walk length: Dolžina sprehoda
             walk_len: false
-            'Walk length: ': 'Dolžina sprehoda: '
+            Walks per node: Število sprehodov na točko
             num_walks: false
-            'Walks per node: ': 'Sprehodi na točko: '
+            Embedding: Vložitve
+            Embedding dimension: Dimenzija vložitve
             emb_size: false
-            'Embedding size: ': 'Velikost vdelave: '
+            Window size: Velikost okna
             window_size: false
-            'Context size: ': 'Velikost konteksta: '
+            Number of epochs: Število epoh
             num_epochs: false
-            'Number of epochs: ': 'Število epoh: '
             auto_commit: false
-            Commit: Potrdi
-            Auto-commit: Samodejno potrdi
+            Apply: Uporabi
+    def `main`:
+        ..: false
+        networks: false
+        davis.net: false
     __main__: false
-    ..: false
-    networks: false
-    davis.net: false
 widgets/OWNxExplorer.py:
     Weights: Uteži
     class `OWNxExplorer`:
