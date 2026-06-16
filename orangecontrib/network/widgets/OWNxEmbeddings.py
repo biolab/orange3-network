@@ -162,9 +162,12 @@ class OWNxEmbedding(OWWidget):
         super().onDeleteWidget()
 
 
-if __name__ == "__main__":
+def main():
     from os.path import join, dirname
+
     davis = join(dirname(__file__), "..", "networks", "davis.net")
     network = readwrite.read_pajek(davis)
     WidgetPreview(OWNxEmbedding).run(network)
 
+if __name__ == "__main__":
+    main()
