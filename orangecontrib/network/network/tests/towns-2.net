@@ -1,0 +1,13 @@
+*Network "Test"
+*Description "Slovenian towns"
+*Vertices
+1 "Ljubljana" 0 0 ellipse population 300000 capital yes region central
+2 "Kranj" 0 0 ellipse population 38000 region gorenjska
+3 "Maribor" 0 0 ellipse population 110000 region štajerska
+4 "Novo mesto" 0 0 ellipse capital no region dolenjska
+5 "Celje"
+*Edges
+1	2	2 distance 30 qdist "near"
+3	4   3.14
+1	3	relations "strained :)" distance 130 qdist far
+1	4	distance 74 qdist "not near, not far"

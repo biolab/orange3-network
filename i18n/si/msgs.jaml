@@ -85,6 +85,17 @@ network/readwrite.py:
     class `PajekReader`:
         .net: false
         Pajek network file format: Format 'pajek'
+    def `read_edges`:
+        edge label: false
+    def `table_from_dicts`:
+        ?: false
+    def `dict_rows_from_table`:
+        def `esc`:
+            ' ': false
+            '"': false
+            \\": false
+        ' ': false
+        {esc(attr.name)} {esc(attr.str_val(value))}: false
     def `read_pajek`:
         def `check_has_vertices`:
             Vertices must be defined before edges or arcs: false
@@ -100,6 +111,7 @@ network/readwrite.py:
         *arcs: false
         *edgeslist: false
         *arcslist: false
+        node label: false
     def `write_pajek`:
         'This implementation of Pajek format does not support saving ': false
         networks with multiple edge types.: false
@@ -108,14 +120,19 @@ network/readwrite.py:
         *Network "{network.name}"\n: false
     def `_write_vertices`:
         *Vertices\t{network.number_of_nodes()}\n: false
-        {i:6} "{label}"\t: false
-        {' '.join(f'{c:.4f}' for c in coordinates)}\n: false
+        {''.join(f' {c:.4f}' for c in coords)}: false
+        0 0: false
+        {i:6} "{label}"\t{coordinates}: false
+        ' ellipse {attribute}': false
+        \n: false
     def `_write_edges`:
         *Arcs\n: false
         *Edges\n: false
         {row + 1:6} {col + 1:6}\n: false
         '{row + 1:6} {mat.indices[i] + 1:6} ': false
-        {mat.data[i]:.6f}\n: false
+        {mat.data[i]:.6f}: false
+        ' {edge_attributes[i]}': false
+        \n: false
     def `transform_data_to_orange_table`:
         x: false
         y: false
@@ -724,12 +741,20 @@ widgets/OWNxSave.py:
         class `Error`:
             Can't save network with multiple edge types: Omrežja z več vrstami povezav ni mogoče shraniti
         def `__init__`:
+            Node Labels: Oznake točk
             (None): (Brez)
-            'Node label: ': 'Oznaka točke: '
             label_variable: false
-            Choose the variables that will be used as a label: Izberite spremenljivke, ki bodo uporabljene kot oznaka
+            Choose the variable that will be used as a node label: Izberite spremenljivko, ki bo uporabljena kot oznaka točk.
+            append_node_data: false
+            Append other available node data: Dodaj ostale podatke o točkah
+            Edge Labels: Oznake povezav
+            edge_variable: false
+            Choose the variable that will be used as an edge label: Izberite spremenljivko, ki bo uporabljena kot oznaka povezav.
+            append_edge_data: false
+            Append other available edge data: Dodaj ostale podatke o povezavah
         def `set_network`:
             node_label: false
+            edge_label: false
         def `send_report`:
             Node labels: Oznake točk
             none: brez
