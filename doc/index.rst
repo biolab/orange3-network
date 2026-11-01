@@ -14,6 +14,7 @@ Widgets
    widgets/networkclustering
    widgets/networkofgroups
    widgets/networkfromdistances
+   widgets/networkofneighbors
    widgets/singlemode
 
 Indices and tables

@@ -10,28 +10,20 @@ Constructs a network from distances between instances.
 **Outputs**
 
 - Network: An instance of Network Graph.
-- Data: Attribute-valued data set.
-- Distances: A distance matrix.
 
-**Network from Distances** constructs a network graph from a given distance matrix. Graph is constructed by connecting nodes from the matrix where the distance between nodes is below the given threshold. In other words, all instances with a distance lower than the selected threshold, will be connected.
+**Network from Distances** constructs a network graph from a given distance matrix. The network is constructed by connecting the closest data instances, where the number of connections is set directly, or by threshold distance or by graph density.
+
+The widget presents an interactive graph that shows the relation between the threshold distance and the number of connections (left axis) and graph density (right axis). The density is the proportion of edges in the graph relative to the number of possible edges.
 
 ![](images/network-from-distances-stamped.png)
 
-1. Edges:
-   - Distance threshold: a closeness threshold for the formation of edges.
-   - Percentile: the percentile of data instances to be connected.
-   - *Include also closest neighbors*: include a number of closest neighbors to the selected instances.
-2. Node selection:
-   - Keep all nodes: entire network is on the output.
-   - Components with at least X nodes: filters out nodes with less than the set number of nodes.
-   - Largest connected component: keep only the largest cluster.
-3. Edge weights:
-   - Proportional to distance: weights are set to reflect the distance (closeness).
-   - Inverted distance: weights are set to reflect the inverted distance (difference).
-4. Information on the constructed network:
-   - Data items on input: number of instances on the input.
-   - Network nodes: number of nodes in the network (and the percentage of the original data).
-   - Network edges: number of constructed edges/connections (and the average number of connections per node).
+1. Drag the horizontal line to set the threshold distance.
+2. Drag the vertical line to set the number of connections or graph density.
+3. Threshold distance: the distance can be set manually, and it also changes when any of the lines or other parameters is edited.
+4. Number of connections: set manually or indirectly, by changing the threshold distance or graph density.
+5. Graph density, that is, the proportion of edges in the graph relative to the number of possible edges, set manually or indirectly.
+
+All five modes of setting the graph are interconnected, so changing one will change the others and move the lines accordingly.
 
 Example
 -------
@@ -40,6 +32,4 @@ Example
 
 ![](images/network-from-distances-example.png)
 
-We took *iris.tab* to visualize instance similarity in a graph. We sent the output of **File** widget to **Distances**, where we computed Euclidean distances between rows (instances). Then we sent the output of **Distances** to **Network from Distances**, where we set the distance threshold (how similar the instances have to be to draw an edge between them) to 0.222. We kept all nodes and set edge weights to *proportional to distance*.
-
-Then we observed the constructed network in a [Network Explorer](networkexplorer.md). We colored the nodes by *iris* attribute.
+We took *iris.tab* to visualize instance similarity in a graph. We sent the output of **File** widget to **Distances**, where we computed Euclidean distances between rows (instances). Then we sent the output of **Distances** to **Network from Distances**, where we dragged the horizontal line low enough to get a reasonably dense network, as observed in the [Network Explorer](networkexplorer.md).
