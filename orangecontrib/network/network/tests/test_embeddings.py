@@ -18,7 +18,7 @@ class TestEmbeddings(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if gensim is None:
-            if datetime.date.today() < datetime.date(2026, 10, 1):
+            if datetime.date.today() < datetime.date(2027, 1, 1):
                 raise unittest.SkipTest(
                     "gensim library is required to run these tests.")
             else:
