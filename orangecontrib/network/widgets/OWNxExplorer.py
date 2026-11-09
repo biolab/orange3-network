@@ -597,7 +597,7 @@ class OWNxExplorer(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 elif edge_data is not None:
                     assert isinstance(edges.edge_data, Table)
             else:
-                self.edges = sp.coo_matrix((0, 3))
+                self.edges = sp.coo_array((0, 3))
                 self.edge_data = None
             if self.distance_matrix is not None:
                 if len(self.distance_matrix) != self.number_of_nodes:
@@ -865,8 +865,8 @@ def main():
     #    join(dirname(dirname(__file__)), 'networks', 'dicty_publication.net'))
     #network = read_pajek(join(dirname(dirname(__file__)), 'networks', 'davis.net'))
     #transform_data_to_orange_table(network)
-    data = Table("relations.tab")
-    network = compose.network_from_edge_table(data, *data.domain.metas[:2])
+    #data = Table("relations.tab")
+    #network = compose.network_from_edge_table(data, *data.domain.metas[:2])
     WidgetPreview(OWNxExplorer).run(set_graph=network)
 
 

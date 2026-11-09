@@ -16,7 +16,7 @@ def _create_net(edges, n=None, directed=False):
     row, col, data = zip(*edges)
     if n is None:
         n = max(*row, *col) + 1
-    return Network(np.arange(n), edge_cons(sp.coo_matrix((data, (row, col)), shape=(n, n))))
+    return Network(np.arange(n), edge_cons(sp.coo_array((data, (row, col)), shape=(n, n))))
 
 
 class NetworkTest(WidgetTest):

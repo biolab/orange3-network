@@ -19,7 +19,7 @@ class TestTwoMode(unittest.TestCase):
             np.testing.assert_almost_equal(a, a2)
             self.assertEqual(a.dtype, float)
 
-        edges = sp.coo_matrix(
+        edges = sp.coo_array(
             ([1., 5, 3, 4, 2, 6], ([0, 1, 1, 2, 2, 3], [4, 4, 5, 4, 5, 6])),
             (7, 7)
         )
@@ -141,7 +141,7 @@ class TestTwoMode(unittest.TestCase):
         )
 
         # Graph is empty
-        net = Network(range(7), sp.csr_matrix((7, 7)))
+        net = Network(range(7), sp.csr_array((7, 7)))
         assert_edges(
             tm._filtered_edges(
                 net,

@@ -9,7 +9,7 @@ from orangecontrib.network.network.base import (
 
 class TestEdges(unittest.TestCase):
     def test_edges(self):
-        edges = sp.csr_matrix([[0, 3, 5], [1, 0, 0], [2, 0, 3]])
+        edges = sp.csr_array([[0, 3, 5], [1, 0, 0], [2, 0, 3]])
 
         assert_equal(Edges._compose_neighbours(0, edges, False), [1, 2])
         assert_equal(Edges._compose_neighbours(1, edges, False), [0])
@@ -23,7 +23,7 @@ class TestEdges(unittest.TestCase):
 
 
     def test_directed_edges(self):
-        edges = sp.csr_matrix([[0, 1, 2], [5, 3, 1], [0, 7, 0]])
+        edges = sp.csr_array([[0, 1, 2], [5, 3, 1], [0, 7, 0]])
         edges = DirectedEdges(edges)
 
         assert_equal(edges.out_degrees(), [2, 3, 1])
@@ -61,7 +61,7 @@ class TestEdges(unittest.TestCase):
         assert_equal(edges.neighbours(1, weights=True), ([0, 1, 2], [6, 6, 8]))
 
     def test_undirected_edges(self):
-        edges = sp.csr_matrix([[0, 0, 2], [0, 3, 1], [3, 4, 0]])
+        edges = sp.csr_array([[0, 0, 2], [0, 3, 1], [3, 4, 0]])
         edges = UndirectedEdges(edges)
 
         assert_equal(edges.degrees(), [1, 2, 2])

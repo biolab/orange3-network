@@ -52,7 +52,7 @@ class Edges:
         pass
 
     @staticmethod
-    def _compose_neighbours(node: int, matrix: sp.csr_matrix, weights: bool):
+    def _compose_neighbours(node: int, matrix: sp.csr_array, weights: bool):
         fr, to = matrix.indptr[node], matrix.indptr[node + 1]
         if not weights:
             return matrix.indices[fr:to]
@@ -62,7 +62,7 @@ class Edges:
     @staticmethod
     def _compute_degrees(edges, weighted):
         if weighted:
-            return edges.sum(axis=1).getA1()
+            return np.array(edges.sum(axis=1)).ravel()
         else:
             return edges.indptr[1:] - edges.indptr[:-1]
 
@@ -85,7 +85,7 @@ class Edges:
         edge_data = self.edge_data[edge_mask] if self.edge_data is not None \
             else None
         return type(self)(
-            sp.csr_matrix(
+            sp.csr_array(
                 (data, (row, col)), shape=shape), edge_data, self.name)
 
 
@@ -93,7 +93,7 @@ class DirectedEdges(Edges):
     directed = True
 
     def __init__(self,
-                 edges: sp.csr_matrix,  # row=from, column=to
+                 edges: sp.sparray,  # row=from, column=to
                  edge_data: Sequence = None,
                  name: str = ""):
         super().__init__(edges, edge_data, name)
@@ -142,7 +142,7 @@ class UndirectedEdges(Edges):
     directed = False
 
     def __init__(self,
-                 edges: sp.csr_matrix,
+                 edges: sp.sparray,
                  edge_data: Sequence = None,
                  name: str = ""):
         super().__init__(edges, edge_data, name)
@@ -218,8 +218,8 @@ concatenate_over_edge_types = partial(aggregate_over_edge_types, np.hstack)
 class Network:
     def __init__(self, nodes: Sequence,
                  edges: Union[Edges,
-                              sp.csr_matrix,
-                              Sequence[Union[Edges, sp.csr_matrix]]],
+                              sp.sparray,
+                              Sequence[Union[Edges, sp.sparray]]],
                  name: str = "",
                  coordinates: np.ndarray = None):
         """
@@ -248,9 +248,10 @@ class Network:
             self.edges = [as_edges(e) for e in edges]
         else:
             self.edges = [as_edges(edges)]
-        if not all(edges.edges.shape[0] == edges.edges.shape[1]
+        if not all(edges.edges.ndim == 2
+                   and edges.edges.shape[0] == edges.edges.shape[1]
                    for edges in self.edges):
-            raise ValueError("Edges must be square matrices")
+            raise ValueError("Edges must be square 2D arrays")
         if not all(edges.edges.shape[0] == len(nodes) for edges in self.edges):
             raise ValueError("Number of nodes and edge matrix dimension must match")
         self.name = name
@@ -267,7 +268,7 @@ class Network:
     def number_of_edges(self, edge_type=None):
         return len(self.edges[edge_type].edges.indices)
 
-    def links(self, attr, edge_type=0, matrix_type=sp.coo_matrix):
+    def links(self, attr, edge_type=0, matrix_type=sp.coo_array):
         edges = self.edges[edge_type]
         return matrix_type(edges.edges), edges.edge_data.get_column(attr)
 

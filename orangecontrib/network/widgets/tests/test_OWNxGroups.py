@@ -138,7 +138,7 @@ class TestOWNxGroups(NetworkTest):
              [3, 8, 8],
              [4, 8, 7],
              [5, 6, 2]]).T
-        edges = sp.coo_matrix((weights.astype(float), (src, dst)), shape=(9, 9))
+        edges = sp.coo_array((weights.astype(float), (src, dst)), shape=(9, 9))
         network = Network(items, edges)
         expected = np.zeros((5, 5), dtype=float)
 
