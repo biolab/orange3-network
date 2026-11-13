@@ -261,9 +261,9 @@ class OWNxFromDistances(widget.OWWidget):
             # have the weight of 0.01; the rest are scaled logarithmically
             weights = matrix[mask].astype(float)
             weights = weights_from_distances(weights)
-            edges = sp.csr_matrix((weights, mask.nonzero()), shape=matrix.shape)
+            edges = sp.csr_array((weights, mask.nonzero()), shape=matrix.shape)
         else:
-            edges = sp.csr_matrix(matrix.shape)
+            edges = sp.csr_array(matrix.shape)
         edge_type = UndirectedEdges if self.symmetric else DirectedEdges
         graph = Network(items_from_distmatrix(self.matrix), edge_type(edges))
         nodes, edges = graph.number_of_nodes(), graph.number_of_edges()

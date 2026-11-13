@@ -11,7 +11,7 @@ class TestOWNxAnalysis(NetworkTest):
         self.widget = self.create_widget(OWNxAnalysis)
         self.small_undir = _create_net(((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0), (2, 3, 1.0)), n=5)
         self.small_dir = _create_net(((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0), (2, 3, 1.0)), n=5, directed=True)
-        self.empty_net = Network([], UndirectedEdges(sp.coo_matrix((0, 0))))
+        self.empty_net = Network([], UndirectedEdges(sp.coo_array((0, 0))))
 
     def test_density(self):
         self.assertAlmostEqual(density(self.small_dir), 0.2)

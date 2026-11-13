@@ -206,7 +206,7 @@ class OWNxGroups(OWWidget):
                 (np.sum(weights[inverse == i]) for i in range(len(row))),
                 dtype=float, count=len(row))
         dim = len(self.feature.values)
-        return sp.csr_matrix((data, (row, col)), shape=(dim, dim))
+        return sp.csr_array((data, (row, col)), shape=(dim, dim))
 
     def _construct_items(self):
         domain = Domain([self.feature])

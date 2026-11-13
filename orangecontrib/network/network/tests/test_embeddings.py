@@ -29,12 +29,12 @@ class TestEmbeddings(unittest.TestCase):
     def setUp(self):
         row, col, w = zip(*((1, 2, 1.0), (1, 3, 3.0), (2, 3, 1.0), (2, 6, 0.5), (3, 4, 1.0), (4, 5, 1.0), (4, 7, -1.0),
                             (5, 6, 0.0), (6, 5, 0.1), (6, 2, 0.1)))
-        dir_edges = DirectedEdges(sp.csr_matrix((w, (row, col)), shape=(8, 8)))
+        dir_edges = DirectedEdges(sp.csr_array((w, (row, col)), shape=(8, 8)))
         self.toy_directed = Network(np.arange(8), dir_edges)
 
         row, col, w = zip(*((1, 2, 1.0), (1, 3, 3.0), (2, 3, 1.0), (2, 6, 0.5), (3, 4, 1.0), (4, 5, 1.0), (4, 7, -1.0),
                             (5, 6, 0.1)))
-        undir_edges = UndirectedEdges(sp.csr_matrix((w, (row, col)), shape=(8, 8)))
+        undir_edges = UndirectedEdges(sp.csr_array((w, (row, col)), shape=(8, 8)))
         self.toy_undirected = Network(np.arange(8), undir_edges)
 
     def test_node_probas(self):

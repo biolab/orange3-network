@@ -25,7 +25,7 @@ def from_row_col(f):
     def wrapped(*args):
         row, col, *n = f(*args)
         n = n[0] if n else max(np.max(row), np.max(col)) + 1
-        edges = sp.csr_matrix((np.ones(len(row)), (row, col)), shape=(n, n))
+        edges = sp.csr_array((np.ones(len(row)), (row, col)), shape=(n, n))
         return Network(
             range(n), edges,
             name=f"{f.__name__}{args}".replace(",)", ")"))
@@ -37,7 +37,7 @@ def from_dense(f):
     def wrapped(*args):
         m = f(*args)
         return Network(
-            range(len(m)), sp.csr_matrix(m),
+            range(len(m)), sp.csr_array(m),
             name=f"{f.__name__}{args}".replace(",)", ")"))
     return wrapped
 
@@ -54,19 +54,13 @@ def cycle(n):
 
 @from_csr
 def complete(n):
-    if n < 5_000:
-        return sp.triu(np.ones((n, n)), k=1, format="csr")
+    indptr = np.arange(n, 0, -1)
+    indptr = np.r_[0, np.cumsum(indptr[1:]), np.sum(indptr[1:])]
 
-    # manually construct sparse matrix elements to avoid storing a dense (n x n) matrix in memory
-    indptr = [0]
-    for n_above_diag in range(n - 1, 0, -1):
-        indptr.append(indptr[-1] + n_above_diag)
-    indptr.append(indptr[-1])
-    indptr = np.array(indptr)
-    indices = np.concatenate([np.arange(row, n) for row in range(1, n)])
-    data = np.ones(n * (n - 1) // 2)
+    indices = np.triu_indices(n, k=1)[1]
+    data = np.ones(len(indices))
 
-    return sp.csr_matrix((data, indices, indptr), shape=(n, n))
+    return sp.csr_array((data, indices, indptr), shape=(n, n))
 
 
 @from_row_col
@@ -100,12 +94,12 @@ def grid(n, m=4, circular=False):
     data = np.ones(2 * t - n)
 
     col[:t] = np.arange(1, t + 1)  # horizontal edges
-    col[n - 1:t:n] = np.arange(m)  # circle to prevent index out of range
+    col[n - 1:t:n] = np.arange(0, t, n)  # circle to prevent index out of range
     if not circular:
         data[n - 1:t:n] = 0  # eliminate circle
 
     col[t:] = np.arange(n, t)  # vertical edges
-    edges = sp.csr_matrix((data, (row, col)), shape=(t, t))
+    edges = sp.csr_array((data, (row, col)), shape=(t, t))
     edges.eliminate_zeros()
     return edges
 
@@ -130,7 +124,7 @@ def _hypercube(ndim):
         d = _hypercube(ndim-1)
         i = np.eye(len(d))
         return np.block([
-            [d, i],
+            [d, 0 * i],
             [i, d],
         ])
 
@@ -161,7 +155,20 @@ def geometric(n_nodes, n_edges):
         raise ValueError(
             f"There are only {n_pairs} (< {n_edges}) possible edges between " 
             f"{n_nodes} points")
+
     xy = np.random.random((n_nodes, 2))
+    if n_edges == n_pairs:
+        network = complete(n_nodes)
+        network.name = f"geometric({n_nodes},{n_edges})"
+        network.coordinates = xy
+        return network
+    elif n_edges == 0:
+        return Network(
+            range(n_nodes), sp.csr_array((n_nodes, n_nodes)),
+            name=f"geometric({n_nodes},{n_edges})",
+            coordinates=xy
+        )
+
     xx = row_norms(xy, squared=True)[:, np.newaxis]
     distances = np.dot(xy, xy.T)
     distances *= -2
@@ -169,11 +176,11 @@ def geometric(n_nodes, n_edges):
     distances += xx.T
     ur = np.triu_indices(n_nodes, k=1)
     # skip zeros and repetitions
-    dist_threshold = np.partition(distances[ur], n_edges)[n_edges]
+    dist_threshold = np.partition(distances[ur], n_edges - 1)[n_edges - 1]
     mask = distances <= dist_threshold
     mask[np.tril_indices(n_nodes)] = False
     row, col = mask.nonzero()
-    edges = sp.csr_matrix((np.ones(len(row)), (row, col)),
+    edges = sp.csr_array((np.ones(len(row)), (row, col)),
                           shape=(n_nodes, n_nodes))
     return Network(
         range(n_nodes), edges,

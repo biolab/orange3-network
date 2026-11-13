@@ -115,7 +115,7 @@ def read_edges(id_idx, lines, nvertices):
             edge_data = values
         else:
             edge_data = None
-    return (sp.coo_matrix((values, (np.array(v1s), np.array(v2s))),
+    return (sp.coo_array((values, (np.array(v1s), np.array(v2s))),
                           shape=(nvertices, nvertices)),
             edge_data)
 
@@ -198,7 +198,7 @@ def read_edges_list(id_idx, lines, nvertices):
     indices = np.array(indices, dtype=int)
     data = np.lib.stride_tricks.as_strided(np.ones(1), (len(indices), ), (0, ))
     data.flags.writeable = False
-    return sp.csr_matrix((data, indices, indptr), shape=(nvertices, nvertices))
+    return sp.csr_array((data, indices, indptr), shape=(nvertices, nvertices))
 
 
 def read_pajek(path):

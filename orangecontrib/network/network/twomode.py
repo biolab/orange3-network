@@ -40,12 +40,14 @@ def _normalize(a, *nominators):
 def _dot_edges(normalization):
     def norm_dot(edges, dim):
         edges = normalization(
-            edges, wuu=lambda: edges.sum(axis=0), wvv=lambda: edges.sum(axis=1))
-        new_edges = np.dot(edges, edges.T).tocoo()
+            edges,
+            wuu=lambda: edges.sum(axis=0)[None, :],
+            wvv=lambda: edges.sum(axis=1)[:, None])
+        new_edges = (edges @ edges.T).tocoo()
         mask = np.logical_and(
             new_edges.row < new_edges.col,  new_edges.data != 0)
 
-        return sp.csr_matrix(
+        return sp.csr_array(
             (new_edges.data[mask], (new_edges.row[mask], new_edges.col[mask])),
             shape=(dim, dim))
     return norm_dot
@@ -78,8 +80,8 @@ def _weight_geo(edges, wuu, wvv):
 def _weight_geodeg(edges, **_):
     return _normalize(
         edges,
-        np.sqrt(edges.getnnz(axis=0)),
-        np.sqrt(edges.getnnz(axis=1)).reshape(edges.shape[1], 1))
+        np.sqrt(edges.count_nonzero(axis=0)[None, :]),
+        np.sqrt(edges.count_nonzero(axis=1)[:, None]).reshape(edges.shape[1], 1))
 
 
 @_dot_edges
@@ -93,11 +95,11 @@ def _weight_output(edges, wuu, **_):
 
 
 def _norm_min_max(edges, wuu, wvv, f):
-    assert isinstance(edges, sp.coo_matrix)
+    assert isinstance(edges, sp.coo_array)
     wuu, wvv = wuu(), wvv()
     edges = edges.copy()
     us, vs = edges.col, edges.row
-    edges.data /= f(wuu.A.flatten()[us], wvv.A.flatten()[vs])
+    edges.data /= f(wuu.flatten()[us], wvv.flatten()[vs])
     return edges
 
 
@@ -128,11 +130,11 @@ Weighting = [WeightType(*x) for x in (
 
 def _filtered_edges(network, mode_mask, conn_mask):
     """
-    Compute a coo_matrix with network edges between nodes in mode_mask and
+    Compute a coo_array with network edges between nodes in mode_mask and
     conn_mask
     """
     if not network.number_of_edges():
-        return sp.coo_matrix((0, 0))
+        return sp.coo_array((0, 0))
     edges = network.edges[0].edges.tocoo()
     node1, node2, weights = edges.row, edges.col, edges.data
     fwd = mode_mask[node1] * conn_mask[node2]
@@ -140,7 +142,7 @@ def _filtered_edges(network, mode_mask, conn_mask):
     us = np.hstack((node1[fwd], node2[back]))
     vs = np.hstack((node2[fwd], node1[back]))
     if not len(us):
-        return sp.coo_matrix((0, 0))
+        return sp.coo_array((0, 0))
     data = np.hstack((weights[fwd], weights[back]))
     new_indices = np.cumsum(mode_mask) - 1
-    return sp.coo_matrix((data, (new_indices[us], vs)))
+    return sp.coo_array((data, (new_indices[us], vs)))

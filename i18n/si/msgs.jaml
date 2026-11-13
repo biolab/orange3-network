@@ -12,7 +12,7 @@ network/base.py:
             def `as_edges`:
                 edges must be an instance of 'Edges' or a sparse matrix,: false
                 not '{type(edges).__name__}: false
-            Edges must be square matrices: false
+            Edges must be square 2D arrays: false
             Number of nodes and edge matrix dimension must match: false
 network/community.py:
     def `add_results_to_items`:
@@ -72,8 +72,6 @@ network/generate.py:
             {f.__name__}{args}: false
             ,): false
             ): false
-    def `complete`:
-        csr: false
     def `geometric`:
         'There are only {n_pairs} (< {n_edges}) possible edges between ': false
         {n_nodes} points: false
@@ -322,7 +320,7 @@ widgets/OWNxEmbeddings.py:
             This widget requires gensim, which is unsupported in Python>=3.14.: Ta gradnik zahteva gensim, ki ni podprt v Pythonu >= 3.14.
         def `__init__`:
             def `spin`:
-                :: " :"
+                :: ' :'
             Random Walk: Naključni sprehod
             Return parameter: Parameter vračanja
             p: false
@@ -457,7 +455,6 @@ widgets/OWNxExplorer.py:
     def `main`:
         networks: false
         leu_by_genesets.net: false
-        relations.tab: false
     __main__: false
 widgets/OWNxFile.py:
     Orange3-Network: false

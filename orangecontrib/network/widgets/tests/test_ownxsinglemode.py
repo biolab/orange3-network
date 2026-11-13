@@ -33,7 +33,7 @@ class TestOWNxSingleMode(NetworkTest):
     def _set_graph(self, data, edges=None):
         net = Network(
             data,
-            sp.csr_matrix((len(data), len(data))) if edges is None else edges)
+            sp.csr_array((len(data), len(data))) if edges is None else edges)
         self.send_signal(self.widget.Inputs.network, net)
 
     def test_combo_inits(self):
@@ -112,7 +112,7 @@ class TestOWNxSingleMode(NetworkTest):
         self.assertFalse(no_categorical())
         self.assertTrue(same_values())
 
-        net = Network(range(3), sp.csr_matrix([[0, 1, 0], [1, 2, 0], [0, 0, 0]]))
+        net = Network(range(3), sp.csr_array([[0, 1, 0], [1, 2, 0], [0, 0, 0]]))
         self.send_signal(widget.Inputs.network, net)
         self.assertTrue(no_data())
         self.assertFalse(no_categorical())
